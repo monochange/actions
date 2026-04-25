@@ -1,0 +1,78 @@
+name: monochange merge
+description: 'Fast-forward a monochange release pull request while preserving the release commit in history.'
+author: monochange
+branding:
+  icon: git-merge
+  color: purple
+inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as merge.'
+    required: false
+    default: merge
+  github-token:
+    description: 'GitHub token used to inspect and fast-forward pull requests.'
+    required: false
+    default: ${{ github.token }}
+  repository:
+    description: 'Target repository in owner/repo format.'
+    required: false
+    default: ${{ github.repository }}
+  pull-request:
+    description: 'Optional pull request number. Leave empty to use the current PR event context or auto-detect a single open release pull request.'
+    required: false
+  base-branch:
+    description: 'Base branch that the release pull request must target.'
+    required: false
+    default: main
+  head-branch-prefix:
+    description: 'Required prefix for the release pull request head branch.'
+    required: false
+    default: monochange/release/
+  required-failing-check:
+    description: 'Optional check name that is expected to fail before the fast-forward update.'
+    required: false
+    default: release-pr-manual-merge-blocker
+  allow-cross-repository:
+    description: 'Whether pull requests from forks are allowed.'
+    required: false
+    default: 'false'
+  require-green-checks:
+    description: 'Whether all checks must be complete and successful apart from the expected failing check.'
+    required: false
+    default: 'true'
+  require-actor-push-permission:
+    description: 'Whether the triggering actor must have push permission on the target repository.'
+    required: false
+    default: 'true'
+  comment:
+    description: 'Whether to post a pull request comment. Supported values: always, never, on-error.'
+    required: false
+    default: on-error
+  dry-run:
+    description: 'Resolve and validate the pull request without updating the base branch.'
+    required: false
+    default: 'false'
+  debug:
+    description: 'Enable extra debug logging.'
+    required: false
+    default: 'false'
+outputs:
+  result:
+    description: 'Final action result.'
+  merged:
+    description: 'Whether the pull request was fast-forwarded.'
+  pull-request-number:
+    description: 'Resolved pull request number.'
+  pull-request-url:
+    description: 'Resolved pull request URL.'
+  base-sha:
+    description: 'Base branch SHA before the fast-forward attempt.'
+  head-sha:
+    description: 'Head commit SHA used for validation.'
+  fast-forward-sha:
+    description: 'Commit SHA pushed to the base branch after a successful fast-forward, or the candidate SHA reported during dry-run mode.'
+  comment:
+    description: 'JSON comment payload with a body field.'
+runs:
+  using: node24
+  main: ../dist/index.mjs
