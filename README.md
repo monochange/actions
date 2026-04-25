@@ -18,8 +18,8 @@ Currently implemented:
 
 Public entrypoints:
 
-- `monochange/actions@v1` with `name: merge`
-- `monochange/actions/merge@v1`
+- `monochange/actions@v0.1.0` with `name: merge`
+- `monochange/actions/merge@v0.1.0`
 
 Both entrypoints run the same implementation.
 
@@ -86,7 +86,7 @@ That is intentional.
 Use this when you want a single repository-level action entrypoint.
 
 ```yaml
-uses: monochange/actions@v1
+uses: monochange/actions@v0.1.0
 with:
   name: merge
 ```
@@ -96,7 +96,7 @@ with:
 Use this when you want a dedicated merge action entrypoint.
 
 ```yaml
-uses: monochange/actions/merge@v1
+uses: monochange/actions/merge@v0.1.0
 ```
 
 For most consumers, the path-based form is the clearest choice.
@@ -109,7 +109,7 @@ For most consumers, the path-based form is the clearest choice.
 
 ```yaml
 - name: fast-forward release PR
-  uses: monochange/actions/merge@v1
+  uses: monochange/actions/merge@v0.1.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
 ```
@@ -118,7 +118,7 @@ For most consumers, the path-based form is the clearest choice.
 
 ```yaml
 - name: fast-forward release PR
-  uses: monochange/actions@v1
+  uses: monochange/actions@v0.1.0
   with:
     name: merge
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
@@ -192,7 +192,7 @@ jobs:
     steps:
       - name: fast-forward release PR from workflow dispatch
         if: github.event_name == 'workflow_dispatch'
-        uses: monochange/actions/merge@v1
+        uses: monochange/actions/merge@v0.1.0
         with:
           github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
           pull-request: ${{ inputs.pull_request }}
@@ -204,7 +204,7 @@ jobs:
 
       - name: fast-forward release PR from /fast-forward comment
         if: github.event_name == 'issue_comment'
-        uses: monochange/actions/merge@v1
+        uses: monochange/actions/merge@v0.1.0
         with:
           github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
           base-branch: main
@@ -274,7 +274,7 @@ jobs:
       statuses: read
     steps:
       - name: fast-forward release PR
-        uses: monochange/actions/merge@v1
+        uses: monochange/actions/merge@v0.1.0
         with:
           github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
           base-branch: main
@@ -417,7 +417,7 @@ with:
 ```yaml
 - name: fast-forward release PR
   id: merge
-  uses: monochange/actions/merge@v1
+  uses: monochange/actions/merge@v0.1.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
 
@@ -440,7 +440,7 @@ with:
 ### Auto-detect the only open release PR
 
 ```yaml
-- uses: monochange/actions/merge@v1
+- uses: monochange/actions/merge@v0.1.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
 ```
@@ -448,7 +448,7 @@ with:
 ### Fast-forward a specific PR number
 
 ```yaml
-- uses: monochange/actions/merge@v1
+- uses: monochange/actions/merge@v0.1.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
     pull-request: '123'
@@ -457,7 +457,7 @@ with:
 ### Dry-run validation only
 
 ```yaml
-- uses: monochange/actions/merge@v1
+- uses: monochange/actions/merge@v0.1.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
     dry-run: 'true'
@@ -466,7 +466,7 @@ with:
 ### Always post a PR comment
 
 ```yaml
-- uses: monochange/actions/merge@v1
+- uses: monochange/actions/merge@v0.1.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
     comment: always
@@ -475,7 +475,7 @@ with:
 ### Allow cross-repository PRs
 
 ```yaml
-- uses: monochange/actions/merge@v1
+- uses: monochange/actions/merge@v0.1.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
     allow-cross-repository: 'true'
@@ -623,17 +623,17 @@ When releasing:
 
 1. run `pnpm build`
 2. commit the updated `dist/`
-3. tag a release such as `v1`
+3. tag a release such as `v0.1.0`
 4. reference the action by tag or pinned SHA downstream
 
 Examples:
 
 ```yaml
-uses: monochange/actions@v1
+uses: monochange/actions@v0.1.0
 ```
 
 ```yaml
-uses: monochange/actions/merge@v1
+uses: monochange/actions/merge@v0.1.0
 ```
 
 ---
@@ -653,5 +653,5 @@ To add one later:
 
 That preserves both consumption styles:
 
-- `monochange/actions@v1` with `name: <variant>`
-- `monochange/actions/<variant>@v1`
+- `monochange/actions@v0.1.0` with `name: <variant>`
+- `monochange/actions/<variant>@v0.1.0`
