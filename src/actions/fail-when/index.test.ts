@@ -189,6 +189,18 @@ describe('runFailWhen', () => {
     await expect(runFailWhen()).rejects.toThrow(/must be a positive integer/);
   });
 
+  it('throws for zero pull-request input', async () => {
+    mockCore.getInput.mockImplementation((name: string) => {
+      if (name === 'should-fail') return 'true';
+      if (name === 'reason') return 'r';
+      if (name === 'repository') return 'o/r';
+      if (name === 'pull-request') return '0';
+      return '';
+    });
+
+    await expect(runFailWhen()).rejects.toThrow(/must be a positive integer/);
+  });
+
   it('throws for invalid repository format', async () => {
     mockCore.getInput.mockImplementation((name: string) => {
       if (name === 'should-fail') return 'true';

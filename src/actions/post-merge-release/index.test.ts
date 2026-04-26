@@ -59,6 +59,18 @@ describe('runPostMergeRelease', () => {
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 
+  it('logs debug info', async () => {
+    mockCore.getInput.mockImplementation((name: string) => {
+      if (name === 'debug') return 'true';
+      return '';
+    });
+    mockParse.mockReturnValue({ version: '1.0.0' });
+
+    await runPostMergeRelease();
+
+    expect(mockCore.info).toHaveBeenCalled();
+  });
+
   it('skips when no release record found', async () => {
     mockParse.mockReturnValue(undefined);
 
@@ -107,6 +119,20 @@ describe('runPostMergeRelease', () => {
       '--branch',
       'release',
     ]);
+  });
+
+  it('handles non-Error thrown during publish-release', async () => {
+    mockExec.mockImplementation(async (_cmd, args) => {
+      if (args[0] === 'publish-release') {
+        throw 'plain string error';
+      }
+      return '';
+    });
+
+    await runPostMergeRelease();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('published', 'false');
+    expect(mockCore.warning).toHaveBeenCalledWith('publish-release failed: plain string error');
   });
 
   it('outputs dry-run values without running commands', async () => {

@@ -61,4 +61,36 @@ describe('execRequired', () => {
 
     await expect(execRequired('git', ['fail'])).rejects.toThrow('git failed');
   });
+
+  it('respects cwd option', async () => {
+    const mockExecImpl = vi.fn().mockImplementation(async (_cmd, _args, opts) => {
+      opts?.listeners?.stdout?.(Buffer.from('ok'));
+      return 0;
+    });
+    vi.mocked(actionsExec.exec).mockImplementation(mockExecImpl);
+
+    await exec('git', ['status'], { cwd: '/tmp' });
+
+    expect(mockExecImpl).toHaveBeenCalledWith(
+      'git',
+      ['status'],
+      expect.objectContaining({ cwd: '/tmp' }),
+    );
+  });
+
+  it('respects env option', async () => {
+    const mockExecImpl = vi.fn().mockImplementation(async (_cmd, _args, opts) => {
+      opts?.listeners?.stdout?.(Buffer.from('ok'));
+      return 0;
+    });
+    vi.mocked(actionsExec.exec).mockImplementation(mockExecImpl);
+
+    await exec('git', ['status'], { env: { FOO: 'bar' } });
+
+    expect(mockExecImpl).toHaveBeenCalledWith(
+      'git',
+      ['status'],
+      expect.objectContaining({ env: { FOO: 'bar' } }),
+    );
+  });
 });

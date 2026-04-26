@@ -65,6 +65,43 @@ describe('resolveMonochange', () => {
     });
   });
 
+  it('throws when cargo binstall succeeds but mc is still not found', async () => {
+    mockExec
+      .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' })
+      .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' });
+    mockExecRequired.mockResolvedValue('');
+    mockExec.mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' });
+
+    await expect(resolveMonochange('true')).rejects.toThrow(
+      'Could not resolve monochange automatically',
+    );
+  });
+
+  it('throws when cargo binstall itself fails', async () => {
+    mockExec
+      .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' })
+      .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' });
+    mockExecRequired.mockRejectedValue(new Error('cargo not found'));
+
+    await expect(resolveMonochange('true')).rejects.toThrow(
+      'Could not resolve monochange automatically',
+    );
+  });
+
+  it('throws when mc returns exitCode 0 but empty stdout', async () => {
+    mockExec.mockResolvedValue({ exitCode: 0, stderr: '', stdout: '' });
+
+    await expect(resolveMonochange('false')).rejects.toThrow('monochange is not available on PATH');
+  });
+
+  it('throws when custom command returns exitCode 0 but empty stdout', async () => {
+    mockExec.mockResolvedValue({ exitCode: 0, stderr: '', stdout: '' });
+
+    await expect(resolveMonochange('/opt/bin/mc')).rejects.toThrow(
+      'did not produce a valid mc --version output',
+    );
+  });
+
   it('returns existing mc when setupInput is false', async () => {
     mockExec.mockResolvedValue({ exitCode: 0, stderr: '', stdout: 'monochange 1.0.0' });
 
@@ -114,6 +151,14 @@ describe('runMcCommand', () => {
 
     expect(result).toBe('output');
     expect(mockCoreInfo).toHaveBeenCalledWith('Running: mc status');
+  });
+
+  it('passes cwd when provided', async () => {
+    mockExecRequired.mockResolvedValue('output');
+
+    await runMcCommand({ args: ['status'], command: 'mc', cwd: '/tmp' });
+
+    expect(mockExecRequired).toHaveBeenCalledWith('mc', ['status'], { cwd: '/tmp' });
   });
 });
 

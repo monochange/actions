@@ -37,6 +37,22 @@ describe('runSetupMonochange', () => {
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 
+  it('logs debug info', async () => {
+    mockCore.getInput.mockImplementation((name: string) => {
+      if (name === 'debug') return 'true';
+      return '';
+    });
+    mockResolve.mockResolvedValue({
+      command: 'mc',
+      source: 'existing-mc',
+      version: '1.2.3',
+    });
+
+    await runSetupMonochange();
+
+    expect(mockCore.info).toHaveBeenCalled();
+  });
+
   it('passes custom setup-monochange input', async () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'setup-monochange') return '/opt/bin/mc';

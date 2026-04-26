@@ -54,6 +54,19 @@ describe('runPublishPlan', () => {
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 
+  it('logs debug info and passes ci input', async () => {
+    mockCore.getInput.mockImplementation((name: string) => {
+      if (name === 'debug') return 'true';
+      if (name === 'ci') return 'github';
+      return '';
+    });
+
+    await runPublishPlan();
+
+    expect(mockCore.info).toHaveBeenCalled();
+    expect(mockExec).toHaveBeenCalledWith('mc', expect.arrayContaining(['--ci', 'github']));
+  });
+
   it('passes package filters', async () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'package') return 'pkg-a, pkg-b';
@@ -87,6 +100,26 @@ describe('runPublishPlan', () => {
     await runPublishPlan();
 
     expect(mockCore.setOutput).toHaveBeenCalledWith('fits-single-window', 'true');
+  });
+
+  it('outputs fits-single-window as false when property is missing', async () => {
+    mockCore.getInput.mockImplementation((name: string) => {
+      if (name === 'mode') return 'single-window';
+      return '';
+    });
+    mockParse.mockReturnValue({ packages: [] });
+
+    await runPublishPlan();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('fits-single-window', 'false');
+  });
+
+  it('outputs null json when parsed is undefined', async () => {
+    mockParse.mockReturnValue(undefined);
+
+    await runPublishPlan();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('json', 'null');
   });
 
   it('throws when execRequired fails', async () => {

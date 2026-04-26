@@ -51,6 +51,17 @@ describe('runChangesetPolicy', () => {
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 
+  it('logs debug info', async () => {
+    mockCore.getInput.mockImplementation((name: string) => {
+      if (name === 'debug') return 'true';
+      return '';
+    });
+
+    await runChangesetPolicy();
+
+    expect(mockCore.info).toHaveBeenCalled();
+  });
+
   it('passes optional inputs', async () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'changed-paths') return 'src/';
@@ -85,6 +96,14 @@ describe('runChangesetPolicy', () => {
 
     expect(mockExec).not.toHaveBeenCalled();
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'dry-run');
+  });
+
+  it('outputs null json when parsed is undefined', async () => {
+    mockParse.mockReturnValue(undefined);
+
+    await runChangesetPolicy();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('json', 'null');
   });
 
   it('throws when execRequired fails', async () => {

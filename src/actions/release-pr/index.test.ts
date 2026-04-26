@@ -47,13 +47,31 @@ describe('runReleasePr', () => {
 
   it('runs release-pr and sets outputs', async () => {
     await runReleasePr();
-
     expect(mockResolve).toHaveBeenCalledWith('true');
     expect(mockExec).toHaveBeenCalledWith('mc', ['release-pr', '--format', 'json'], {
       cwd: '.',
     });
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
     expect(mockCore.setOutput).toHaveBeenCalledWith('release-request-number', '42');
+  });
+
+  it('logs debug info', async () => {
+    mockCore.getInput.mockImplementation((name: string) => {
+      if (name === 'debug') return 'true';
+      return '';
+    });
+
+    await runReleasePr();
+
+    expect(mockCore.info).toHaveBeenCalled();
+  });
+
+  it('outputs empty release-request-number when parsed number is not a number or string', async () => {
+    mockParse.mockReturnValue({ number: null });
+
+    await runReleasePr();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('release-request-number', '');
   });
 
   it('sets GITHUB_TOKEN when provided', async () => {
