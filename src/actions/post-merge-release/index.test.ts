@@ -124,7 +124,7 @@ describe('runPostMergeRelease', () => {
   it('handles non-Error thrown during publish-release', async () => {
     mockExec.mockImplementation(async (_cmd, args) => {
       if (args[0] === 'publish-release') {
-        throw 'plain string error';
+        throw new Error('plain string error');
       }
       return '';
     });

@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "oxc"],
+  "options": {
+    "typeAware": true
+  },
   "categories": {
     "correctness": "error",
     "perf": "error",
@@ -36,8 +39,70 @@
     "eslint/capitalized-comments": "off",
     "typescript/consistent-indexed-object-style": "off",
     "eslint/prefer-template": "off",
-    "unicorn/numeric-separators-style": "off"
+    "unicorn/numeric-separators-style": "off",
+    "typescript/strict-boolean-expressions": "off",
+    "typescript/prefer-regexp-exec": "off",
+    "typescript/no-unsafe-type-assertion": "warn",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "typescript/only-throw-error": "error",
+    "typescript/return-await": "off",
+    "typescript/no-unnecessary-condition": "warn",
+    "typescript/no-unnecessary-type-assertion": "warn",
+    "typescript/no-unnecessary-type-arguments": "warn",
+    "typescript/no-unnecessary-template-expression": "warn",
+    "typescript/no-unnecessary-qualifier": "warn",
+    "typescript/no-unnecessary-type-conversion": "warn",
+    "typescript/no-confusing-void-expression": "warn",
+    "typescript/no-duplicate-type-constituents": "warn",
+    "typescript/no-redundant-type-constituents": "warn",
+    "typescript/no-useless-default-assignment": "warn",
+    "typescript/no-meaningless-void-operator": "warn",
+    "typescript/require-await": "warn",
+    "typescript/consistent-return": "warn",
+    "typescript/prefer-nullish-coalescing": "warn",
+    "typescript/prefer-optional-chain": "warn",
+    "typescript/prefer-includes": "warn",
+    "typescript/prefer-string-starts-ends-with": "warn",
+    "typescript/prefer-find": "warn",
+    "typescript/promise-function-async": "warn",
+    "typescript/restrict-template-expressions": "warn",
+    "typescript/restrict-plus-operands": "warn",
+    "typescript/dot-notation": "warn",
+    "typescript/non-nullable-type-assertion-style": "warn",
+    "typescript/no-base-to-string": "warn",
+    "typescript/no-for-in-array": "error",
+    "typescript/no-implied-eval": "error",
+    "typescript/no-misused-spread": "warn",
+    "typescript/no-unsafe-enum-comparison": "warn",
+    "typescript/no-unsafe-unary-minus": "warn",
+    "typescript/no-deprecated": "warn",
+    "typescript/related-getter-setter-pairs": "warn",
+    "typescript/require-array-sort-compare": "warn",
+    "typescript/unbound-method": "warn",
+    "typescript/use-unknown-in-catch-callback-variable": "warn",
+    "typescript/switch-exhaustiveness-check": "warn",
+    "typescript/prefer-reduce-type-parameter": "warn",
+    "typescript/prefer-return-this-type": "warn",
+    "typescript/no-mixed-enums": "warn"
   },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts"],
+      "rules": {
+        "typescript/require-await": "off",
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-assignment": "off"
+      }
+    }
+  ],
   "env": {
     "builtin": true,
     "node": true

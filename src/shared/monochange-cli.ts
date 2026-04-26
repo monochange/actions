@@ -127,5 +127,5 @@ export async function runMcJsonCommand<T>(options: {
 }): Promise<T | undefined> {
   const stdout = await runMcCommand(options);
 
-  return parseMixedOutput<T>(stdout);
+  return parseMixedOutput(stdout) as T | undefined;
 }

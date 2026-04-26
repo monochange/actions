@@ -55,7 +55,8 @@ export async function runMerge(): Promise<void> {
   const inputs = readInputs();
 
   if (github.context.eventName === 'issue_comment') {
-    const commentBody = (github.context.payload.comment?.body as string | undefined) ?? '';
+    const commentBody =
+      (github.context.payload.comment as { body?: string } | undefined)?.body ?? '';
     if (!commentBody.includes(inputs.triggerCommand)) {
       throw new Error(
         `This workflow was triggered by a pull request comment, but the comment does not contain the configured trigger command \`${inputs.triggerCommand}\`.`,

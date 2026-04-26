@@ -1,6 +1,6 @@
-export function safeJsonParse<T>(text: string): T | undefined {
+export function safeJsonParse(text: string): unknown {
   try {
-    return JSON.parse(text) as T;
+    return JSON.parse(text);
   } catch {
     return undefined;
   }
@@ -14,13 +14,13 @@ export function extractJsonBlock(text: string): string | undefined {
   }
 
   /* eslint-disable-next-line regexp/no-useless-escape */
-  const jsonMatch = trimmed.match(/```(?:json)?\s*({[\s\S]*?}|\[[\s\S]*?])\s*```/);
+  const jsonMatch = trimmed.match(/```(?:json)?\s*({[\s\S]*?}|\[[\s\S]*?)\s*```/);
 
   if (jsonMatch?.[1]) {
     return jsonMatch[1].trim();
   }
 
-  const inlineMatch = trimmed.match(/({[\s\S]*?}|\[[\s\S]*?])/);
+  const inlineMatch = trimmed.match(/({[\s\S]*?}|\[[\s\S]*?)/);
 
   if (inlineMatch?.[1]) {
     return inlineMatch[1].trim();
@@ -29,12 +29,12 @@ export function extractJsonBlock(text: string): string | undefined {
   return undefined;
 }
 
-export function parseMixedOutput<T>(text: string): T | undefined {
+export function parseMixedOutput(text: string): unknown {
   const block = extractJsonBlock(text);
 
   if (block) {
-    return safeJsonParse<T>(block);
+    return safeJsonParse(block);
   }
 
-  return safeJsonParse<T>(text);
+  return safeJsonParse(text);
 }

@@ -5,6 +5,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
+
 //#region src/shared/exec.ts
 async function exec(command, args, options) {
 	let stdout = "";
@@ -39,6 +40,7 @@ async function execRequired(command, args, options) {
 	}
 	return result.stdout.trim();
 }
+
 //#endregion
 //#region src/shared/json.ts
 function safeJsonParse(text) {
@@ -51,9 +53,9 @@ function safeJsonParse(text) {
 function extractJsonBlock(text) {
 	const trimmed = text.trim();
 	if (trimmed.startsWith("{") || trimmed.startsWith("[")) return trimmed;
-	const jsonMatch = trimmed.match(/```(?:json)?\s*({[\s\S]*?}|\[[\s\S]*?])\s*```/);
+	const jsonMatch = trimmed.match(/```(?:json)?\s*({[\s\S]*?}|\[[\s\S]*?)\s*```/);
 	if (jsonMatch?.[1]) return jsonMatch[1].trim();
-	const inlineMatch = trimmed.match(/({[\s\S]*?}|\[[\s\S]*?])/);
+	const inlineMatch = trimmed.match(/({[\s\S]*?}|\[[\s\S]*?)/);
 	if (inlineMatch?.[1]) return inlineMatch[1].trim();
 }
 function parseMixedOutput(text) {
@@ -61,6 +63,7 @@ function parseMixedOutput(text) {
 	if (block) return safeJsonParse(block);
 	return safeJsonParse(text);
 }
+
 //#endregion
 //#region src/shared/monochange-cli.ts
 async function resolveMonochange(setupInput) {
@@ -128,6 +131,7 @@ async function getMcVersion(command, prefixArgs = []) {
 		}
 	} catch {}
 }
+
 //#endregion
 //#region src/actions/changeset-policy/index.ts
 function readInputs$6() {
@@ -184,6 +188,7 @@ async function runChangesetPolicy() {
 	core.setOutput("summary", stdout.slice(0, 65536));
 	core.info("changeset-policy completed successfully");
 }
+
 //#endregion
 //#region src/shared/inputs.ts
 const TRUE_VALUES = new Set([
@@ -221,6 +226,7 @@ function parseRepository$1(input) {
 function normalizeName(input) {
 	return input.trim().toLowerCase();
 }
+
 //#endregion
 //#region src/actions/fail-when/index.ts
 async function runFailWhen() {
@@ -347,6 +353,7 @@ async function postPullRequestComment$1(options) {
 		repo
 	});
 }
+
 //#endregion
 //#region src/actions/merge/checks.ts
 function evaluateChecks(options) {
@@ -377,6 +384,7 @@ function evaluateChecks(options) {
 function renderChecks(checks) {
 	return checks.map((check) => `- [${check.state}] ${check.name} (${check.kind})`).join("\n");
 }
+
 //#endregion
 //#region src/actions/merge/comment.ts
 function normalizeCommentMode(input) {
@@ -397,11 +405,13 @@ function shouldPostComment(mode, failed) {
 		case "always": return true;
 		case "never": return false;
 		case "on-error": return failed;
+		default: return false;
 	}
 }
 function serializeCommentOutput(body) {
 	return JSON.stringify({ body }, null, 2);
 }
+
 //#endregion
 //#region src/actions/merge/index.ts
 async function runMerge() {
@@ -1111,6 +1121,7 @@ function mapStatusState(state) {
 		default: return "skipped";
 	}
 }
+
 //#endregion
 //#region src/actions/post-merge-release/index.ts
 function readInputs$3() {
@@ -1180,6 +1191,7 @@ async function runPostMergeRelease() {
 	core.setOutput("json", JSON.stringify(record));
 	core.info("post-merge-release completed successfully");
 }
+
 //#endregion
 //#region src/actions/publish-plan/index.ts
 function readInputs$2() {
@@ -1227,6 +1239,7 @@ async function runPublishPlan() {
 	}
 	core.info("publish-plan completed successfully");
 }
+
 //#endregion
 //#region src/actions/release-pr/index.ts
 function readInputs$1() {
@@ -1273,14 +1286,16 @@ async function runReleasePr() {
 	];
 	if (inputs.githubToken) core.exportVariable("GITHUB_TOKEN", inputs.githubToken);
 	const parsed = parseMixedOutput(await execRequired(mc.command, args, { cwd: inputs.workingDirectory }));
+	const parsedRecord = typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : void 0;
 	core.setOutput("result", "success");
-	core.setOutput("json", JSON.stringify(parsed ?? null));
-	core.setOutput("head-branch", parsed?.headBranch ?? "");
-	core.setOutput("base-branch", parsed?.baseBranch ?? "");
-	core.setOutput("release-request-number", typeof parsed?.number === "number" || typeof parsed?.number === "string" ? String(parsed.number) : "");
-	core.setOutput("release-request-url", parsed?.url ?? "");
+	core.setOutput("json", JSON.stringify(parsedRecord ?? null));
+	core.setOutput("head-branch", parsedRecord?.headBranch ?? "");
+	core.setOutput("base-branch", parsedRecord?.baseBranch ?? "");
+	core.setOutput("release-request-number", typeof parsedRecord?.number === "number" || typeof parsedRecord?.number === "string" ? String(parsedRecord.number) : "");
+	core.setOutput("release-request-url", parsedRecord?.url ?? "");
 	core.info("release-pr completed successfully");
 }
+
 //#endregion
 //#region src/actions/setup-monochange/index.ts
 function readInputs() {
@@ -1302,6 +1317,7 @@ async function runSetupMonochange() {
 	core.setOutput("result", "success");
 	core.info(`Resolved monochange ${resolved.version} from ${resolved.source}: ${resolved.command}`);
 }
+
 //#endregion
 //#region src/main.ts
 async function run() {
@@ -1337,7 +1353,7 @@ run().catch((error) => {
 	core.setOutput("merged", "false");
 	core.setFailed(message);
 });
-//#endregion
-export {};
 
+//#endregion
+export {  };
 //# sourceMappingURL=index.mjs.map

@@ -62,19 +62,23 @@ export async function runReleasePr(): Promise<void> {
   }
 
   const stdout = await execRequired(mc.command, args, { cwd: inputs.workingDirectory });
-  const parsed = parseMixedOutput(stdout) as Record<string, unknown> | undefined;
+  const parsed = parseMixedOutput(stdout);
+  const parsedRecord =
+    typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
 
   core.setOutput('result', 'success');
-  core.setOutput('json', JSON.stringify(parsed ?? null));
-  core.setOutput('head-branch', parsed?.headBranch ?? '');
-  core.setOutput('base-branch', parsed?.baseBranch ?? '');
+  core.setOutput('json', JSON.stringify(parsedRecord ?? null));
+  core.setOutput('head-branch', parsedRecord?.headBranch ?? '');
+  core.setOutput('base-branch', parsedRecord?.baseBranch ?? '');
   core.setOutput(
     'release-request-number',
-    typeof parsed?.number === 'number' || typeof parsed?.number === 'string'
-      ? String(parsed.number)
+    typeof parsedRecord?.number === 'number' || typeof parsedRecord?.number === 'string'
+      ? String(parsedRecord.number)
       : '',
   );
-  core.setOutput('release-request-url', parsed?.url ?? '');
+  core.setOutput('release-request-url', parsedRecord?.url ?? '');
 
   core.info('release-pr completed successfully');
 }
