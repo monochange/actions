@@ -143,7 +143,7 @@ It supports both:
 - optionally accepts a PR number
 - also listens for `/merge` comments on pull requests
 - uses a dedicated token such as `RELEASE_PR_MERGE_TOKEN`
-- keeps `require-actor-push-permission: 'true'` enabled for safety
+- uses `minimum-reviewer-permission: 'admin'` for safety
 
 ### Example file contents
 
@@ -199,7 +199,7 @@ jobs:
           base-branch: main
           head-branch-prefix: monochange/release/
           required-failing-check: release-pr-manual-merge-blocker
-          require-actor-push-permission: 'true'
+          minimum-reviewer-permission: 'admin'
           comment: ${{ inputs.comment }}
 
       - name: fast-forward release PR from /merge comment
@@ -210,7 +210,7 @@ jobs:
           base-branch: main
           head-branch-prefix: monochange/release/
           required-failing-check: release-pr-manual-merge-blocker
-          require-actor-push-permission: 'true'
+          minimum-reviewer-permission: 'admin'
           comment: always
 ```
 
@@ -233,7 +233,7 @@ The recommended pattern is:
 - listen to `issue_comment`
 - only run when the comment body contains `/merge`
 - only run when the issue is actually a pull request
-- keep `require-actor-push-permission: 'true'`
+- keep `minimum-reviewer-permission: 'admin'`
 - use `comment: always` so the PR gets visible feedback
 
 ### Security note
@@ -246,7 +246,7 @@ Keep this input enabled:
 
 ```yaml
 with:
-  require-actor-push-permission: 'true'
+  minimum-reviewer-permission: 'admin'
 ```
 
 That makes the action verify that the user who triggered the workflow has push access to the target repository before it performs the fast-forward.
@@ -280,7 +280,7 @@ jobs:
           base-branch: main
           head-branch-prefix: monochange/release/
           required-failing-check: release-pr-manual-merge-blocker
-          require-actor-push-permission: 'true'
+          minimum-reviewer-permission: 'admin'
           comment: always
 ```
 
@@ -382,24 +382,24 @@ with:
 
 ### Shared merge inputs
 
-| Input                           | Required | Default                           | Description                                                                                                                                       |
-| ------------------------------- | -------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `github-token`                  | no       | `${{ github.token }}`             | Token used for GitHub API calls and the final git push.                                                                                           |
-| `repository`                    | no       | `${{ github.repository }}`        | Target repository in `owner/repo` format.                                                                                                         |
-| `pull-request`                  | no       | empty                             | Explicit PR number. Must be a positive integer when provided.                                                                                     |
-| `base-branch`                   | no       | `main`                            | Expected base branch for the release PR.                                                                                                          |
-| `head-branch-prefix`            | no       | `monochange/release/`             | Required prefix for the release PR head branch.                                                                                                   |
-| `required-failing-check`        | no       | `release-pr-manual-merge-blocker` | Name of the intentionally failing blocker check. Pass an empty string to disable this special rule.                                               |
-| `allow-cross-repository`        | no       | `'false'`                         | Whether pull requests from forks are allowed.                                                                                                     |
-| `require-green-checks`          | no       | `'true'`                          | Whether all checks must be complete and successful apart from the configured blocker check.                                                       |
-| `require-actor-push-permission` | no       | `'true'`                          | Whether the triggering actor must have push permission on the target repository. Strongly recommended for comment-triggered workflows.            |
-| `comment`                       | no       | `on-error`                        | Whether to post a pull request comment: `always`, `never`, or `on-error`.                                                                         |
-| `dry-run`                       | no       | `'false'`                         | Validate everything without updating the base branch.                                                                                             |
-| `update-branch-on-failure`      | no       | `'false'`                         | When true, rebase the head branch onto the latest base branch and force-push it instead of failing when fast-forward is not possible.             |
-| `post-update-script`            | no       | empty                             | Optional shell command to run after a successful rebase and force-push, before the fast-forward merge. Runs in the temp git workspace.            |
-| `post-update-workflow`          | no       | empty                             | Optional workflow file path to dispatch via `workflow_dispatch` after a successful rebase and force-push. Requires `actions: write` permission.   |
-| `trigger-command`               | no       | `/merge`                          | Slash command that triggers this action when posted as a pull request comment. Only validated when the workflow runs from an issue_comment event. |
-| `debug`                         | no       | `'false'`                         | Emit extra debug logging.                                                                                                                         |
+| Input                         | Required | Default                           | Description                                                                                                                                                       |
+| ----------------------------- | -------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `github-token`                | no       | `${{ github.token }}`             | Token used for GitHub API calls and the final git push.                                                                                                           |
+| `repository`                  | no       | `${{ github.repository }}`        | Target repository in `owner/repo` format.                                                                                                                         |
+| `pull-request`                | no       | empty                             | Explicit PR number. Must be a positive integer when provided.                                                                                                     |
+| `base-branch`                 | no       | `main`                            | Expected base branch for the release PR.                                                                                                                          |
+| `head-branch-prefix`          | no       | `monochange/release/`             | Required prefix for the release PR head branch.                                                                                                                   |
+| `required-failing-check`      | no       | `release-pr-manual-merge-blocker` | Name of the intentionally failing blocker check. Pass an empty string to disable this special rule.                                                               |
+| `allow-cross-repository`      | no       | `'false'`                         | Whether pull requests from forks are allowed.                                                                                                                     |
+| `require-green-checks`        | no       | `'true'`                          | Whether all checks must be complete and successful apart from the configured blocker check.                                                                       |
+| `minimum-reviewer-permission` | no       | `admin`                           | Minimum repository role required to trigger the merge. `admin` (default), `maintain`, or `push` (insecure). Strongly recommended for comment-triggered workflows. |
+| `comment`                     | no       | `on-error`                        | Whether to post a pull request comment: `always`, `never`, or `on-error`.                                                                                         |
+| `dry-run`                     | no       | `'false'`                         | Validate everything without updating the base branch.                                                                                                             |
+| `update-branch-on-failure`    | no       | `'false'`                         | When true, rebase the head branch onto the latest base branch and force-push it instead of failing when fast-forward is not possible.                             |
+| `post-update-script`          | no       | empty                             | Optional shell command to run after a successful rebase and force-push, before the fast-forward merge. Runs in the temp git workspace.                            |
+| `post-update-workflow`        | no       | empty                             | Optional workflow file path to dispatch via `workflow_dispatch` after a successful rebase and force-push. Requires `actions: write` permission.                   |
+| `trigger-command`             | no       | `/merge`                          | Slash command that triggers this action when posted as a pull request comment. Only validated when the workflow runs from an issue_comment event.                 |
+| `debug`                       | no       | `'false'`                         | Emit extra debug logging.                                                                                                                                         |
 
 ---
 

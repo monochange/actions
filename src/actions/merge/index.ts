@@ -30,7 +30,7 @@ type MergeInputs = {
   postUpdateWorkflow: string | undefined;
   pullRequestNumber: number | undefined;
   repository: string;
-  requireActorPushPermission: boolean;
+  minimumReviewerPermission: 'admin' | 'maintain' | 'push';
   requireGreenChecks: boolean;
   requiredFailingCheck: string | undefined;
   triggerCommand: string;
@@ -222,14 +222,13 @@ export async function runMerge(): Promise<void> {
       throw new Error(checkEvaluation.errors.join(' '));
     }
 
-    if (inputs.requireActorPushPermission) {
-      await ensureActorPushPermission({
-        actor: github.context.actor,
-        octokit,
-        owner,
-        repo,
-      });
-    }
+    await ensureActorPermission({
+      actor: github.context.actor,
+      minimumPermission: inputs.minimumReviewerPermission,
+      octokit,
+      owner,
+      repo,
+    });
 
     if (inputs.dryRun) {
       commentBody = buildCommentBody({
@@ -363,7 +362,9 @@ function readInputs(): MergeInputs {
     postUpdateWorkflow: getOptionalInput('post-update-workflow'),
     pullRequestNumber: parsePullRequestNumber(pullRequest),
     repository: core.getInput('repository', { required: true }).trim(),
-    requireActorPushPermission: getBooleanInput('require-actor-push-permission'),
+    minimumReviewerPermission: normalizeMinimumReviewerPermission(
+      core.getInput('minimum-reviewer-permission', { required: true }).trim(),
+    ),
     requireGreenChecks: getBooleanInput('require-green-checks'),
     requiredFailingCheck,
     triggerCommand: core.getInput('trigger-command', { required: true }).trim(),
@@ -387,6 +388,18 @@ function parsePullRequestNumber(input: string | undefined): number | undefined {
   }
 
   return value;
+}
+
+function normalizeMinimumReviewerPermission(input: string): 'admin' | 'maintain' | 'push' {
+  const value = input.toLowerCase().trim();
+
+  if (value === 'admin' || value === 'maintain' || value === 'push') {
+    return value;
+  }
+
+  throw new Error(
+    `Input \`minimum-reviewer-permission\` must be one of admin, maintain, or push. Received \`${input}\`.`,
+  );
 }
 
 async function resolvePullRequest(options: {
@@ -812,23 +825,37 @@ async function dispatchPostUpdateWorkflow(options: {
   });
 }
 
-async function ensureActorPushPermission(options: {
+async function ensureActorPermission(options: {
   actor: string;
+  minimumPermission: 'admin' | 'maintain' | 'push';
   octokit: Octokit;
   owner: string;
   repo: string;
 }): Promise<void> {
-  const { actor, octokit, owner, repo } = options;
+  const { actor, minimumPermission, octokit, owner, repo } = options;
 
   const response = await octokit.rest.repos.getCollaboratorPermissionLevel({
     owner,
     repo,
     username: actor,
   });
-  const permission = response.data.permission;
 
-  if (!['admin', 'maintain', 'write'].includes(permission)) {
-    throw new Error(`Actor @${actor} does not have push permission for ${owner}/${repo}.`);
+  // Use role_name for precise role checking. GitHub maps roles to permission levels:
+  // admin → permission: "admin"
+  // maintain → permission: "write" (but role_name: "maintain")
+  // write → permission: "write" (role_name: "write")
+  const roleName = response.data.role_name;
+
+  const allowedRoles: Record<'admin' | 'maintain' | 'push', string[]> = {
+    admin: ['admin'],
+    maintain: ['admin', 'maintain'],
+    push: ['admin', 'maintain', 'write'],
+  };
+
+  if (!allowedRoles[minimumPermission].includes(roleName)) {
+    throw new Error(
+      `Actor @${actor} has role \`${roleName}\` on ${owner}/${repo}, but the action requires at least \`${minimumPermission}\`.`,
+    );
   }
 }
 
