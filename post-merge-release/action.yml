@@ -1,0 +1,35 @@
+name: post-merge-release
+description: 'After a release PR merges, tag the release and publish packages.'
+author: monochange
+inputs:
+  setup-monochange:
+    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
+    required: false
+    default: 'true'
+  ref:
+    description: 'Git ref to inspect for a release record.'
+    required: false
+    default: 'HEAD'
+  target-branch:
+    description: 'Target branch the release PR merged into.'
+    required: false
+  dry-run:
+    description: 'Show what would be done without tagging or publishing.'
+    required: false
+    default: 'false'
+  debug:
+    description: 'Enable extra debug logging.'
+    required: false
+    default: 'false'
+outputs:
+  result:
+    description: 'success, skipped, dry-run, or failed.'
+  tagged:
+    description: 'Whether tags were created.'
+  published:
+    description: 'Whether packages were published.'
+  json:
+    description: 'Release record JSON.'
+runs:
+  using: node24
+  main: ../dist/index.mjs

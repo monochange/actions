@@ -1,0 +1,43 @@
+name: changeset-policy
+description: 'Run mc affected to verify changeset policy for the current pull request.'
+author: monochange
+inputs:
+  setup-monochange:
+    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
+    required: false
+    default: 'true'
+  github-token:
+    description: 'GitHub token used to inspect pull request labels and files.'
+    required: false
+    default: ${{ github.token }}
+  changed-paths:
+    description: 'Comma-separated list of changed paths to check.'
+    required: false
+  labels:
+    description: 'Comma-separated list of labels to consider.'
+    required: false
+  skip-labels:
+    description: 'Comma-separated list of labels that skip changeset requirements.'
+    required: false
+  comment-on-failure:
+    description: 'Whether to post a PR comment when the policy check fails.'
+    required: false
+    default: 'false'
+  dry-run:
+    description: 'Validate without posting comments or failing.'
+    required: false
+    default: 'false'
+  debug:
+    description: 'Enable extra debug logging.'
+    required: false
+    default: 'false'
+outputs:
+  result:
+    description: 'success, dry-run, or failed.'
+  json:
+    description: 'Raw JSON output from mc affected.'
+  summary:
+    description: 'Text summary of affected packages.'
+runs:
+  using: node24
+  main: ../dist/index.mjs

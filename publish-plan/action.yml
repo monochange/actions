@@ -1,0 +1,38 @@
+name: publish-plan
+description: 'Run mc publish-plan and expose the plan as JSON, summary, and CI snippet outputs.'
+author: monochange
+inputs:
+  setup-monochange:
+    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
+    required: false
+    default: 'true'
+  format:
+    description: 'Output format for the publish plan.'
+    required: false
+    default: 'json'
+  mode:
+    description: 'Plan mode: full or single-window.'
+    required: false
+    default: 'full'
+  ci:
+    description: 'CI provider name for snippet generation.'
+    required: false
+  package:
+    description: 'Comma-separated list of package names to scope the plan.'
+    required: false
+  debug:
+    description: 'Enable extra debug logging.'
+    required: false
+    default: 'false'
+outputs:
+  result:
+    description: 'success or failed.'
+  json:
+    description: 'Full JSON publish plan.'
+  summary:
+    description: 'Text summary of the publish plan.'
+  fits-single-window:
+    description: 'Whether the plan fits in a single window (mode=single-window only).'
+runs:
+  using: node24
+  main: ../dist/index.mjs
