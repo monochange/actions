@@ -35,8 +35,23 @@ jobs:
       - name: check
         run: pnpm check
 
-      - name: test
-        run: pnpm test
+      - name: test with coverage
+        run: pnpm test -- --coverage
 
       - name: build
         run: pnpm build
+
+      - name: verify dist is up to date
+        run: |
+          if [ -n "$(git status --porcelain dist/)" ]; then
+            echo "::error::dist/ is out of date. Run 'pnpm build' and commit the changes."
+            git diff --stat dist/
+            exit 1
+          fi
+
+      - name: upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/

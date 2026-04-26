@@ -4,41 +4,50 @@ GitHub Actions for monochange release automation.
 
 This repository exists so monochange can own the critical parts of its workflow instead of depending directly on third-party actions, while still preserving the behavior that matters for release pull requests.
 
-The first action in this repository is `merge`.
-
-It is intentionally modeled after [`sequoia-pgp/fast-forward`](https://github.com/sequoia-pgp/fast-forward): it performs a **fast-forward-only** update of the base branch so the release commit lands unchanged.
-
-That means it does **not** create a merge commit.
-
 ## What is in this repository?
 
-Currently implemented:
+Currently implemented variants:
 
-- `merge` — fast-forward a monochange release pull request onto its base branch
+| Variant                                     | Purpose                                                             | Path entrypoint                            |
+| ------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------ |
+| [`merge`](#merge)                           | Fast-forward a monochange release pull request onto its base branch | `monochange/actions/merge@v0`              |
+| [`setup-monochange`](#setup-monochange)     | Resolve or install the monochange CLI                               | `monochange/actions/setup-monochange@v0`   |
+| [`changeset-policy`](#changeset-policy)     | Run `mc affected` to verify changeset policy                        | `monochange/actions/changeset-policy@v0`   |
+| [`release-pr`](#release-pr)                 | Create or update the release pull request                           | `monochange/actions/release-pr@v0`         |
+| [`publish-plan`](#publish-plan)             | Generate a publish plan from monochange                             | `monochange/actions/publish-plan@v0`       |
+| [`post-merge-release`](#post-merge-release) | Tag and publish after a release PR merges                           | `monochange/actions/post-merge-release@v0` |
 
-Public entrypoints:
+All variants are also available through the root action with the `name` input:
 
-- `monochange/actions@v0.1.0` with `name: merge`
-- `monochange/actions/merge@v0.1.0`
-
-Both entrypoints run the same implementation.
-
-### Planned next variants
-
-The next monochange-specific variants are tracked in [`docs/monochange-action-variants-plan.md`](docs/monochange-action-variants-plan.md).
-They are planned around a shared `setup-monochange` input so every variant can auto-resolve monochange before it runs.
-
-Open implementation issues:
-
-- [#1 `setup-monochange`](https://github.com/monochange/actions/issues/1)
-- [#2 `changeset-policy`](https://github.com/monochange/actions/issues/2)
-- [#3 `release-pr`](https://github.com/monochange/actions/issues/3)
-- [#4 `publish-plan`](https://github.com/monochange/actions/issues/4)
-- [#5 `post-merge-release`](https://github.com/monochange/actions/issues/5)
+```yaml
+uses: monochange/actions@v0
+with:
+  name: merge
+```
 
 ---
 
-## Why monochange needs this
+## Shared inputs
+
+Every variant supports these common inputs:
+
+| Input              | Required | Default   | Description                                                                                                                  |
+| ------------------ | -------- | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `setup-monochange` | no       | `'true'`  | How to resolve monochange: `true` = auto-resolve, `false` = require existing `mc` on PATH, any other string = custom command |
+| `dry-run`          | no       | `'false'` | Validate everything without side effects                                                                                     |
+| `debug`            | no       | `'false'` | Emit extra debug logging                                                                                                     |
+
+The `setup-monochange` bootstrap is the first meaningful operation of every variant except `merge` (which does not need monochange).
+
+---
+
+## `merge`
+
+The `merge` action is intentionally modeled after [`sequoia-pgp/fast-forward`](https://github.com/sequoia-pgp/fast-forward): it performs a **fast-forward-only** update of the base branch so the release commit lands unchanged.
+
+That means it does **not** create a merge commit.
+
+### Why monochange needs this
 
 monochange release pull requests are not ordinary feature PRs.
 
@@ -55,13 +64,11 @@ The `merge` action exists to:
 
 - preserve the release commit SHA
 - keep branch history compatible with monochange release expectations
-- allow a deliberate “manual merge blocker” check pattern
+- allow a deliberate "manual merge blocker" check pattern
 - support slash-command style approval flows such as `/fast-forward`
 - keep the merge policy inside your own GitHub Actions repository
 
----
-
-## How the `merge` action works
+### How the `merge` action works
 
 At a high level, the action:
 
@@ -82,512 +89,244 @@ git push origin <pr-head-sha>:refs/heads/<base-branch>
 
 —but only after the action has verified that this is a legal fast-forward update.
 
-### Important consequence
+**Important consequence:** If the release branch has diverged from the base branch, the action fails. It will not create a merge commit and it will not force-push around divergence. That is intentional.
 
-If the release branch has diverged from the base branch, the action fails.
-
-It will not create a merge commit and it will not force-push around divergence.
-
-That is intentional.
-
----
-
-## Available entrypoints
-
-### Root action with variant dispatch
-
-Use this when you want a single repository-level action entrypoint.
-
-```yaml
-uses: monochange/actions@v0.1.0
-with:
-  name: merge
-```
-
-### Path-based action
-
-Use this when you want a dedicated merge action entrypoint.
-
-```yaml
-uses: monochange/actions/merge@v0.1.0
-```
-
-For most consumers, the path-based form is the clearest choice.
-
----
-
-## Quick start
-
-### Simplest usage
+### Quick start
 
 ```yaml
 - name: fast-forward release PR
-  uses: monochange/actions/merge@v0.1.0
+  uses: monochange/actions/merge@v0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
 ```
 
-### Root-entrypoint equivalent
+### Inputs
+
+| Input                           | Required | Default                           | Description                                         |
+| ------------------------------- | -------- | --------------------------------- | --------------------------------------------------- |
+| `github-token`                  | no       | `${{ github.token }}`             | Token for GitHub API and the final git push         |
+| `repository`                    | no       | `${{ github.repository }}`        | Target repository in `owner/repo` format            |
+| `pull-request`                  | no       | —                                 | Explicit PR number, must be a positive integer      |
+| `base-branch`                   | no       | `main`                            | Expected base branch for the release PR             |
+| `head-branch-prefix`            | no       | `monochange/release/`             | Required prefix for the release PR head branch      |
+| `required-failing-check`        | no       | `release-pr-manual-merge-blocker` | Name of the intentionally failing blocker check     |
+| `allow-cross-repository`        | no       | `'false'`                         | Whether PRs from forks are allowed                  |
+| `require-green-checks`          | no       | `'true'`                          | Whether all checks must pass except the blocker     |
+| `require-actor-push-permission` | no       | `'true'`                          | Whether the triggering actor needs push access      |
+| `comment`                       | no       | `on-error`                        | Post a PR comment: `always`, `never`, or `on-error` |
+| `dry-run`                       | no       | `'false'`                         | Validate without updating the base branch           |
+| `debug`                         | no       | `'false'`                         | Emit extra debug logging                            |
+
+### Outputs
+
+| Output                | Description                                     |
+| --------------------- | ----------------------------------------------- |
+| `result`              | `fast-forwarded`, `dry-run`, or `failed`        |
+| `merged`              | `'true'` when a fast-forward was performed      |
+| `pull-request-number` | Resolved PR number                              |
+| `pull-request-url`    | Resolved PR URL                                 |
+| `base-sha`            | Base branch SHA before push                     |
+| `head-sha`            | Head SHA used for validation                    |
+| `fast-forward-sha`    | SHA pushed to the base branch                   |
+| `comment`             | JSON with a `body` field containing the summary |
+
+### Ready-to-copy workflow
+
+See [`.github/workflows/release-pr-merge.yml`](.github/workflows/release-pr-merge.yml) for a complete example that supports both `workflow_dispatch` and `/fast-forward` comment triggers.
+
+---
+
+## `setup-monochange`
+
+Resolve or install the monochange CLI and expose its resolved command, version, and source.
+
+This variant also powers the shared bootstrap used by every other monochange-dependent variant, so it is useful both as a standalone setup step and as the internal mechanism other actions rely on.
+
+### Quick start
 
 ```yaml
-- name: fast-forward release PR
-  uses: monochange/actions@v0.1.0
+- name: setup monochange
+  uses: monochange/actions/setup-monochange@v0
+```
+
+### Inputs
+
+| Input              | Required | Default   | Description                                                                       |
+| ------------------ | -------- | --------- | --------------------------------------------------------------------------------- |
+| `setup-monochange` | no       | `'true'`  | `true` = auto-resolve, `false` = require existing, custom string = use as command |
+| `debug`            | no       | `'false'` | Enable extra debug logging                                                        |
+
+### Outputs
+
+| Output    | Description                                                                      |
+| --------- | -------------------------------------------------------------------------------- |
+| `command` | Resolved monochange command                                                      |
+| `version` | Resolved monochange version string                                               |
+| `source`  | Resolution source: `existing-mc`, `npx-shim`, `cargo-binstall`, `custom-command` |
+| `result`  | `success` or `failed`                                                            |
+
+---
+
+## `changeset-policy`
+
+Run `mc affected --format json --verify` to check changeset policy for the current pull request.
+
+This is the action variant that answers the question: **"does this PR satisfy monochange's changeset requirements?"**
+
+### Quick start
+
+```yaml
+- name: check changeset policy
+  uses: monochange/actions/changeset-policy@v0
   with:
-    name: merge
-    github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
+    setup-monochange: 'true'
 ```
+
+### Inputs
+
+| Input                | Required | Default               | Description                                   |
+| -------------------- | -------- | --------------------- | --------------------------------------------- |
+| `setup-monochange`   | no       | `'true'`              | How to resolve monochange                     |
+| `github-token`       | no       | `${{ github.token }}` | Token for PR inspection                       |
+| `changed-paths`      | no       | —                     | Comma-separated changed paths                 |
+| `labels`             | no       | —                     | Comma-separated labels to consider            |
+| `skip-labels`        | no       | —                     | Comma-separated labels that skip requirements |
+| `comment-on-failure` | no       | `'false'`             | Post a PR comment on failure                  |
+| `dry-run`            | no       | `'false'`             | Validate without side effects                 |
+| `debug`              | no       | `'false'`             | Enable extra debug logging                    |
+
+### Outputs
+
+| Output    | Description                       |
+| --------- | --------------------------------- |
+| `result`  | `success`, `dry-run`, or `failed` |
+| `json`    | Raw JSON from `mc affected`       |
+| `summary` | Text summary of affected packages |
 
 ---
 
-## Ready-to-copy workflow
+## `release-pr`
 
-This repository includes a ready-to-copy example workflow at:
+Create or update the release pull request using `mc release-pr`.
 
-- [`.github/workflows/release-pr-merge.yml`](.github/workflows/release-pr-merge.yml)
+This action produces a machine-readable release PR and exposes its metadata as outputs for downstream workflows.
 
-It supports both:
-
-- `workflow_dispatch`
-- `/fast-forward` PR comments via `issue_comment`
-
-### What the example workflow does
-
-- lets a maintainer manually dispatch a release merge
-- optionally accepts a PR number
-- also listens for `/fast-forward` comments on pull requests
-- uses a dedicated token such as `RELEASE_PR_MERGE_TOKEN`
-- keeps `require-actor-push-permission: 'true'` enabled for safety
-
-### Example file contents
+### Quick start
 
 ```yaml
-name: release PR merge
-
-on:
-  workflow_dispatch:
-    inputs:
-      pull_request:
-        description: Optional release PR number. Leave empty to auto-detect the single open release PR.
-        required: false
-        type: string
-      comment:
-        description: Whether the action should post a pull request comment.
-        required: false
-        default: on-error
-        type: choice
-        options:
-          - always
-          - on-error
-          - never
-  issue_comment:
-    types:
-      - created
-
-concurrency:
-  group: release-pr-merge-${{ github.event.issue.number || inputs.pull_request || github.ref_name }}
-  cancel-in-progress: false
-
-jobs:
-  merge-release-pr:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event_name == 'issue_comment' &&
-        github.event.issue.pull_request &&
-        contains(github.event.comment.body, '/fast-forward')
-      )
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      checks: read
-      statuses: read
-    steps:
-      - name: fast-forward release PR from workflow dispatch
-        if: github.event_name == 'workflow_dispatch'
-        uses: monochange/actions/merge@v0.1.0
-        with:
-          github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-          pull-request: ${{ inputs.pull_request }}
-          base-branch: main
-          head-branch-prefix: monochange/release/
-          required-failing-check: release-pr-manual-merge-blocker
-          require-actor-push-permission: 'true'
-          comment: ${{ inputs.comment }}
-
-      - name: fast-forward release PR from /fast-forward comment
-        if: github.event_name == 'issue_comment'
-        uses: monochange/actions/merge@v0.1.0
-        with:
-          github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-          base-branch: main
-          head-branch-prefix: monochange/release/
-          required-failing-check: release-pr-manual-merge-blocker
-          require-actor-push-permission: 'true'
-          comment: always
-```
-
----
-
-## `/fast-forward` comment trigger
-
-If you want behavior close to the original fast-forward workflow pattern, use an `issue_comment` trigger and ask maintainers to comment:
-
-```text
-/fast-forward
-```
-
-on the release pull request.
-
-### Recommended pattern
-
-The recommended pattern is:
-
-- listen to `issue_comment`
-- only run when the comment body contains `/fast-forward`
-- only run when the issue is actually a pull request
-- keep `require-actor-push-permission: 'true'`
-- use `comment: always` so the PR gets visible feedback
-
-### Security note
-
-`issue_comment` workflows run in the base repository context, so they can see repository secrets.
-
-Because of that, you should **not** rely on the slash command match alone.
-
-Keep this input enabled:
-
-```yaml
-with:
-  require-actor-push-permission: 'true'
-```
-
-That makes the action verify that the user who triggered the workflow has push access to the target repository before it performs the fast-forward.
-
-### Minimal slash-command example
-
-```yaml
-name: release PR merge
-
-on:
-  issue_comment:
-    types:
-      - created
-
-jobs:
-  merge-release-pr:
-    if: >-
-      github.event.issue.pull_request &&
-      contains(github.event.comment.body, '/fast-forward')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      checks: read
-      statuses: read
-    steps:
-      - name: fast-forward release PR
-        uses: monochange/actions/merge@v0.1.0
-        with:
-          github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-          base-branch: main
-          head-branch-prefix: monochange/release/
-          required-failing-check: release-pr-manual-merge-blocker
-          require-actor-push-permission: 'true'
-          comment: always
-```
-
----
-
-## Pull request resolution
-
-The action resolves the pull request in this order:
-
-1. `pull-request` input, if provided
-2. the current GitHub event payload, if the workflow runs in a PR or PR-comment context
-3. auto-detection of a single open PR targeting `base-branch` whose head branch starts with `head-branch-prefix`
-
-This makes the action work well for:
-
-- `workflow_dispatch`
-- `pull_request`
-- `issue_comment`
-- automation that expects exactly one open release PR
-
-If auto-detection finds zero or multiple matching PRs, the action fails rather than guessing.
-
----
-
-## Check policy
-
-By default, the action enforces a monochange-friendly release PR policy.
-
-It requires:
-
-- no pending checks
-- no cancelled checks
-- no unexpected failing checks
-- exactly one intentionally failing check named `release-pr-manual-merge-blocker`
-
-This supports the common pattern where a blocker check exists only to stop humans from using GitHub's merge button directly.
-
-### Disable strict green-check enforcement
-
-```yaml
-with:
-  require-green-checks: 'false'
-```
-
-### Disable the special failing-check expectation
-
-```yaml
-with:
-  required-failing-check: ''
-```
-
----
-
-## Permissions and token requirements
-
-Minimum recommended workflow permissions:
-
-```yaml
-permissions:
-  contents: write
-  pull-requests: write
-  checks: read
-  statuses: read
-```
-
-### Why `pull-requests: write`?
-
-The action may post a pull request comment depending on the `comment` mode.
-
-If you always use `comment: never`, you may not need that permission, but keeping it is usually simplest.
-
-### Recommended token setup
-
-In most real repositories, the default `github.token` is not enough for protected branch fast-forwarding.
-
-Recommended setup:
-
-- create a dedicated token or GitHub App installation token
-- store it as `RELEASE_PR_MERGE_TOKEN`
-- allow it to update the protected base branch
-- use that secret for this action
-
-Example:
-
-```yaml
-with:
-  github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-```
-
----
-
-## Inputs
-
-### Root action only
-
-| Input  | Required | Default | Description                                          |
-| ------ | -------- | ------- | ---------------------------------------------------- |
-| `name` | yes      | none    | Action variant to run. Currently supported: `merge`. |
-
-### Shared merge inputs
-
-| Input                           | Required | Default                           | Description                                                                                                                            |
-| ------------------------------- | -------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `github-token`                  | no       | `${{ github.token }}`             | Token used for GitHub API calls and the final git push.                                                                                |
-| `repository`                    | no       | `${{ github.repository }}`        | Target repository in `owner/repo` format.                                                                                              |
-| `pull-request`                  | no       | empty                             | Explicit PR number. Must be a positive integer when provided.                                                                          |
-| `base-branch`                   | no       | `main`                            | Expected base branch for the release PR.                                                                                               |
-| `head-branch-prefix`            | no       | `monochange/release/`             | Required prefix for the release PR head branch.                                                                                        |
-| `required-failing-check`        | no       | `release-pr-manual-merge-blocker` | Name of the intentionally failing blocker check. Pass an empty string to disable this special rule.                                    |
-| `allow-cross-repository`        | no       | `'false'`                         | Whether pull requests from forks are allowed.                                                                                          |
-| `require-green-checks`          | no       | `'true'`                          | Whether all checks must be complete and successful apart from the configured blocker check.                                            |
-| `require-actor-push-permission` | no       | `'true'`                          | Whether the triggering actor must have push permission on the target repository. Strongly recommended for comment-triggered workflows. |
-| `comment`                       | no       | `on-error`                        | Whether to post a pull request comment: `always`, `never`, or `on-error`.                                                              |
-| `dry-run`                       | no       | `'false'`                         | Validate everything without updating the base branch.                                                                                  |
-| `debug`                         | no       | `'false'`                         | Emit extra debug logging.                                                                                                              |
-
----
-
-## Outputs
-
-| Output                | Description                                                                           |
-| --------------------- | ------------------------------------------------------------------------------------- |
-| `result`              | Final result. Currently `fast-forwarded`, `dry-run`, or `failed`.                     |
-| `merged`              | `'true'` when a fast-forward update was performed, otherwise `'false'`.               |
-| `pull-request-number` | Resolved PR number.                                                                   |
-| `pull-request-url`    | Resolved PR URL.                                                                      |
-| `base-sha`            | Base branch SHA before validation/push.                                               |
-| `head-sha`            | Head SHA used for validation.                                                         |
-| `fast-forward-sha`    | The SHA pushed to the base branch, or the candidate SHA reported during dry-run mode. |
-| `comment`             | JSON string with a `body` field containing the summary comment text.                  |
-
-### Example: consume outputs
-
-```yaml
-- name: fast-forward release PR
-  id: merge
-  uses: monochange/actions/merge@v0.1.0
+- name: create release PR
+  uses: monochange/actions/release-pr@v0
   with:
-    github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-
-- name: print results
-  run: |
-    echo "result=${{ steps.merge.outputs.result }}"
-    echo "merged=${{ steps.merge.outputs.merged }}"
-    echo "pr=${{ steps.merge.outputs.pull-request-number }}"
-    echo "url=${{ steps.merge.outputs.pull-request-url }}"
-    echo "base_sha=${{ steps.merge.outputs.base-sha }}"
-    echo "head_sha=${{ steps.merge.outputs.head-sha }}"
-    echo "ff_sha=${{ steps.merge.outputs.fast-forward-sha }}"
-    echo '${{ steps.merge.outputs.comment }}'
+    setup-monochange: 'true'
+    github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+### Inputs
+
+| Input               | Required | Default   | Description                  |
+| ------------------- | -------- | --------- | ---------------------------- |
+| `setup-monochange`  | no       | `'true'`  | How to resolve monochange    |
+| `format`            | no       | `json`    | Output format                |
+| `dry-run`           | no       | `'false'` | Show without creating        |
+| `github-token`      | no       | —         | GitHub token for PR creation |
+| `working-directory` | no       | `.`       | Working directory            |
+| `debug`             | no       | `'false'` | Enable extra debug logging   |
+
+### Outputs
+
+| Output                   | Description                       |
+| ------------------------ | --------------------------------- |
+| `result`                 | `success`, `dry-run`, or `failed` |
+| `head-branch`            | Release PR head branch            |
+| `base-branch`            | Release PR base branch            |
+| `release-request-number` | PR number                         |
+| `release-request-url`    | PR URL                            |
+| `json`                   | Full JSON metadata                |
 
 ---
 
-## Common usage patterns
+## `publish-plan`
 
-### Auto-detect the only open release PR
+Run `mc publish-plan` and expose the plan as JSON, summary, and CI outputs.
 
-```yaml
-- uses: monochange/actions/merge@v0.1.0
-  with:
-    github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-```
+This variant is **read-only**: it never changes anything in the repository. It is safe to run on every push or PR.
 
-### Fast-forward a specific PR number
+### Quick start
 
 ```yaml
-- uses: monochange/actions/merge@v0.1.0
+- name: generate publish plan
+  uses: monochange/actions/publish-plan@v0
   with:
-    github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-    pull-request: '123'
+    setup-monochange: 'true'
+    mode: full
 ```
 
-### Dry-run validation only
+### Inputs
 
-```yaml
-- uses: monochange/actions/merge@v0.1.0
-  with:
-    github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-    dry-run: 'true'
-```
+| Input              | Required | Default   | Description                          |
+| ------------------ | -------- | --------- | ------------------------------------ |
+| `setup-monochange` | no       | `'true'`  | How to resolve monochange            |
+| `format`           | no       | `json`    | Output format                        |
+| `mode`             | no       | `full`    | Plan mode: `full` or `single-window` |
+| `ci`               | no       | —         | CI provider for snippet generation   |
+| `package`          | no       | —         | Comma-separated package filters      |
+| `debug`            | no       | `'false'` | Enable extra debug logging           |
 
-### Always post a PR comment
+### Outputs
 
-```yaml
-- uses: monochange/actions/merge@v0.1.0
-  with:
-    github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-    comment: always
-```
-
-### Allow cross-repository PRs
-
-```yaml
-- uses: monochange/actions/merge@v0.1.0
-  with:
-    github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-    allow-cross-repository: 'true'
-```
+| Output               | Description                           |
+| -------------------- | ------------------------------------- |
+| `result`             | `success` or `failed`                 |
+| `json`               | Full JSON publish plan                |
+| `summary`            | Text summary                          |
+| `fits-single-window` | Whether the plan fits a single window |
 
 ---
 
-## Failure modes and troubleshooting
+## `post-merge-release`
 
-### “Expected exactly one open release pull request...”
+After a release PR merges, detect the release record, create tags, and publish packages.
 
-Auto-detection found zero or multiple matching PRs.
+This variant intentionally does **not** hardcode `main` as the target branch. It operates on the actual target branch or configured branch input, relying on release-record detection and git reachability.
 
-Fixes:
+### Quick start
 
-- pass `pull-request` explicitly
-- close extra release PRs
-- tighten `base-branch`
-- tighten `head-branch-prefix`
-
-### “Pull request still has pending checks...”
-
-Some checks have not completed yet.
-
-Fixes:
-
-- wait for CI to finish
-- disable strict enforcement with `require-green-checks: 'false'` if that matches your policy
-
-### “Expected exactly one failing check named ...”
-
-The blocker-check expectation did not match the repository's real check set.
-
-Fixes:
-
-- keep the blocker check name aligned with your workflow
-- set `required-failing-check: ''` to disable the special-case rule
-
-### “Cannot fast-forward ... is not a direct ancestor ...”
-
-The base branch advanced or the release branch diverged.
-
-Fixes:
-
-- rebase or regenerate the release branch
-- re-run the workflow after the release PR head is updated
-
-### “Actor @... does not have push permission ...”
-
-The user who triggered the workflow does not have write-level access.
-
-Fixes:
-
-- have a maintainer trigger the workflow
-- keep this check enabled for slash-command workflows
-- disable it only if you deliberately trust another gating mechanism
-
-### “Fast-forward push failed ...”
-
-The final push was rejected.
-
-Common reasons:
-
-- the base branch advanced after validation
-- the token cannot update the protected branch
-- branch protection still blocks the push
-
-Fixes:
-
-- re-run the workflow
-- verify branch protection bypass rules for the token
-- use a dedicated `RELEASE_PR_MERGE_TOKEN`
-
----
-
-## Suggested monochange workflow shape
-
-A typical monochange setup looks like this:
-
-1. CI runs on `main` and keeps the release PR refreshed.
-2. The release PR targets `main` and uses a branch like `monochange/release/...`.
-3. A dedicated blocker check fails intentionally to stop UI merges.
-4. A maintainer runs the merge workflow or comments `/fast-forward`.
-5. This action validates the PR and fast-forwards `main` to the release commit.
-6. The release commit lands unchanged.
-
----
-
-## Repository layout
-
-```text
-action.yml                              # root action entrypoint
-merge/action.yml                        # path-based merge entrypoint
-.github/workflows/release-pr-merge.yml  # ready-to-copy workflow example
-src/main.ts                             # variant dispatcher
-src/actions/merge/                      # merge implementation
-src/shared/                             # shared helpers
-dist/index.mjs                          # published bundle
+```yaml
+- name: post-merge release
+  uses: monochange/actions/post-merge-release@v0
+  with:
+    setup-monochange: 'true'
 ```
+
+### Inputs
+
+| Input              | Required | Default   | Description                              |
+| ------------------ | -------- | --------- | ---------------------------------------- |
+| `setup-monochange` | no       | `'true'`  | How to resolve monochange                |
+| `ref`              | no       | `HEAD`    | Git ref to inspect for a release record  |
+| `target-branch`    | no       | —         | Target branch the release PR merged into |
+| `dry-run`          | no       | `'false'` | Show without tagging or publishing       |
+| `debug`            | no       | `'false'` | Enable extra debug logging               |
+
+### Outputs
+
+| Output      | Description                                  |
+| ----------- | -------------------------------------------- |
+| `result`    | `success`, `skipped`, `dry-run`, or `failed` |
+| `tagged`    | Whether tags were created                    |
+| `published` | Whether packages were published              |
+| `json`      | Release record JSON                          |
+
+### Behavior
+
+1. Resolves monochange through the shared bootstrap helper
+2. Inspects `mc release-record --from <ref> --format json`
+3. Detects whether the release commit is reachable from the target branch
+4. Skips cleanly when the commit is still only on the release PR branch
+5. Runs `mc tag-release --from <ref>`
+6. Runs `mc publish-release`
+
+The `publish-release` step is allowed to fail without failing the whole action, because publication may fail for network or registry reasons while tagging succeeded.
 
 ---
 
@@ -601,8 +340,6 @@ dist/index.mjs                          # published bundle
 - build/test toolchain: Vite+
 
 ### Install dependencies
-
-If this repository lives inside a larger pnpm workspace, this is often useful:
 
 ```bash
 pnpm install --ignore-workspace
@@ -618,53 +355,72 @@ pnpm build
 
 ### Commands
 
-| Command      | Purpose                    |
-| ------------ | -------------------------- |
-| `pnpm fmt`   | format files               |
-| `pnpm check` | format/lint/typecheck      |
-| `pnpm test`  | run tests                  |
-| `pnpm build` | build `dist/index.mjs`     |
-| `pnpm all`   | run check, test, and build |
+| Command                   | Purpose                        |
+| ------------------------- | ------------------------------ |
+| `pnpm fmt`                | format files                   |
+| `pnpm check`              | format, lint, and typecheck    |
+| `pnpm test`               | run tests                      |
+| `pnpm test -- --coverage` | run tests with coverage report |
+| `pnpm build`              | build `dist/index.mjs`         |
+| `pnpm all`                | run check, test, and build     |
+
+### Test coverage
+
+The repository enforces a minimum coverage threshold of **50%** across statements, branches, functions, and lines. Current coverage is well above this threshold.
+
+### Verify `dist/` before committing
+
+After `pnpm build`, make sure `dist/` is committed:
+
+```bash
+git add dist/
+```
+
+The CI workflow checks that `dist/` matches a fresh build and fails if it is stale.
 
 ---
 
 ## Publishing notes
 
-Like most JavaScript GitHub Actions repositories, this repository is meant to publish the compiled `dist/` bundle alongside the source.
+This repository is meant to publish the compiled `dist/` bundle alongside the source.
 
 When releasing:
 
 1. run `pnpm build`
 2. commit the updated `dist/`
-3. tag a release such as `v0.1.0`
-4. reference the action by tag or pinned SHA downstream
+3. tag a release such as `v0.2.0`
+4. update the moving `v0` tag to point to the same commit
+5. reference the action by tag downstream
 
-Examples:
+There are two consumption styles:
 
-```yaml
-uses: monochange/actions@v0.1.0
-```
+- root entrypoint with variant dispatch:
 
-```yaml
-uses: monochange/actions/merge@v0.1.0
-```
+  ```yaml
+  uses: monochange/actions@v0
+  with:
+    name: merge
+  ```
+
+- path-based entrypoint:
+
+  ```yaml
+  uses: monochange/actions/merge@v0
+  ```
 
 ---
 
-## Adding more actions later
+## Adding more variants
 
-This repository is intentionally structured for future action variants.
+To add a new variant later:
 
-To add one later:
-
-1. add `src/actions/<variant>/`
+1. add `src/actions/<variant>/` with `index.ts` and `index.test.ts`
 2. dispatch from `src/main.ts`
-3. document it here
-4. optionally expose `<variant>/action.yml`
-5. add tests
-6. rebuild `dist/`
+3. optionally expose `<variant>/action.yml` and `<variant>/README.md`
+4. add tests
+5. rebuild `dist/`
 
 That preserves both consumption styles:
 
-- `monochange/actions@v0.1.0` with `name: <variant>`
-- `monochange/actions/<variant>@v0.1.0`
+- `monochange/actions@v0` with `name: <variant>`
+- `monochange/actions/<variant>@v0`
