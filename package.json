@@ -13,13 +13,13 @@
   },
   "type": "module",
   "scripts": {
-    "check": "vp check",
-    "fmt": "vp fmt . --write",
-    "fmt:check": "vp fmt --check",
-    "lint": "vp lint",
+    "check": "tsgo -config tsconfig.json",
+    "fmt": "oxfmt --write .",
+    "fmt:check": "oxfmt --check .",
+    "lint": "oxlint .",
     "test": "vp test",
     "build": "vp pack",
-    "all": "pnpm check && pnpm test && pnpm build"
+    "all": "pnpm lint && pnpm fmt:check && pnpm check && pnpm test && pnpm build"
   },
   "dependencies": {
     "@actions/core": "^3.0.1",
@@ -27,8 +27,11 @@
     "@actions/github": "^9.1.1"
   },
   "devDependencies": {
+    "@rslint/tsgo": "^0.5.0",
     "@types/node": "^25.6.0",
     "@vitest/coverage-v8": "^4.1.5",
+    "oxfmt": "^0.46.0",
+    "oxlint": "^1.61.0",
     "typescript": "^6.0.3",
     "vite-plus": "^0.1.19",
     "vitest": "^4.1.5"
