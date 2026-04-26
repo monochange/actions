@@ -115,6 +115,33 @@ describe('runFailWhen', () => {
     expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('network'));
   });
 
+  it('handles comment failure with a non-Error gracefully', async () => {
+    mockCore.getInput.mockImplementation((name: string) => {
+      if (name === 'should-fail') return 'true';
+      if (name === 'reason') return 'test reason';
+      if (name === 'fail-comment') return 'fail comment';
+      if (name === 'repository') return 'monochange/actions';
+      if (name === 'github-token') return 'token';
+      return '';
+    });
+    mockGithub.context.payload = {
+      pull_request: { number: 5 },
+    };
+    mockGithub.getOctokit.mockReturnValue({
+      rest: {
+        issues: {
+          createComment: vi.fn().mockRejectedValue('network'),
+        },
+        pulls: {
+          get: vi.fn().mockResolvedValue({ data: { number: 5 } }),
+        },
+      },
+    } as unknown as ReturnType<typeof github.getOctokit>);
+
+    await expect(runFailWhen()).rejects.toThrow('test reason');
+    expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('network'));
+  });
+
   it('resolves PR from event payload', async () => {
     mockCore.getInput.mockImplementation((name: string) => {
       if (name === 'should-fail') return 'true';

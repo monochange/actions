@@ -115,7 +115,7 @@ async function resolveMonochange(setupInput) {
 async function getMcVersion(command, prefixArgs = []) {
 	const args = [...prefixArgs, "--version"];
 	if (command !== "mc") args.unshift(command);
-	const bin = args[0] ?? command;
+	const bin = args[0];
 	const binArgs = args.slice(1);
 	try {
 		const result = await exec(bin, binArgs, {
@@ -389,7 +389,7 @@ function normalizeCommentMode(input) {
 		case "never": return "never";
 		case "on-error":
 		case "": return "on-error";
-		default: throw new Error(`Input \`comment\` must be one of always, never, on-error, true, or false. Received \`${input ?? ""}\`.`);
+		default: throw new Error(`Input \`comment\` must be one of always, never, on-error, true, or false. Received \`${input}\`.`);
 	}
 }
 function shouldPostComment(mode, failed) {

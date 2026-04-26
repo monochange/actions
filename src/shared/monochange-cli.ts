@@ -86,7 +86,7 @@ async function getMcVersion(
     args.unshift(command);
   }
 
-  const bin = args[0] ?? command;
+  const bin = args[0]!;
   const binArgs = args.slice(1);
 
   try {

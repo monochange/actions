@@ -74,6 +74,14 @@ describe('runReleasePr', () => {
     expect(mockCore.setOutput).toHaveBeenCalledWith('release-request-number', '');
   });
 
+  it('outputs release-request-number when parsed number is a string', async () => {
+    mockParse.mockReturnValue({ number: '42' });
+
+    await runReleasePr();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('release-request-number', '42');
+  });
+
   it('sets GITHUB_TOKEN when provided', async () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'github-token') return 'secret-token';
@@ -95,6 +103,16 @@ describe('runReleasePr', () => {
 
     expect(mockExec).not.toHaveBeenCalled();
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'dry-run');
+  });
+
+  it('outputs empty values when parsed is undefined', async () => {
+    mockParse.mockReturnValue(undefined);
+
+    await runReleasePr();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('release-request-number', '');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('head-branch', '');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('base-branch', '');
   });
 
   it('throws when execRequired fails', async () => {
