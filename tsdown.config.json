@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/tsdown/schema.json",
+  "entry": { "index": "src/main.ts" },
+  "format": ["esm"],
+  "target": "node24",
+  "outDir": "dist",
+  "clean": true,
+  "sourcemap": true,
+  "platform": "node",
+  "treeshake": true,
+  "dts": false,
+  "minify": false,
+  "report": false
+}

@@ -22,7 +22,7 @@
     "lint": "oxlint --type-aware .",
     "lint:syntax": "oxlint .",
     "test": "vp test",
-    "build": "vp pack",
+    "build": "tsdown",
     "all": "pnpm lint && pnpm fmt:check && pnpm check && pnpm test && pnpm build"
   },
   "dependencies": {
@@ -37,6 +37,7 @@
     "oxfmt": "^0.46.0",
     "oxlint": "^1.61.0",
     "oxlint-tsgolint": "^0.22.0",
+    "tsdown": "^0.21.10",
     "typescript": "^6.0.3",
     "vite-plus": "^0.1.19",
     "vitest": "^4.1.5"
