@@ -1,0 +1,42 @@
+name: fail-when
+description: 'Fail a workflow when a condition is true, with optional PR comment.'
+author: monochange
+branding:
+  icon: x-circle
+  color: red
+inputs:
+  github-token:
+    description: 'GitHub token used for pull request comments.'
+    required: false
+    default: ${{ github.token }}
+  repository:
+    description: 'Target repository in owner/repo format.'
+    required: false
+    default: ${{ github.repository }}
+  pull-request:
+    description: 'Optional pull request number. Leave empty to use the current PR event context or auto-detect a single open release pull request.'
+    required: false
+  should-fail:
+    description: 'When true, the action fails with the provided reason. Supports GitHub Actions expressions.'
+    required: false
+    default: 'false'
+  reason:
+    description: 'Failure reason shown in the action summary and used as the thrown error message when should-fail is true.'
+    required: false
+    default: ''
+  fail-comment:
+    description: 'Optional comment body to post on the pull request when should-fail is true. Supports markdown.'
+    required: false
+    default: ''
+outputs:
+  failed:
+    description: 'Whether the action failed (true) or skipped (false).'
+  reason:
+    description: 'The failure reason when should-fail was true.'
+  comment:
+    description: 'JSON representation of the posted comment body, if any.'
+  pull-request-number:
+    description: 'Resolved pull request number.'
+runs:
+  using: node24
+  main: ../dist/index.mjs

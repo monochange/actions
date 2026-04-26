@@ -1,10 +1,353 @@
 import * as core from "@actions/core";
-import * as exec$1 from "@actions/exec";
 import * as github from "@actions/github";
+import * as actionsExec from "@actions/exec";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
+//#region src/shared/exec.ts
+async function exec(command, args, options) {
+	let stdout = "";
+	let stderr = "";
+	return {
+		exitCode: await actionsExec.exec(command, args, {
+			...options?.cwd ? { cwd: options.cwd } : {},
+			...options?.env ? { env: options.env } : {},
+			ignoreReturnCode: options?.ignoreReturnCode ?? true,
+			silent: options?.silent ?? true,
+			listeners: {
+				stdout(data) {
+					stdout += data.toString();
+				},
+				stderr(data) {
+					stderr += data.toString();
+				}
+			}
+		}),
+		stdout,
+		stderr
+	};
+}
+async function execRequired(command, args, options) {
+	const result = await exec(command, args, {
+		...options,
+		ignoreReturnCode: true
+	});
+	if (result.exitCode !== 0) {
+		const message = result.stderr.trim() || result.stdout.trim() || `${command} failed`;
+		throw new Error(message);
+	}
+	return result.stdout.trim();
+}
+//#endregion
+//#region src/shared/json.ts
+function safeJsonParse(text) {
+	try {
+		return JSON.parse(text);
+	} catch {
+		return;
+	}
+}
+function extractJsonBlock(text) {
+	const trimmed = text.trim();
+	if (trimmed.startsWith("{") || trimmed.startsWith("[")) return trimmed;
+	const jsonMatch = trimmed.match(/```(?:json)?\s*({[\s\S]*?}|\[[\s\S]*?])\s*```/);
+	if (jsonMatch?.[1]) return jsonMatch[1].trim();
+	const inlineMatch = trimmed.match(/({[\s\S]*?}|\[[\s\S]*?])/);
+	if (inlineMatch?.[1]) return inlineMatch[1].trim();
+}
+function parseMixedOutput(text) {
+	const block = extractJsonBlock(text);
+	if (block) return safeJsonParse(block);
+	return safeJsonParse(text);
+}
+//#endregion
+//#region src/shared/monochange-cli.ts
+async function resolveMonochange(setupInput) {
+	const lower = setupInput.trim().toLowerCase();
+	if (lower === "false") {
+		const version = await getMcVersion("mc");
+		if (!version) throw new Error("monochange is not available on PATH and setup-monochange is false. Install monochange manually or use setup-monochange: true.");
+		return {
+			command: "mc",
+			version,
+			source: "existing-mc"
+		};
+	}
+	if (lower === "true" || lower === "") {
+		const existingVersion = await getMcVersion("mc");
+		if (existingVersion) return {
+			command: "mc",
+			version: existingVersion,
+			source: "existing-mc"
+		};
+		core.info("monochange not found on PATH; trying npx @monochange/cli");
+		const npxVersion = await getMcVersion("npx", ["-y", "@monochange/cli"]);
+		if (npxVersion) return {
+			command: "npx -y @monochange/cli",
+			version: npxVersion,
+			source: "npx-shim"
+		};
+		core.info("npx fallback failed; trying cargo binstall monochange");
+		try {
+			await execRequired("cargo", [
+				"binstall",
+				"monochange",
+				"-y"
+			]);
+			const cargoVersion = await getMcVersion("mc");
+			if (cargoVersion) return {
+				command: "mc",
+				version: cargoVersion,
+				source: "cargo-binstall"
+			};
+		} catch {}
+		throw new Error("Could not resolve monochange automatically. Install monochange manually, use cargo binstall, or provide a custom command.");
+	}
+	const version = await getMcVersion(setupInput);
+	if (!version) throw new Error(`setup-monochange command \`${setupInput}\` did not produce a valid mc --version output.`);
+	return {
+		command: setupInput,
+		version,
+		source: "custom-command"
+	};
+}
+async function getMcVersion(command, prefixArgs = []) {
+	const args = [...prefixArgs, "--version"];
+	if (command !== "mc") args.unshift(command);
+	const bin = args[0] ?? command;
+	const binArgs = args.slice(1);
+	try {
+		const result = await exec(bin, binArgs, {
+			ignoreReturnCode: true,
+			silent: true
+		});
+		if (result.exitCode === 0) {
+			const versionText = result.stdout.trim();
+			if (versionText) return versionText;
+		}
+	} catch {}
+}
+//#endregion
+//#region src/actions/changeset-policy/index.ts
+function readInputs$6() {
+	return {
+		changedPaths: getOptionalInput$1("changed-paths"),
+		commentOnFailure: getBoolean$3("comment-on-failure"),
+		debug: getBoolean$3("debug"),
+		dryRun: getBoolean$3("dry-run"),
+		githubToken: core.getInput("github-token").trim(),
+		labels: getOptionalInput$1("labels"),
+		repository: core.getInput("repository") || github.context.repo.owner + "/" + github.context.repo.repo,
+		setupMonochange: core.getInput("setup-monochange").trim() || "true",
+		skipLabels: getOptionalInput$1("skip-labels")
+	};
+}
+function getOptionalInput$1(name) {
+	return core.getInput(name).trim() || void 0;
+}
+function getBoolean$3(name) {
+	const value = core.getInput(name).trim().toLowerCase();
+	return [
+		"true",
+		"1",
+		"yes",
+		"on"
+	].includes(value);
+}
+async function runChangesetPolicy() {
+	const inputs = readInputs$6();
+	if (inputs.debug) core.info(`changeset-policy inputs: ${JSON.stringify({
+		...inputs,
+		githubToken: "[redacted]"
+	}, null, 2)}`);
+	const mc = await resolveMonochange(inputs.setupMonochange);
+	core.info(`Using monochange ${mc.version} from ${mc.source}`);
+	const args = [
+		"affected",
+		"--format",
+		"json",
+		"--verify"
+	];
+	if (inputs.changedPaths) args.push("--paths", inputs.changedPaths);
+	if (inputs.labels) args.push("--labels", inputs.labels);
+	if (inputs.skipLabels) args.push("--skip-labels", inputs.skipLabels);
+	if (inputs.dryRun) {
+		core.info(`Dry-run: would run \`${mc.command} ${args.join(" ")}\``);
+		core.setOutput("result", "dry-run");
+		return;
+	}
+	const stdout = await execRequired(mc.command, args);
+	const parsed = parseMixedOutput(stdout);
+	core.setOutput("result", "success");
+	core.setOutput("json", JSON.stringify(parsed ?? null));
+	core.setOutput("summary", stdout.slice(0, 65536));
+	core.info("changeset-policy completed successfully");
+}
+//#endregion
+//#region src/shared/inputs.ts
+const TRUE_VALUES = new Set([
+	"1",
+	"true",
+	"yes",
+	"on"
+]);
+const FALSE_VALUES = new Set([
+	"0",
+	"false",
+	"no",
+	"off",
+	""
+]);
+function getOptionalInput(name) {
+	const value = core.getInput(name).trim();
+	if (value.length === 0) return;
+	return value;
+}
+function getBooleanInput(name) {
+	const value = core.getInput(name).trim().toLowerCase();
+	if (TRUE_VALUES.has(value)) return true;
+	if (FALSE_VALUES.has(value)) return false;
+	throw new Error(`Input \`${name}\` must be a boolean-like value, received \`${value}\`.`);
+}
+function parseRepository$1(input) {
+	const parts = input.split("/").map((part) => part.trim());
+	if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error(`Input \`repository\` must be in owner/repo format, received \`${input}\`.`);
+	return {
+		owner: parts[0],
+		repo: parts[1]
+	};
+}
+function normalizeName(input) {
+	return input.trim().toLowerCase();
+}
+//#endregion
+//#region src/actions/fail-when/index.ts
+async function runFailWhen() {
+	const inputs = readInputs$5();
+	const { owner, repo } = parseRepository(inputs.repository);
+	const octokit = github.getOctokit(inputs.githubToken);
+	const pullRequest = await resolveContextPullRequest({
+		octokit,
+		owner,
+		pullRequestNumber: inputs.pullRequestNumber,
+		repo
+	});
+	if (!inputs.shouldFail) {
+		core.notice("should-fail evaluated to false. Skipping.");
+		core.setOutput("failed", "false");
+		return;
+	}
+	core.setOutput("failed", "true");
+	core.setOutput("reason", inputs.reason);
+	let commentBody = "";
+	if (inputs.comment) {
+		commentBody = buildFailCommentBody({
+			actor: github.context.actor,
+			comment: inputs.comment,
+			reason: inputs.reason,
+			runUrl: buildRunUrl()
+		});
+		core.setOutput("comment", serializeCommentOutput$1(commentBody));
+		await writeSummary$1(commentBody);
+		if (pullRequest) try {
+			await postPullRequestComment$1({
+				body: commentBody,
+				octokit,
+				owner,
+				pullRequestNumber: pullRequest.number,
+				repo
+			});
+		} catch (error) {
+			core.warning(`Failed to post pull request comment: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+	throw new Error(inputs.reason);
+}
+function readInputs$5() {
+	return {
+		comment: getOptionalInput("fail-comment"),
+		githubToken: core.getInput("github-token", { required: true }).trim(),
+		pullRequestNumber: parsePullRequestNumber$1(getOptionalInput("pull-request")),
+		reason: core.getInput("reason", { required: true }).trim(),
+		repository: core.getInput("repository", { required: true }).trim(),
+		shouldFail: getBooleanInput("should-fail")
+	};
+}
+function parsePullRequestNumber$1(input) {
+	if (!input) return;
+	if (!/^\d+$/.test(input)) throw new Error(`Input \`pull-request\` must be a positive integer, received \`${input}\`.`);
+	const value = Number.parseInt(input, 10);
+	if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`Input \`pull-request\` must be a positive integer, received \`${input}\`.`);
+	return value;
+}
+function parseRepository(input) {
+	const parts = input.split("/");
+	if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error(`Input \`repository\` must be in owner/repo format, received \`${input}\`.`);
+	return {
+		owner: parts[0],
+		repo: parts[1]
+	};
+}
+async function resolveContextPullRequest(options) {
+	const { octokit, owner, pullRequestNumber, repo } = options;
+	if (pullRequestNumber) {
+		const { data } = await octokit.rest.pulls.get({
+			owner,
+			pull_number: pullRequestNumber,
+			repo
+		});
+		return { number: data.number };
+	}
+	const eventPullRequest = github.context.payload.pull_request;
+	if (eventPullRequest?.number) return { number: eventPullRequest.number };
+	const eventIssue = github.context.payload.issue;
+	if (eventIssue?.pull_request) {
+		const commentPrNumber = eventIssue.number;
+		const { data } = await octokit.rest.pulls.get({
+			owner,
+			pull_number: commentPrNumber,
+			repo
+		});
+		return { number: data.number };
+	}
+}
+function buildFailCommentBody(options) {
+	const { actor, comment, reason, runUrl } = options;
+	return [
+		`## ⚠️ Action Blocked`,
+		"",
+		`Triggered by @${actor}.`,
+		"",
+		`**Reason:** ${reason}`,
+		"",
+		comment,
+		"",
+		`---`,
+		"",
+		`[View run](${runUrl})`
+	].join("\n");
+}
+function buildRunUrl() {
+	const { owner, repo } = github.context.repo;
+	return `https://github.com/${owner}/${repo}/actions/runs/${github.context.runId}`;
+}
+function serializeCommentOutput$1(body) {
+	return JSON.stringify({ body }, null, 2);
+}
+async function writeSummary$1(body) {
+	await core.summary.addRaw(body).write();
+}
+async function postPullRequestComment$1(options) {
+	const { body, octokit, owner, pullRequestNumber, repo } = options;
+	await octokit.rest.issues.createComment({
+		body,
+		issue_number: pullRequestNumber,
+		owner,
+		repo
+	});
+}
+//#endregion
 //#region src/actions/merge/checks.ts
 function evaluateChecks(options) {
 	const { checks, requiredFailingCheck, requireGreenChecks } = options;
@@ -60,53 +403,20 @@ function serializeCommentOutput(body) {
 	return JSON.stringify({ body }, null, 2);
 }
 //#endregion
-//#region src/shared/inputs.ts
-const TRUE_VALUES = new Set([
-	"1",
-	"true",
-	"yes",
-	"on"
-]);
-const FALSE_VALUES = new Set([
-	"0",
-	"false",
-	"no",
-	"off",
-	""
-]);
-function getOptionalInput$1(name) {
-	const value = core.getInput(name).trim();
-	if (value.length === 0) return;
-	return value;
-}
-function getBooleanInput(name) {
-	const value = core.getInput(name).trim().toLowerCase();
-	if (TRUE_VALUES.has(value)) return true;
-	if (FALSE_VALUES.has(value)) return false;
-	throw new Error(`Input \`${name}\` must be a boolean-like value, received \`${value}\`.`);
-}
-function parseRepository(input) {
-	const parts = input.split("/").map((part) => part.trim());
-	if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error(`Input \`repository\` must be in owner/repo format, received \`${input}\`.`);
-	return {
-		owner: parts[0],
-		repo: parts[1]
-	};
-}
-function normalizeName(input) {
-	return input.trim().toLowerCase();
-}
-//#endregion
 //#region src/actions/merge/index.ts
 async function runMerge() {
-	const inputs = readInputs$5();
-	const { owner, repo } = parseRepository(inputs.repository);
+	const inputs = readInputs$4();
+	if (github.context.eventName === "issue_comment") {
+		if (!(github.context.payload.comment?.body ?? "").includes(inputs.triggerCommand)) throw new Error(`This workflow was triggered by a pull request comment, but the comment does not contain the configured trigger command \`${inputs.triggerCommand}\`.`);
+	}
+	const { owner, repo } = parseRepository$1(inputs.repository);
 	const octokit = github.getOctokit(inputs.githubToken);
 	let pullRequest;
 	let checks = [];
 	let checkEvaluation;
 	let workspace;
 	let commentBody = "";
+	let rebased = false;
 	try {
 		if (inputs.debug) core.info(`merge inputs: ${JSON.stringify({
 			...inputs,
@@ -150,7 +460,71 @@ async function runMerge() {
 			pullRequest,
 			workspace
 		});
-		if (!workspace.canFastForward) throw new Error(renderFastForwardFailureMessage({
+		if (!workspace.canFastForward) if (inputs.updateBranchOnFailure) {
+			core.notice(`Fast-forward not possible. Rebase ${workspace.headBranch} onto ${workspace.baseBranch} and retry.`);
+			await runGit({
+				args: [
+					"fetch",
+					"--no-tags",
+					workspace.headRemote,
+					`+refs/heads/${workspace.headBranch}:refs/tmp/head`
+				],
+				authHeader: workspace.authHeader,
+				cwd: workspace.tempDir,
+				debug: inputs.debug
+			});
+			const latestHeadSha = await getGitStdout({
+				args: ["rev-parse", "refs/tmp/head"],
+				cwd: workspace.tempDir,
+				debug: inputs.debug
+			});
+			if (latestHeadSha !== workspace.headSha) throw new Error(`${workspace.headBranch} moved from ${workspace.headSha} to ${latestHeadSha} while the action was running. Re-run the workflow with the updated pull request head.`);
+			await rebaseHeadBranch({
+				debug: inputs.debug,
+				headBranch: workspace.headBranch,
+				tempDir: workspace.tempDir
+			});
+			await pushRebasedHeadBranch({
+				authHeader: workspace.authHeader,
+				debug: inputs.debug,
+				headBranch: workspace.headBranch,
+				headRemote: workspace.headRemote,
+				tempDir: workspace.tempDir
+			});
+			const newHeadSha = await getGitStdout({
+				args: ["rev-parse", "HEAD"],
+				cwd: workspace.tempDir,
+				debug: inputs.debug
+			});
+			workspace.headSha = newHeadSha;
+			workspace.canFastForward = await didGitSucceed({
+				args: [
+					"merge-base",
+					"--is-ancestor",
+					workspace.baseSha,
+					workspace.headSha
+				],
+				cwd: workspace.tempDir,
+				debug: inputs.debug
+			});
+			if (!workspace.canFastForward) throw new Error(`Rebased ${workspace.headBranch} onto ${workspace.baseBranch}, but fast-forward is still not possible.`);
+			core.setOutput("head-sha", workspace.headSha);
+			rebased = true;
+			core.setOutput("rebased", "true");
+			core.notice(`Rebased and pushed ${workspace.headBranch} to ${workspace.headSha}.`);
+			if (inputs.postUpdateScript) await runPostUpdateScript({
+				debug: inputs.debug,
+				script: inputs.postUpdateScript,
+				tempDir: workspace.tempDir
+			});
+			if (inputs.postUpdateWorkflow) await dispatchPostUpdateWorkflow({
+				baseBranch: workspace.baseBranch,
+				octokit,
+				owner,
+				repo,
+				workflowId: inputs.postUpdateWorkflow
+			});
+		} else throw new Error(renderFastForwardFailureMessage({
 			baseBranch: workspace.baseBranch,
 			baseSha: workspace.baseSha,
 			headBranch: workspace.headBranch,
@@ -177,6 +551,7 @@ async function runMerge() {
 			core.notice(`Dry run succeeded for PR #${pullRequest.number}.`);
 			core.setOutput("result", "dry-run");
 			core.setOutput("merged", "false");
+			core.setOutput("rebased", "false");
 			core.setOutput("fast-forward-sha", workspace.headSha);
 			core.setOutput("comment", serializeCommentOutput(commentBody));
 			await writeSummary(commentBody);
@@ -205,6 +580,7 @@ async function runMerge() {
 		core.notice(`Fast-forwarded ${workspace.baseBranch} to ${workspace.headSha} from PR #${pullRequest.number}.`);
 		core.setOutput("result", "fast-forwarded");
 		core.setOutput("merged", "true");
+		core.setOutput("rebased", rebased ? "true" : "false");
 		core.setOutput("fast-forward-sha", workspace.headSha);
 		core.setOutput("comment", serializeCommentOutput(commentBody));
 		await writeSummary(commentBody);
@@ -227,6 +603,7 @@ async function runMerge() {
 			workspace
 		});
 		core.setOutput("comment", serializeCommentOutput(commentBody));
+		core.setOutput("rebased", rebased ? "true" : "false");
 		if (pullRequest) try {
 			if (shouldPostComment(inputs.commentMode, true)) await postPullRequestComment({
 				body: commentBody,
@@ -245,10 +622,10 @@ async function runMerge() {
 		if (workspace) await cleanupWorkspace(workspace.tempDir);
 	}
 }
-function readInputs$5() {
-	const comment = getOptionalInput$1("comment");
-	const pullRequest = getOptionalInput$1("pull-request");
-	const requiredFailingCheck = getOptionalInput$1("required-failing-check");
+function readInputs$4() {
+	const comment = getOptionalInput("comment");
+	const pullRequest = getOptionalInput("pull-request");
+	const requiredFailingCheck = getOptionalInput("required-failing-check");
 	return {
 		allowCrossRepository: getBooleanInput("allow-cross-repository"),
 		baseBranch: core.getInput("base-branch", { required: true }).trim(),
@@ -257,11 +634,15 @@ function readInputs$5() {
 		dryRun: getBooleanInput("dry-run"),
 		githubToken: core.getInput("github-token", { required: true }).trim(),
 		headBranchPrefix: core.getInput("head-branch-prefix", { required: true }).trim(),
+		postUpdateScript: getOptionalInput("post-update-script"),
+		postUpdateWorkflow: getOptionalInput("post-update-workflow"),
 		pullRequestNumber: parsePullRequestNumber(pullRequest),
 		repository: core.getInput("repository", { required: true }).trim(),
 		requireActorPushPermission: getBooleanInput("require-actor-push-permission"),
 		requireGreenChecks: getBooleanInput("require-green-checks"),
-		requiredFailingCheck
+		requiredFailingCheck,
+		triggerCommand: core.getInput("trigger-command", { required: true }).trim(),
+		updateBranchOnFailure: getBooleanInput("update-branch-on-failure")
 	};
 }
 function parsePullRequestNumber(input) {
@@ -435,32 +816,36 @@ async function createFastForwardWorkspace(options) {
 		debug
 	});
 	if (headSha !== expectedHeadSha) throw new Error(`Resolved head branch ${headBranch} moved from ${expectedHeadSha} to ${headSha}. Re-run the workflow with the updated pull request head.`);
+	const canFastForward = await didGitSucceed({
+		args: [
+			"merge-base",
+			"--is-ancestor",
+			baseSha,
+			headSha
+		],
+		cwd: tempDir,
+		debug
+	});
+	const mergeBaseSha = await getGitStdoutIfAvailable({
+		args: [
+			"merge-base",
+			baseSha,
+			headSha
+		],
+		cwd: tempDir,
+		debug
+	});
 	return {
 		authHeader,
 		baseBranch,
 		baseSha,
-		canFastForward: await didGitSucceed({
-			args: [
-				"merge-base",
-				"--is-ancestor",
-				baseSha,
-				headSha
-			],
-			cwd: tempDir,
-			debug
-		}),
+		canFastForward,
 		expectedHeadSha,
 		headBranch,
+		headCloneUrl,
+		headRemote,
 		headSha,
-		mergeBaseSha: await getGitStdoutIfAvailable({
-			args: [
-				"merge-base",
-				baseSha,
-				headSha
-			],
-			cwd: tempDir,
-			debug
-		}),
+		mergeBaseSha,
 		tempDir
 	};
 }
@@ -482,6 +867,77 @@ async function fastForwardBaseBranch(options) {
 		throw new Error(`Fast-forward push failed. The base branch may have advanced, the token may not be allowed to push, or branch protection may still be blocking the update. ${message}`);
 	}
 }
+async function rebaseHeadBranch(options) {
+	const { debug, headBranch, tempDir } = options;
+	try {
+		await runGit({
+			args: [
+				"checkout",
+				"--detach",
+				"refs/tmp/head"
+			],
+			cwd: tempDir,
+			debug
+		});
+		await runGit({
+			args: ["rebase", "refs/tmp/base"],
+			cwd: tempDir,
+			debug
+		});
+	} catch (error) {
+		await actionsExec.getExecOutput("git", ["rebase", "--abort"], {
+			cwd: tempDir,
+			ignoreReturnCode: true,
+			silent: true
+		});
+		const message = error instanceof Error ? error.message : String(error);
+		throw new Error(`Rebase of ${headBranch} onto base failed: ${message}`);
+	}
+}
+async function pushRebasedHeadBranch(options) {
+	const { authHeader, debug, headBranch, headRemote, tempDir } = options;
+	try {
+		await runGit({
+			args: [
+				"push",
+				"--force",
+				headRemote,
+				`HEAD:refs/heads/${headBranch}`
+			],
+			authHeader,
+			cwd: tempDir,
+			debug
+		});
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		throw new Error(`Force-push of rebased ${headBranch} failed: ${message}`);
+	}
+}
+async function runPostUpdateScript(options) {
+	const { debug, script, tempDir } = options;
+	core.info(`Running post-update script: ${script}`);
+	const result = await actionsExec.getExecOutput("bash", ["-c", script], {
+		cwd: tempDir,
+		ignoreReturnCode: true,
+		silent: !debug
+	});
+	if (debug) {
+		core.info(`post-update script exit code: ${result.exitCode}`);
+		if (result.stdout.trim()) core.info(result.stdout.trim());
+		if (result.stderr.trim()) core.info(result.stderr.trim());
+	}
+	if (result.exitCode !== 0) throw new Error(`Post-update script failed with exit code ${result.exitCode}: ${result.stderr.trim() || result.stdout.trim() || "unknown error"}`);
+}
+async function dispatchPostUpdateWorkflow(options) {
+	const { baseBranch, octokit, owner, repo, workflowId } = options;
+	core.info(`Dispatching workflow ${workflowId} on ${baseBranch}`);
+	await octokit.rest.actions.createWorkflowDispatch({
+		owner,
+		repo,
+		workflow_id: workflowId,
+		ref: baseBranch
+	});
+}
 async function ensureActorPushPermission(options) {
 	const { actor, octokit, owner, repo } = options;
 	const permission = (await octokit.rest.repos.getCollaboratorPermissionLevel({
@@ -496,7 +952,7 @@ async function ensureActorPushPermission(options) {
 	].includes(permission)) throw new Error(`Actor @${actor} does not have push permission for ${owner}/${repo}.`);
 }
 async function runGit(options) {
-	const result = await exec$1.getExecOutput("git", options.authHeader ? [
+	const result = await actionsExec.getExecOutput("git", options.authHeader ? [
 		"-c",
 		`http.extraheader=${options.authHeader}`,
 		...options.args
@@ -513,7 +969,7 @@ async function runGit(options) {
 	if (result.exitCode !== 0) throw new Error(result.stderr.trim() || result.stdout.trim() || "git failed");
 }
 async function getGitStdout(options) {
-	const result = await exec$1.getExecOutput("git", options.args, {
+	const result = await actionsExec.getExecOutput("git", options.args, {
 		cwd: options.cwd,
 		ignoreReturnCode: true,
 		silent: true
@@ -527,7 +983,7 @@ async function getGitStdout(options) {
 	return result.stdout.trim();
 }
 async function getGitStdoutIfAvailable(options) {
-	const result = await exec$1.getExecOutput("git", options.args, {
+	const result = await actionsExec.getExecOutput("git", options.args, {
 		cwd: options.cwd,
 		ignoreReturnCode: true,
 		silent: true
@@ -541,7 +997,7 @@ async function getGitStdoutIfAvailable(options) {
 	return result.stdout.trim() || void 0;
 }
 async function didGitSucceed(options) {
-	const result = await exec$1.getExecOutput("git", options.args, {
+	const result = await actionsExec.getExecOutput("git", options.args, {
 		cwd: options.cwd,
 		ignoreReturnCode: true,
 		silent: true
@@ -644,186 +1100,6 @@ function mapStatusState(state) {
 		case "error": return "failure";
 		default: return "skipped";
 	}
-}
-//#endregion
-//#region src/shared/exec.ts
-async function exec(command, args, options) {
-	let stdout = "";
-	let stderr = "";
-	return {
-		exitCode: await exec$1.exec(command, args, {
-			...options?.cwd ? { cwd: options.cwd } : {},
-			...options?.env ? { env: options.env } : {},
-			ignoreReturnCode: options?.ignoreReturnCode ?? true,
-			silent: options?.silent ?? true,
-			listeners: {
-				stdout(data) {
-					stdout += data.toString();
-				},
-				stderr(data) {
-					stderr += data.toString();
-				}
-			}
-		}),
-		stdout,
-		stderr
-	};
-}
-async function execRequired(command, args, options) {
-	const result = await exec(command, args, {
-		...options,
-		ignoreReturnCode: true
-	});
-	if (result.exitCode !== 0) {
-		const message = result.stderr.trim() || result.stdout.trim() || `${command} failed`;
-		throw new Error(message);
-	}
-	return result.stdout.trim();
-}
-//#endregion
-//#region src/shared/json.ts
-function safeJsonParse(text) {
-	try {
-		return JSON.parse(text);
-	} catch {
-		return;
-	}
-}
-function extractJsonBlock(text) {
-	const trimmed = text.trim();
-	if (trimmed.startsWith("{") || trimmed.startsWith("[")) return trimmed;
-	const jsonMatch = trimmed.match(/```(?:json)?\s*({[\s\S]*?}|\[[\s\S]*?])\s*```/);
-	if (jsonMatch?.[1]) return jsonMatch[1].trim();
-	const inlineMatch = trimmed.match(/({[\s\S]*?}|\[[\s\S]*?])/);
-	if (inlineMatch?.[1]) return inlineMatch[1].trim();
-}
-function parseMixedOutput(text) {
-	const block = extractJsonBlock(text);
-	if (block) return safeJsonParse(block);
-	return safeJsonParse(text);
-}
-//#endregion
-//#region src/shared/monochange-cli.ts
-async function resolveMonochange(setupInput) {
-	const lower = setupInput.trim().toLowerCase();
-	if (lower === "false") {
-		const version = await getMcVersion("mc");
-		if (!version) throw new Error("monochange is not available on PATH and setup-monochange is false. Install monochange manually or use setup-monochange: true.");
-		return {
-			command: "mc",
-			version,
-			source: "existing-mc"
-		};
-	}
-	if (lower === "true" || lower === "") {
-		const existingVersion = await getMcVersion("mc");
-		if (existingVersion) return {
-			command: "mc",
-			version: existingVersion,
-			source: "existing-mc"
-		};
-		core.info("monochange not found on PATH; trying npx @monochange/cli");
-		const npxVersion = await getMcVersion("npx", ["-y", "@monochange/cli"]);
-		if (npxVersion) return {
-			command: "npx -y @monochange/cli",
-			version: npxVersion,
-			source: "npx-shim"
-		};
-		core.info("npx fallback failed; trying cargo binstall monochange");
-		try {
-			await execRequired("cargo", [
-				"binstall",
-				"monochange",
-				"-y"
-			]);
-			const cargoVersion = await getMcVersion("mc");
-			if (cargoVersion) return {
-				command: "mc",
-				version: cargoVersion,
-				source: "cargo-binstall"
-			};
-		} catch {}
-		throw new Error("Could not resolve monochange automatically. Install monochange manually, use cargo binstall, or provide a custom command.");
-	}
-	const version = await getMcVersion(setupInput);
-	if (!version) throw new Error(`setup-monochange command \`${setupInput}\` did not produce a valid mc --version output.`);
-	return {
-		command: setupInput,
-		version,
-		source: "custom-command"
-	};
-}
-async function getMcVersion(command, prefixArgs = []) {
-	const args = [...prefixArgs, "--version"];
-	if (command !== "mc") args.unshift(command);
-	const bin = args[0] ?? command;
-	const binArgs = args.slice(1);
-	try {
-		const result = await exec(bin, binArgs, {
-			ignoreReturnCode: true,
-			silent: true
-		});
-		if (result.exitCode === 0) {
-			const versionText = result.stdout.trim();
-			if (versionText) return versionText;
-		}
-	} catch {}
-}
-//#endregion
-//#region src/actions/changeset-policy/index.ts
-function readInputs$4() {
-	return {
-		changedPaths: getOptionalInput("changed-paths"),
-		commentOnFailure: getBoolean$3("comment-on-failure"),
-		debug: getBoolean$3("debug"),
-		dryRun: getBoolean$3("dry-run"),
-		githubToken: core.getInput("github-token").trim(),
-		labels: getOptionalInput("labels"),
-		repository: core.getInput("repository") || github.context.repo.owner + "/" + github.context.repo.repo,
-		setupMonochange: core.getInput("setup-monochange").trim() || "true",
-		skipLabels: getOptionalInput("skip-labels")
-	};
-}
-function getOptionalInput(name) {
-	return core.getInput(name).trim() || void 0;
-}
-function getBoolean$3(name) {
-	const value = core.getInput(name).trim().toLowerCase();
-	return [
-		"true",
-		"1",
-		"yes",
-		"on"
-	].includes(value);
-}
-async function runChangesetPolicy() {
-	const inputs = readInputs$4();
-	if (inputs.debug) core.info(`changeset-policy inputs: ${JSON.stringify({
-		...inputs,
-		githubToken: "[redacted]"
-	}, null, 2)}`);
-	const mc = await resolveMonochange(inputs.setupMonochange);
-	core.info(`Using monochange ${mc.version} from ${mc.source}`);
-	const args = [
-		"affected",
-		"--format",
-		"json",
-		"--verify"
-	];
-	if (inputs.changedPaths) args.push("--paths", inputs.changedPaths);
-	if (inputs.labels) args.push("--labels", inputs.labels);
-	if (inputs.skipLabels) args.push("--skip-labels", inputs.skipLabels);
-	if (inputs.dryRun) {
-		core.info(`Dry-run: would run \`${mc.command} ${args.join(" ")}\``);
-		core.setOutput("result", "dry-run");
-		return;
-	}
-	const stdout = await execRequired(mc.command, args);
-	const parsed = parseMixedOutput(stdout);
-	core.setOutput("result", "success");
-	core.setOutput("json", JSON.stringify(parsed ?? null));
-	core.setOutput("summary", stdout.slice(0, 65536));
-	core.info("changeset-policy completed successfully");
 }
 //#endregion
 //#region src/actions/post-merge-release/index.ts
@@ -1039,7 +1315,10 @@ async function run() {
 		case "post-merge-release":
 			await runPostMergeRelease();
 			return;
-		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: merge, setup-monochange, changeset-policy, release-pr, publish-plan, post-merge-release.`);
+		case "fail-when":
+			await runFailWhen();
+			return;
+		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: merge, setup-monochange, changeset-policy, release-pr, publish-plan, post-merge-release, fail-when.`);
 	}
 }
 run().catch((error) => {

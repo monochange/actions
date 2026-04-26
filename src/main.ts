@@ -1,7 +1,8 @@
 import * as core from '@actions/core';
 
-import { runMerge } from './actions/merge';
 import { runChangesetPolicy } from './actions/changeset-policy';
+import { runFailWhen } from './actions/fail-when';
+import { runMerge } from './actions/merge';
 import { runPostMergeRelease } from './actions/post-merge-release';
 import { runPublishPlan } from './actions/publish-plan';
 import { runReleasePr } from './actions/release-pr';
@@ -36,9 +37,13 @@ async function run(): Promise<void> {
       await runPostMergeRelease();
 
       return;
+    case 'fail-when':
+      await runFailWhen();
+
+      return;
     default:
       throw new Error(
-        `Unsupported action variant \`${name}\`. Supported values: merge, setup-monochange, changeset-policy, release-pr, publish-plan, post-merge-release.`,
+        `Unsupported action variant \`${name}\`. Supported values: merge, setup-monochange, changeset-policy, release-pr, publish-plan, post-merge-release, fail-when.`,
       );
   }
 }
