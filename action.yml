@@ -43,10 +43,15 @@ inputs:
     description: 'Whether all checks must be complete and successful apart from the expected failing check.'
     required: false
     default: 'true'
-  require-actor-push-permission:
-    description: 'Whether the triggering actor must have push permission on the target repository.'
+  minimum-reviewer-permission:
+    description: 'Minimum repository permission the triggering actor must have for the merge to proceed. admin = repository admin (default), maintain = maintainer role, push = merge (insecure).'
     required: false
-    default: 'true'
+    default: admin
+    type: choice
+    options:
+      - admin
+      - maintain
+      - push
   comment:
     description: 'Whether to post a pull request comment. Supported values: always, never, on-error.'
     required: false

@@ -532,8 +532,9 @@ async function runMerge() {
 			mergeBaseSha: workspace.mergeBaseSha
 		}));
 		if (!checkEvaluation.ok) throw new Error(checkEvaluation.errors.join(" "));
-		if (inputs.requireActorPushPermission) await ensureActorPushPermission({
+		await ensureActorPermission({
 			actor: github.context.actor,
+			minimumPermission: inputs.minimumReviewerPermission,
 			octokit,
 			owner,
 			repo
@@ -638,7 +639,7 @@ function readInputs$4() {
 		postUpdateWorkflow: getOptionalInput("post-update-workflow"),
 		pullRequestNumber: parsePullRequestNumber(pullRequest),
 		repository: core.getInput("repository", { required: true }).trim(),
-		requireActorPushPermission: getBooleanInput("require-actor-push-permission"),
+		minimumReviewerPermission: normalizeMinimumReviewerPermission(core.getInput("minimum-reviewer-permission", { required: true }).trim()),
 		requireGreenChecks: getBooleanInput("require-green-checks"),
 		requiredFailingCheck,
 		triggerCommand: core.getInput("trigger-command", { required: true }).trim(),
@@ -651,6 +652,11 @@ function parsePullRequestNumber(input) {
 	const value = Number.parseInt(input, 10);
 	if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`Input \`pull-request\` must be a positive integer, received \`${input}\`.`);
 	return value;
+}
+function normalizeMinimumReviewerPermission(input) {
+	const value = input.toLowerCase().trim();
+	if (value === "admin" || value === "maintain" || value === "push") return value;
+	throw new Error(`Input \`minimum-reviewer-permission\` must be one of admin, maintain, or push. Received \`${input}\`.`);
 }
 async function resolvePullRequest(options) {
 	const { octokit, owner, repo, baseBranch, headBranchPrefix, pullRequestNumber } = options;
@@ -938,18 +944,22 @@ async function dispatchPostUpdateWorkflow(options) {
 		ref: baseBranch
 	});
 }
-async function ensureActorPushPermission(options) {
-	const { actor, octokit, owner, repo } = options;
-	const permission = (await octokit.rest.repos.getCollaboratorPermissionLevel({
+async function ensureActorPermission(options) {
+	const { actor, minimumPermission, octokit, owner, repo } = options;
+	const roleName = (await octokit.rest.repos.getCollaboratorPermissionLevel({
 		owner,
 		repo,
 		username: actor
-	})).data.permission;
-	if (![
-		"admin",
-		"maintain",
-		"write"
-	].includes(permission)) throw new Error(`Actor @${actor} does not have push permission for ${owner}/${repo}.`);
+	})).data.role_name;
+	if (!{
+		admin: ["admin"],
+		maintain: ["admin", "maintain"],
+		push: [
+			"admin",
+			"maintain",
+			"write"
+		]
+	}[minimumPermission].includes(roleName)) throw new Error(`Actor @${actor} has role \`${roleName}\` on ${owner}/${repo}, but the action requires at least \`${minimumPermission}\`.`);
 }
 async function runGit(options) {
 	const result = await actionsExec.getExecOutput("git", options.authHeader ? [
