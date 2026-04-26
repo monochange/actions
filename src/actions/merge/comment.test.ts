@@ -36,6 +36,10 @@ describe('shouldPostComment', () => {
     expect(shouldPostComment('on-error', true)).toBe(true);
     expect(shouldPostComment('on-error', false)).toBe(false);
   });
+
+  it('returns false for unrecognized mode', () => {
+    expect(shouldPostComment('unknown' as never, false)).toBe(false);
+  });
 });
 
 describe('serializeCommentOutput', () => {

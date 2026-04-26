@@ -17,7 +17,7 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
     coverage: {
-      reporter: ['text', 'html', 'json'],
+      reporter: ['text', 'html', 'json', 'lcov'],
       thresholds: {
         statements: 100,
         branches: 100,
