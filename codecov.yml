@@ -1,0 +1,36 @@
+codecov:
+  require_ci_to_pass: true
+  notify:
+    wait_for_ci: true
+
+coverage:
+  precision: 2
+  round: down
+  range: '80...100'
+  status:
+    project:
+      default:
+        target: 100%
+        threshold: 0%
+        base: auto
+        if_ci_failed: error
+        informational: false
+        only_pulls: false
+    patch:
+      default:
+        target: 100%
+        threshold: 0%
+        base: auto
+        if_ci_failed: error
+        informational: false
+        only_pulls: false
+
+comment:
+  layout: 'condensed_header, diff, files'
+  behavior: default
+  require_changes: false
+  show_carryforward_plans: true
+
+parsers:
+  javascript:
+    enable_partials: true

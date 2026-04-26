@@ -1,5 +1,7 @@
 # monochange actions
 
+[![codecov](https://codecov.io/gh/monochange/actions/graph/badge.svg)](https://codecov.io/gh/monochange/actions)
+
 GitHub Actions for monochange release automation.
 
 This repository exists so monochange can own the critical parts of its workflow instead of depending directly on third-party actions, while still preserving the behavior that matters for release pull requests.

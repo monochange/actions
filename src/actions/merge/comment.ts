@@ -17,7 +17,7 @@ export function normalizeCommentMode(input: string | undefined): CommentMode {
       return 'on-error';
     default:
       throw new Error(
-        `Input \`comment\` must be one of always, never, on-error, true, or false. Received \`${input ?? ''}\`.`,
+        `Input \`comment\` must be one of always, never, on-error, true, or false. Received \`${input}\`.`,
       );
   }
 }

@@ -17,12 +17,12 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
     coverage: {
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'json'],
       thresholds: {
-        statements: 50,
-        branches: 50,
-        functions: 50,
-        lines: 50,
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100,
       },
     },
   },
