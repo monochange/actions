@@ -30,6 +30,8 @@ export function shouldPostComment(mode: CommentMode, failed: boolean): boolean {
       return false;
     case 'on-error':
       return failed;
+    default:
+      return false;
   }
 }
 

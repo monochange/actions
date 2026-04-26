@@ -19,7 +19,8 @@
     "check": "tsgo -config tsconfig.json",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
-    "lint": "oxlint .",
+    "lint": "oxlint --type-aware .",
+    "lint:syntax": "oxlint .",
     "test": "vp test",
     "build": "vp pack",
     "all": "pnpm lint && pnpm fmt:check && pnpm check && pnpm test && pnpm build"
@@ -35,6 +36,7 @@
     "@vitest/coverage-v8": "^4.1.5",
     "oxfmt": "^0.46.0",
     "oxlint": "^1.61.0",
+    "oxlint-tsgolint": "^0.22.0",
     "typescript": "^6.0.3",
     "vite-plus": "^0.1.19",
     "vitest": "^4.1.5"

@@ -51,9 +51,9 @@ function safeJsonParse(text) {
 function extractJsonBlock(text) {
 	const trimmed = text.trim();
 	if (trimmed.startsWith("{") || trimmed.startsWith("[")) return trimmed;
-	const jsonMatch = trimmed.match(/```(?:json)?\s*({[\s\S]*?}|\[[\s\S]*?])\s*```/);
+	const jsonMatch = trimmed.match(/```(?:json)?\s*({[\s\S]*?}|\[[\s\S]*?)\s*```/);
 	if (jsonMatch?.[1]) return jsonMatch[1].trim();
-	const inlineMatch = trimmed.match(/({[\s\S]*?}|\[[\s\S]*?])/);
+	const inlineMatch = trimmed.match(/({[\s\S]*?}|\[[\s\S]*?)/);
 	if (inlineMatch?.[1]) return inlineMatch[1].trim();
 }
 function parseMixedOutput(text) {
@@ -397,6 +397,7 @@ function shouldPostComment(mode, failed) {
 		case "always": return true;
 		case "never": return false;
 		case "on-error": return failed;
+		default: return false;
 	}
 }
 function serializeCommentOutput(body) {
@@ -1273,12 +1274,13 @@ async function runReleasePr() {
 	];
 	if (inputs.githubToken) core.exportVariable("GITHUB_TOKEN", inputs.githubToken);
 	const parsed = parseMixedOutput(await execRequired(mc.command, args, { cwd: inputs.workingDirectory }));
+	const parsedRecord = typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : void 0;
 	core.setOutput("result", "success");
-	core.setOutput("json", JSON.stringify(parsed ?? null));
-	core.setOutput("head-branch", parsed?.headBranch ?? "");
-	core.setOutput("base-branch", parsed?.baseBranch ?? "");
-	core.setOutput("release-request-number", typeof parsed?.number === "number" || typeof parsed?.number === "string" ? String(parsed.number) : "");
-	core.setOutput("release-request-url", parsed?.url ?? "");
+	core.setOutput("json", JSON.stringify(parsedRecord ?? null));
+	core.setOutput("head-branch", parsedRecord?.headBranch ?? "");
+	core.setOutput("base-branch", parsedRecord?.baseBranch ?? "");
+	core.setOutput("release-request-number", typeof parsedRecord?.number === "number" || typeof parsedRecord?.number === "string" ? String(parsedRecord.number) : "");
+	core.setOutput("release-request-url", parsedRecord?.url ?? "");
 	core.info("release-pr completed successfully");
 }
 //#endregion
