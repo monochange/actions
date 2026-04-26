@@ -8,8 +8,14 @@ describe('normalizeCommentMode', () => {
   });
 
   it('accepts aliases', () => {
+    expect(normalizeCommentMode('1')).toBe('always');
     expect(normalizeCommentMode('true')).toBe('always');
+    expect(normalizeCommentMode('always')).toBe('always');
+    expect(normalizeCommentMode('0')).toBe('never');
     expect(normalizeCommentMode('false')).toBe('never');
+    expect(normalizeCommentMode('never')).toBe('never');
+    expect(normalizeCommentMode('on-error')).toBe('on-error');
+    expect(normalizeCommentMode('')).toBe('on-error');
   });
 
   it('rejects unknown values', () => {

@@ -143,6 +143,40 @@ describe('runFailWhen', () => {
     await expect(runFailWhen()).rejects.toThrow('reason');
   });
 
+  it('resolves PR from explicit pull-request input', async () => {
+    mockCore.getInput.mockImplementation((name: string) => {
+      if (name === 'should-fail') return 'true';
+      if (name === 'reason') return 'reason';
+      if (name === 'repository') return 'o/r';
+      if (name === 'pull-request') return '42';
+      return '';
+    });
+
+    const mockGet = vi.fn().mockResolvedValue({ data: { number: 42 } });
+    mockGithub.getOctokit.mockReturnValue({
+      rest: {
+        issues: { createComment: vi.fn().mockResolvedValue({}) },
+        pulls: { get: mockGet },
+      },
+    } as unknown as ReturnType<typeof github.getOctokit>);
+
+    await expect(runFailWhen()).rejects.toThrow('reason');
+    expect(mockGet).toHaveBeenCalledWith({ owner: 'o', pull_number: 42, repo: 'r' });
+  });
+
+  it('handles no PR found in any context', async () => {
+    mockCore.getInput.mockImplementation((name: string) => {
+      if (name === 'should-fail') return 'true';
+      if (name === 'reason') return 'reason';
+      if (name === 'repository') return 'o/r';
+      if (name === 'fail-comment') return 'no pr found';
+      return '';
+    });
+    mockGithub.context.payload = {};
+
+    await expect(runFailWhen()).rejects.toThrow('reason');
+  });
+
   it('throws for invalid pull-request input', async () => {
     mockCore.getInput.mockImplementation((name: string) => {
       if (name === 'should-fail') return 'true';
