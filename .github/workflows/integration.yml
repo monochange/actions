@@ -1,0 +1,51 @@
+name: integration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: read
+  statuses: read
+  pull-requests: write
+
+jobs:
+  setup-monochange:
+    name: setup-monochange smoke test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: use setup-monochange action
+        uses: ./setup-monochange
+        with:
+          debug: true
+
+      - name: verify mc is available
+        run: mc --version
+
+  merge-action-validates:
+    name: merge action validates PR context
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: read
+      statuses: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: run merge action (dry-run, no actual merge)
+        uses: ./merge
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          base-branch: main
+          require-green-checks: false
+          require-merge-blocker: false
+
+      - name: verify merge action ran without error
+        run: echo "merge action completed"

@@ -12,6 +12,9 @@
     "url": "git+https://github.com/monochange/actions.git"
   },
   "type": "module",
+  "publishConfig": {
+    "provenance": true
+  },
   "scripts": {
     "check": "tsgo -config tsconfig.json",
     "fmt": "oxfmt --write .",

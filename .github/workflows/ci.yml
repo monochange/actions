@@ -38,7 +38,13 @@ jobs:
       - name: audit dependencies
         run: pnpm audit
 
-      - name: check
+      - name: lint
+        run: pnpm lint
+
+      - name: format check
+        run: pnpm fmt:check
+
+      - name: type check
         run: pnpm check
 
       - name: test with coverage
