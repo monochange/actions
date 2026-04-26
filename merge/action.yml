@@ -56,6 +56,20 @@ inputs:
     description: 'Enable extra debug logging.'
     required: false
     default: 'false'
+  update-branch-on-failure:
+    description: 'When true, if the head branch is not a fast-forward of the base branch, rebase the head branch onto the latest base branch and force-push it instead of failing immediately.'
+    required: false
+    default: 'false'
+  post-update-script:
+    description: 'Optional shell command to run after a successful rebase and force-push, before the fast-forward merge. Runs in the temporary git workspace.'
+    required: false
+  post-update-workflow:
+    description: 'Optional workflow file path to dispatch via workflow_dispatch after a successful rebase and force-push. Runs on the base branch.'
+    required: false
+  trigger-command:
+    description: 'Slash command that triggers this action when posted as a pull request comment. Only validated when the workflow runs from an issue_comment event.'
+    required: false
+    default: '/merge'
 outputs:
   result:
     description: 'Final action result.'
@@ -73,6 +87,8 @@ outputs:
     description: 'Commit SHA pushed to the base branch after a successful fast-forward, or the candidate SHA reported during dry-run mode.'
   comment:
     description: 'JSON comment payload with a body field.'
+  rebased:
+    description: 'Whether the head branch was rebased onto the base branch before the fast-forward.'
 runs:
   using: node24
   main: ../dist/index.mjs

@@ -100,6 +100,9 @@ function normalizeName(input) {
 //#region src/actions/merge/index.ts
 async function runMerge() {
 	const inputs = readInputs();
+	if (github.context.eventName === "issue_comment") {
+		if (!(github.context.payload.comment?.body ?? "").includes(inputs.triggerCommand)) throw new Error(`This workflow was triggered by a pull request comment, but the comment does not contain the configured trigger command \`${inputs.triggerCommand}\`.`);
+	}
 	const { owner, repo } = parseRepository(inputs.repository);
 	const octokit = github.getOctokit(inputs.githubToken);
 	let pullRequest;
@@ -107,6 +110,7 @@ async function runMerge() {
 	let checkEvaluation;
 	let workspace;
 	let commentBody = "";
+	let rebased = false;
 	try {
 		if (inputs.debug) core.info(`merge inputs: ${JSON.stringify({
 			...inputs,
@@ -150,7 +154,71 @@ async function runMerge() {
 			pullRequest,
 			workspace
 		});
-		if (!workspace.canFastForward) throw new Error(renderFastForwardFailureMessage({
+		if (!workspace.canFastForward) if (inputs.updateBranchOnFailure) {
+			core.notice(`Fast-forward not possible. Rebase ${workspace.headBranch} onto ${workspace.baseBranch} and retry.`);
+			await runGit({
+				args: [
+					"fetch",
+					"--no-tags",
+					workspace.headRemote,
+					`+refs/heads/${workspace.headBranch}:refs/tmp/head`
+				],
+				authHeader: workspace.authHeader,
+				cwd: workspace.tempDir,
+				debug: inputs.debug
+			});
+			const latestHeadSha = await getGitStdout({
+				args: ["rev-parse", "refs/tmp/head"],
+				cwd: workspace.tempDir,
+				debug: inputs.debug
+			});
+			if (latestHeadSha !== workspace.headSha) throw new Error(`${workspace.headBranch} moved from ${workspace.headSha} to ${latestHeadSha} while the action was running. Re-run the workflow with the updated pull request head.`);
+			await rebaseHeadBranch({
+				debug: inputs.debug,
+				headBranch: workspace.headBranch,
+				tempDir: workspace.tempDir
+			});
+			await pushRebasedHeadBranch({
+				authHeader: workspace.authHeader,
+				debug: inputs.debug,
+				headBranch: workspace.headBranch,
+				headRemote: workspace.headRemote,
+				tempDir: workspace.tempDir
+			});
+			const newHeadSha = await getGitStdout({
+				args: ["rev-parse", "HEAD"],
+				cwd: workspace.tempDir,
+				debug: inputs.debug
+			});
+			workspace.headSha = newHeadSha;
+			workspace.canFastForward = await didGitSucceed({
+				args: [
+					"merge-base",
+					"--is-ancestor",
+					workspace.baseSha,
+					workspace.headSha
+				],
+				cwd: workspace.tempDir,
+				debug: inputs.debug
+			});
+			if (!workspace.canFastForward) throw new Error(`Rebased ${workspace.headBranch} onto ${workspace.baseBranch}, but fast-forward is still not possible.`);
+			core.setOutput("head-sha", workspace.headSha);
+			rebased = true;
+			core.setOutput("rebased", "true");
+			core.notice(`Rebased and pushed ${workspace.headBranch} to ${workspace.headSha}.`);
+			if (inputs.postUpdateScript) await runPostUpdateScript({
+				debug: inputs.debug,
+				script: inputs.postUpdateScript,
+				tempDir: workspace.tempDir
+			});
+			if (inputs.postUpdateWorkflow) await dispatchPostUpdateWorkflow({
+				baseBranch: workspace.baseBranch,
+				octokit,
+				owner,
+				repo,
+				workflowId: inputs.postUpdateWorkflow
+			});
+		} else throw new Error(renderFastForwardFailureMessage({
 			baseBranch: workspace.baseBranch,
 			baseSha: workspace.baseSha,
 			headBranch: workspace.headBranch,
@@ -177,6 +245,7 @@ async function runMerge() {
 			core.notice(`Dry run succeeded for PR #${pullRequest.number}.`);
 			core.setOutput("result", "dry-run");
 			core.setOutput("merged", "false");
+			core.setOutput("rebased", "false");
 			core.setOutput("fast-forward-sha", workspace.headSha);
 			core.setOutput("comment", serializeCommentOutput(commentBody));
 			await writeSummary(commentBody);
@@ -205,6 +274,7 @@ async function runMerge() {
 		core.notice(`Fast-forwarded ${workspace.baseBranch} to ${workspace.headSha} from PR #${pullRequest.number}.`);
 		core.setOutput("result", "fast-forwarded");
 		core.setOutput("merged", "true");
+		core.setOutput("rebased", rebased ? "true" : "false");
 		core.setOutput("fast-forward-sha", workspace.headSha);
 		core.setOutput("comment", serializeCommentOutput(commentBody));
 		await writeSummary(commentBody);
@@ -227,6 +297,7 @@ async function runMerge() {
 			workspace
 		});
 		core.setOutput("comment", serializeCommentOutput(commentBody));
+		core.setOutput("rebased", rebased ? "true" : "false");
 		if (pullRequest) try {
 			if (shouldPostComment(inputs.commentMode, true)) await postPullRequestComment({
 				body: commentBody,
@@ -257,11 +328,15 @@ function readInputs() {
 		dryRun: getBooleanInput("dry-run"),
 		githubToken: core.getInput("github-token", { required: true }).trim(),
 		headBranchPrefix: core.getInput("head-branch-prefix", { required: true }).trim(),
+		postUpdateScript: getOptionalInput("post-update-script"),
+		postUpdateWorkflow: getOptionalInput("post-update-workflow"),
 		pullRequestNumber: parsePullRequestNumber(pullRequest),
 		repository: core.getInput("repository", { required: true }).trim(),
 		requireActorPushPermission: getBooleanInput("require-actor-push-permission"),
 		requireGreenChecks: getBooleanInput("require-green-checks"),
-		requiredFailingCheck
+		requiredFailingCheck,
+		triggerCommand: core.getInput("trigger-command", { required: true }).trim(),
+		updateBranchOnFailure: getBooleanInput("update-branch-on-failure")
 	};
 }
 function parsePullRequestNumber(input) {
@@ -435,32 +510,36 @@ async function createFastForwardWorkspace(options) {
 		debug
 	});
 	if (headSha !== expectedHeadSha) throw new Error(`Resolved head branch ${headBranch} moved from ${expectedHeadSha} to ${headSha}. Re-run the workflow with the updated pull request head.`);
+	const canFastForward = await didGitSucceed({
+		args: [
+			"merge-base",
+			"--is-ancestor",
+			baseSha,
+			headSha
+		],
+		cwd: tempDir,
+		debug
+	});
+	const mergeBaseSha = await getGitStdoutIfAvailable({
+		args: [
+			"merge-base",
+			baseSha,
+			headSha
+		],
+		cwd: tempDir,
+		debug
+	});
 	return {
 		authHeader,
 		baseBranch,
 		baseSha,
-		canFastForward: await didGitSucceed({
-			args: [
-				"merge-base",
-				"--is-ancestor",
-				baseSha,
-				headSha
-			],
-			cwd: tempDir,
-			debug
-		}),
+		canFastForward,
 		expectedHeadSha,
 		headBranch,
+		headCloneUrl,
+		headRemote,
 		headSha,
-		mergeBaseSha: await getGitStdoutIfAvailable({
-			args: [
-				"merge-base",
-				baseSha,
-				headSha
-			],
-			cwd: tempDir,
-			debug
-		}),
+		mergeBaseSha,
 		tempDir
 	};
 }
@@ -481,6 +560,77 @@ async function fastForwardBaseBranch(options) {
 		const message = error instanceof Error ? error.message : String(error);
 		throw new Error(`Fast-forward push failed. The base branch may have advanced, the token may not be allowed to push, or branch protection may still be blocking the update. ${message}`);
 	}
+}
+async function rebaseHeadBranch(options) {
+	const { debug, headBranch, tempDir } = options;
+	try {
+		await runGit({
+			args: [
+				"checkout",
+				"--detach",
+				"refs/tmp/head"
+			],
+			cwd: tempDir,
+			debug
+		});
+		await runGit({
+			args: ["rebase", "refs/tmp/base"],
+			cwd: tempDir,
+			debug
+		});
+	} catch (error) {
+		await exec.getExecOutput("git", ["rebase", "--abort"], {
+			cwd: tempDir,
+			ignoreReturnCode: true,
+			silent: true
+		});
+		const message = error instanceof Error ? error.message : String(error);
+		throw new Error(`Rebase of ${headBranch} onto base failed: ${message}`);
+	}
+}
+async function pushRebasedHeadBranch(options) {
+	const { authHeader, debug, headBranch, headRemote, tempDir } = options;
+	try {
+		await runGit({
+			args: [
+				"push",
+				"--force",
+				headRemote,
+				`HEAD:refs/heads/${headBranch}`
+			],
+			authHeader,
+			cwd: tempDir,
+			debug
+		});
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		throw new Error(`Force-push of rebased ${headBranch} failed: ${message}`);
+	}
+}
+async function runPostUpdateScript(options) {
+	const { debug, script, tempDir } = options;
+	core.info(`Running post-update script: ${script}`);
+	const result = await exec.getExecOutput("bash", ["-c", script], {
+		cwd: tempDir,
+		ignoreReturnCode: true,
+		silent: !debug
+	});
+	if (debug) {
+		core.info(`post-update script exit code: ${result.exitCode}`);
+		if (result.stdout.trim()) core.info(result.stdout.trim());
+		if (result.stderr.trim()) core.info(result.stderr.trim());
+	}
+	if (result.exitCode !== 0) throw new Error(`Post-update script failed with exit code ${result.exitCode}: ${result.stderr.trim() || result.stdout.trim() || "unknown error"}`);
+}
+async function dispatchPostUpdateWorkflow(options) {
+	const { baseBranch, octokit, owner, repo, workflowId } = options;
+	core.info(`Dispatching workflow ${workflowId} on ${baseBranch}`);
+	await octokit.rest.actions.createWorkflowDispatch({
+		owner,
+		repo,
+		workflow_id: workflowId,
+		ref: baseBranch
+	});
 }
 async function ensureActorPushPermission(options) {
 	const { actor, octokit, owner, repo } = options;

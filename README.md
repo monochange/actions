@@ -14,7 +14,7 @@ That means it does **not** create a merge commit.
 
 Currently implemented:
 
-- `merge` — fast-forward a monochange release pull request onto its base branch
+- `merge` - fast-forward a monochange release pull request onto its base branch
 
 Public entrypoints:
 
@@ -42,8 +42,8 @@ The `merge` action exists to:
 
 - preserve the release commit SHA
 - keep branch history compatible with monochange release expectations
-- allow a deliberate “manual merge blocker” check pattern
-- support slash-command style approval flows such as `/fast-forward`
+- allow a deliberate "manual merge blocker" check pattern
+- support slash-command style approval flows such as `/merge`
 - keep the merge policy inside your own GitHub Actions repository
 
 ---
@@ -67,7 +67,7 @@ In practical terms, the final branch update is equivalent to:
 git push origin <pr-head-sha>:refs/heads/<base-branch>
 ```
 
-—but only after the action has verified that this is a legal fast-forward update.
+-but only after the action has verified that this is a legal fast-forward update.
 
 ### Important consequence
 
@@ -135,13 +135,13 @@ This repository includes a ready-to-copy example workflow at:
 It supports both:
 
 - `workflow_dispatch`
-- `/fast-forward` PR comments via `issue_comment`
+- `/merge` PR comments via `issue_comment`
 
 ### What the example workflow does
 
 - lets a maintainer manually dispatch a release merge
 - optionally accepts a PR number
-- also listens for `/fast-forward` comments on pull requests
+- also listens for `/merge` comments on pull requests
 - uses a dedicated token such as `RELEASE_PR_MERGE_TOKEN`
 - keeps `require-actor-push-permission: 'true'` enabled for safety
 
@@ -181,7 +181,7 @@ jobs:
       (
         github.event_name == 'issue_comment' &&
         github.event.issue.pull_request &&
-        contains(github.event.comment.body, '/fast-forward')
+        contains(github.event.comment.body, '/merge')
       )
     runs-on: ubuntu-latest
     permissions:
@@ -202,7 +202,7 @@ jobs:
           require-actor-push-permission: 'true'
           comment: ${{ inputs.comment }}
 
-      - name: fast-forward release PR from /fast-forward comment
+      - name: fast-forward release PR from /merge comment
         if: github.event_name == 'issue_comment'
         uses: monochange/actions/merge@v0.1.0
         with:
@@ -216,12 +216,12 @@ jobs:
 
 ---
 
-## `/fast-forward` comment trigger
+## `/merge` comment trigger
 
 If you want behavior close to the original fast-forward workflow pattern, use an `issue_comment` trigger and ask maintainers to comment:
 
 ```text
-/fast-forward
+/merge
 ```
 
 on the release pull request.
@@ -231,7 +231,7 @@ on the release pull request.
 The recommended pattern is:
 
 - listen to `issue_comment`
-- only run when the comment body contains `/fast-forward`
+- only run when the comment body contains `/merge`
 - only run when the issue is actually a pull request
 - keep `require-actor-push-permission: 'true'`
 - use `comment: always` so the PR gets visible feedback
@@ -265,7 +265,7 @@ jobs:
   merge-release-pr:
     if: >-
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, '/fast-forward')
+      contains(github.event.comment.body, '/merge')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -382,35 +382,40 @@ with:
 
 ### Shared merge inputs
 
-| Input                           | Required | Default                           | Description                                                                                                                            |
-| ------------------------------- | -------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `github-token`                  | no       | `${{ github.token }}`             | Token used for GitHub API calls and the final git push.                                                                                |
-| `repository`                    | no       | `${{ github.repository }}`        | Target repository in `owner/repo` format.                                                                                              |
-| `pull-request`                  | no       | empty                             | Explicit PR number. Must be a positive integer when provided.                                                                          |
-| `base-branch`                   | no       | `main`                            | Expected base branch for the release PR.                                                                                               |
-| `head-branch-prefix`            | no       | `monochange/release/`             | Required prefix for the release PR head branch.                                                                                        |
-| `required-failing-check`        | no       | `release-pr-manual-merge-blocker` | Name of the intentionally failing blocker check. Pass an empty string to disable this special rule.                                    |
-| `allow-cross-repository`        | no       | `'false'`                         | Whether pull requests from forks are allowed.                                                                                          |
-| `require-green-checks`          | no       | `'true'`                          | Whether all checks must be complete and successful apart from the configured blocker check.                                            |
-| `require-actor-push-permission` | no       | `'true'`                          | Whether the triggering actor must have push permission on the target repository. Strongly recommended for comment-triggered workflows. |
-| `comment`                       | no       | `on-error`                        | Whether to post a pull request comment: `always`, `never`, or `on-error`.                                                              |
-| `dry-run`                       | no       | `'false'`                         | Validate everything without updating the base branch.                                                                                  |
-| `debug`                         | no       | `'false'`                         | Emit extra debug logging.                                                                                                              |
+| Input                           | Required | Default                           | Description                                                                                                                                       |
+| ------------------------------- | -------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `github-token`                  | no       | `${{ github.token }}`             | Token used for GitHub API calls and the final git push.                                                                                           |
+| `repository`                    | no       | `${{ github.repository }}`        | Target repository in `owner/repo` format.                                                                                                         |
+| `pull-request`                  | no       | empty                             | Explicit PR number. Must be a positive integer when provided.                                                                                     |
+| `base-branch`                   | no       | `main`                            | Expected base branch for the release PR.                                                                                                          |
+| `head-branch-prefix`            | no       | `monochange/release/`             | Required prefix for the release PR head branch.                                                                                                   |
+| `required-failing-check`        | no       | `release-pr-manual-merge-blocker` | Name of the intentionally failing blocker check. Pass an empty string to disable this special rule.                                               |
+| `allow-cross-repository`        | no       | `'false'`                         | Whether pull requests from forks are allowed.                                                                                                     |
+| `require-green-checks`          | no       | `'true'`                          | Whether all checks must be complete and successful apart from the configured blocker check.                                                       |
+| `require-actor-push-permission` | no       | `'true'`                          | Whether the triggering actor must have push permission on the target repository. Strongly recommended for comment-triggered workflows.            |
+| `comment`                       | no       | `on-error`                        | Whether to post a pull request comment: `always`, `never`, or `on-error`.                                                                         |
+| `dry-run`                       | no       | `'false'`                         | Validate everything without updating the base branch.                                                                                             |
+| `update-branch-on-failure`      | no       | `'false'`                         | When true, rebase the head branch onto the latest base branch and force-push it instead of failing when fast-forward is not possible.             |
+| `post-update-script`            | no       | empty                             | Optional shell command to run after a successful rebase and force-push, before the fast-forward merge. Runs in the temp git workspace.            |
+| `post-update-workflow`          | no       | empty                             | Optional workflow file path to dispatch via `workflow_dispatch` after a successful rebase and force-push. Requires `actions: write` permission.   |
+| `trigger-command`               | no       | `/merge`                          | Slash command that triggers this action when posted as a pull request comment. Only validated when the workflow runs from an issue_comment event. |
+| `debug`                         | no       | `'false'`                         | Emit extra debug logging.                                                                                                                         |
 
 ---
 
 ## Outputs
 
-| Output                | Description                                                                           |
-| --------------------- | ------------------------------------------------------------------------------------- |
-| `result`              | Final result. Currently `fast-forwarded`, `dry-run`, or `failed`.                     |
-| `merged`              | `'true'` when a fast-forward update was performed, otherwise `'false'`.               |
-| `pull-request-number` | Resolved PR number.                                                                   |
-| `pull-request-url`    | Resolved PR URL.                                                                      |
-| `base-sha`            | Base branch SHA before validation/push.                                               |
-| `head-sha`            | Head SHA used for validation.                                                         |
-| `fast-forward-sha`    | The SHA pushed to the base branch, or the candidate SHA reported during dry-run mode. |
-| `comment`             | JSON string with a `body` field containing the summary comment text.                  |
+| Output                | Description                                                                            |
+| --------------------- | -------------------------------------------------------------------------------------- |
+| `result`              | Final result. Currently `fast-forwarded`, `dry-run`, or `failed`.                      |
+| `merged`              | `'true'` when a fast-forward update was performed, otherwise `'false'`.                |
+| `rebased`             | `'true'` when the head branch was rebased onto the base branch before fast-forwarding. |
+| `pull-request-number` | Resolved PR number.                                                                    |
+| `pull-request-url`    | Resolved PR URL.                                                                       |
+| `base-sha`            | Base branch SHA before validation/push.                                                |
+| `head-sha`            | Head SHA used for validation.                                                          |
+| `fast-forward-sha`    | The SHA pushed to the base branch, or the candidate SHA reported during dry-run mode.  |
+| `comment`             | JSON string with a `body` field containing the summary comment text.                   |
 
 ### Example: consume outputs
 
@@ -485,7 +490,7 @@ with:
 
 ## Failure modes and troubleshooting
 
-### “Expected exactly one open release pull request...”
+### "Expected exactly one open release pull request..."
 
 Auto-detection found zero or multiple matching PRs.
 
@@ -496,7 +501,7 @@ Fixes:
 - tighten `base-branch`
 - tighten `head-branch-prefix`
 
-### “Pull request still has pending checks...”
+### "Pull request still has pending checks..."
 
 Some checks have not completed yet.
 
@@ -505,7 +510,7 @@ Fixes:
 - wait for CI to finish
 - disable strict enforcement with `require-green-checks: 'false'` if that matches your policy
 
-### “Expected exactly one failing check named ...”
+### "Expected exactly one failing check named ..."
 
 The blocker-check expectation did not match the repository's real check set.
 
@@ -514,16 +519,17 @@ Fixes:
 - keep the blocker check name aligned with your workflow
 - set `required-failing-check: ''` to disable the special-case rule
 
-### “Cannot fast-forward ... is not a direct ancestor ...”
+### "Cannot fast-forward ... is not a direct ancestor ..."
 
 The base branch advanced or the release branch diverged.
 
 Fixes:
 
 - rebase or regenerate the release branch
+- set `update-branch-on-failure: 'true'` to let the action rebase and push automatically
 - re-run the workflow after the release PR head is updated
 
-### “Actor @... does not have push permission ...”
+### "Actor @... does not have push permission ..."
 
 The user who triggered the workflow does not have write-level access.
 
@@ -533,7 +539,7 @@ Fixes:
 - keep this check enabled for slash-command workflows
 - disable it only if you deliberately trust another gating mechanism
 
-### “Fast-forward push failed ...”
+### "Fast-forward push failed ..."
 
 The final push was rejected.
 
@@ -558,7 +564,7 @@ A typical monochange setup looks like this:
 1. CI runs on `main` and keeps the release PR refreshed.
 2. The release PR targets `main` and uses a branch like `monochange/release/...`.
 3. A dedicated blocker check fails intentionally to stop UI merges.
-4. A maintainer runs the merge workflow or comments `/fast-forward`.
+4. A maintainer runs the merge workflow or comments `/merge`.
 5. This action validates the PR and fast-forwards `main` to the release commit.
 6. The release commit lands unchanged.
 
