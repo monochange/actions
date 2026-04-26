@@ -26,9 +26,9 @@ Currently implemented:
 
 Public entrypoints:
 
-- `monochange/actions@v0.3.0` with `name: merge`
-- `monochange/actions/merge@v0.3.0`
-- `monochange/actions/fail-when@v0.3.0`
+- `monochange/actions@v0.4.0` with `name: merge`
+- `monochange/actions/merge@v0.4.0`
+- `monochange/actions/fail-when@v0.4.0`
 
 Both entrypoints run the same implementation.
 
@@ -95,7 +95,7 @@ That is intentional.
 Use this when you want a single repository-level action entrypoint.
 
 ```yaml
-uses: monochange/actions@v0.3.0
+uses: monochange/actions@v0.4.0
 with:
   name: merge
 ```
@@ -105,7 +105,7 @@ with:
 Use this when you want a dedicated merge action entrypoint.
 
 ```yaml
-uses: monochange/actions/merge@v0.3.0
+uses: monochange/actions/merge@v0.4.0
 ```
 
 For most consumers, the path-based form is the clearest choice.
@@ -118,7 +118,7 @@ For most consumers, the path-based form is the clearest choice.
 
 ```yaml
 - name: fast-forward release PR
-  uses: monochange/actions/merge@v0.3.0
+  uses: monochange/actions/merge@v0.4.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
 ```
@@ -127,7 +127,7 @@ For most consumers, the path-based form is the clearest choice.
 
 ```yaml
 - name: fast-forward release PR
-  uses: monochange/actions@v0.3.0
+  uses: monochange/actions@v0.4.0
   with:
     name: merge
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
@@ -201,7 +201,7 @@ jobs:
     steps:
       - name: fast-forward release PR from workflow dispatch
         if: github.event_name == 'workflow_dispatch'
-        uses: monochange/actions/merge@v0.3.0
+        uses: monochange/actions/merge@v0.4.0
         with:
           github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
           pull-request: ${{ inputs.pull_request }}
@@ -213,7 +213,7 @@ jobs:
 
       - name: fast-forward release PR from /merge comment
         if: github.event_name == 'issue_comment'
-        uses: monochange/actions/merge@v0.3.0
+        uses: monochange/actions/merge@v0.4.0
         with:
           github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
           base-branch: main
@@ -283,7 +283,7 @@ jobs:
       statuses: read
     steps:
       - name: fast-forward release PR
-        uses: monochange/actions/merge@v0.3.0
+        uses: monochange/actions/merge@v0.4.0
         with:
           github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
           base-branch: main
@@ -431,7 +431,7 @@ with:
 ```yaml
 - name: fast-forward release PR
   id: merge
-  uses: monochange/actions/merge@v0.3.0
+  uses: monochange/actions/merge@v0.4.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
 
@@ -454,7 +454,7 @@ with:
 ### Auto-detect the only open release PR
 
 ```yaml
-- uses: monochange/actions/merge@v0.3.0
+- uses: monochange/actions/merge@v0.4.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
 ```
@@ -462,7 +462,7 @@ with:
 ### Fast-forward a specific PR number
 
 ```yaml
-- uses: monochange/actions/merge@v0.3.0
+- uses: monochange/actions/merge@v0.4.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
     pull-request: '123'
@@ -471,7 +471,7 @@ with:
 ### Dry-run validation only
 
 ```yaml
-- uses: monochange/actions/merge@v0.3.0
+- uses: monochange/actions/merge@v0.4.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
     dry-run: 'true'
@@ -480,7 +480,7 @@ with:
 ### Always post a PR comment
 
 ```yaml
-- uses: monochange/actions/merge@v0.3.0
+- uses: monochange/actions/merge@v0.4.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
     comment: always
@@ -489,7 +489,7 @@ with:
 ### Allow cross-repository PRs
 
 ```yaml
-- uses: monochange/actions/merge@v0.3.0
+- uses: monochange/actions/merge@v0.4.0
   with:
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
     allow-cross-repository: 'true'
@@ -638,17 +638,17 @@ When releasing:
 
 1. run `pnpm build`
 2. commit the updated `dist/`
-3. tag a release such as `v0.3.0`
+3. tag a release such as `v0.4.0`
 4. reference the action by tag or pinned SHA downstream
 
 Examples:
 
 ```yaml
-uses: monochange/actions@v0.3.0
+uses: monochange/actions@v0.4.0
 ```
 
 ```yaml
-uses: monochange/actions/merge@v0.3.0
+uses: monochange/actions/merge@v0.4.0
 ```
 
 ---
@@ -658,7 +658,7 @@ uses: monochange/actions/merge@v0.3.0
 Intentionally fail a workflow step with a configurable reason. Useful for manual merge blockers, policy gates, or conditional failure steps.
 
 ```yaml
-- uses: monochange/actions/fail-when@v0.3.0
+- uses: monochange/actions/fail-when@v0.4.0
   with:
     should-fail: true
     reason: 'Release PR is not ready'
@@ -672,7 +672,7 @@ Intentionally fail a workflow step with a configurable reason. Useful for manual
 Install the `monochange` CLI from cargo or via `cargo binstall`. Falls back to installing from source if neither is available.
 
 ```yaml
-- uses: monochange/actions/setup-monochange@v0.3.0
+- uses: monochange/actions/setup-monochange@v0.4.0
   with:
     setup-monochange: true
     command: mc
@@ -685,7 +685,7 @@ Install the `monochange` CLI from cargo or via `cargo binstall`. Falls back to i
 Validate that all affected packages have appropriate changesets.
 
 ```yaml
-- uses: monochange/actions/changeset-policy@v0.3.0
+- uses: monochange/actions/changeset-policy@v0.4.0
   with:
     dry-run: false
 ```
@@ -697,7 +697,7 @@ Validate that all affected packages have appropriate changesets.
 Open a release pull request with the current changeset state.
 
 ```yaml
-- uses: monochange/actions/release-pr@v0.3.0
+- uses: monochange/actions/release-pr@v0.4.0
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -709,7 +709,7 @@ Open a release pull request with the current changeset state.
 Generate a publish plan for the current release.
 
 ```yaml
-- uses: monochange/actions/publish-plan@v0.3.0
+- uses: monochange/actions/publish-plan@v0.4.0
   with:
     mode: full
 ```
@@ -721,7 +721,7 @@ Generate a publish plan for the current release.
 Tag and publish after a release PR merges.
 
 ```yaml
-- uses: monochange/actions/post-merge-release@v0.3.0
+- uses: monochange/actions/post-merge-release@v0.4.0
   with:
     from-ref: HEAD
     branch: release
@@ -744,5 +744,5 @@ To add one later:
 
 That preserves both consumption styles:
 
-- `monochange/actions@v0.3.0` with `name: <variant>`
-- `monochange/actions/<variant>@v0.3.0`
+- `monochange/actions@v0.4.0` with `name: <variant>`
+- `monochange/actions/<variant>@v0.4.0`
