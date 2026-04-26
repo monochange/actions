@@ -6,7 +6,7 @@ branding:
   color: purple
 inputs:
   name:
-    description: 'Action variant to run. Supported values: merge.'
+    description: 'Action variant to run. Supported values: merge, fail-when.'
     required: true
   github-token:
     description: 'GitHub token used to inspect and fast-forward pull requests.'
@@ -69,6 +69,18 @@ inputs:
     description: 'Slash command that triggers this action when posted as a pull request comment. Only validated when the workflow runs from an issue_comment event.'
     required: false
     default: '/merge'
+  should-fail:
+    description: 'When true, the action fails with the provided reason. Supports GitHub Actions expressions. Use this to block merges conditionally (e.g., on a protected branch).'
+    required: false
+    default: 'false'
+  reason:
+    description: 'Failure reason shown in the action summary and used as the thrown error message when should-fail is true.'
+    required: false
+    default: ''
+  fail-comment:
+    description: 'Optional comment body to post on the pull request when should-fail is true. Supports markdown.'
+    required: false
+    default: ''
 outputs:
   result:
     description: 'Final action result.'

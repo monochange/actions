@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 
+import { runFailWhen } from './actions/fail-when';
 import { runMerge } from './actions/merge';
 import { normalizeName } from './shared/inputs';
 
@@ -10,8 +11,13 @@ async function run(): Promise<void> {
     case 'merge':
       await runMerge();
       return;
+    case 'fail-when':
+      await runFailWhen();
+      return;
     default:
-      throw new Error(`Unsupported action variant \`${name}\`. Supported values: merge.`);
+      throw new Error(
+        `Unsupported action variant \`${name}\`. Supported values: merge, fail-when.`,
+      );
   }
 }
 

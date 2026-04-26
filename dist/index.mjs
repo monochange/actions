@@ -1,10 +1,173 @@
 import * as core from "@actions/core";
-import * as exec from "@actions/exec";
 import * as github from "@actions/github";
+import * as exec from "@actions/exec";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
+//#region src/shared/inputs.ts
+const TRUE_VALUES = new Set([
+	"1",
+	"true",
+	"yes",
+	"on"
+]);
+const FALSE_VALUES = new Set([
+	"0",
+	"false",
+	"no",
+	"off",
+	""
+]);
+function getOptionalInput(name) {
+	const value = core.getInput(name).trim();
+	if (value.length === 0) return;
+	return value;
+}
+function getBooleanInput(name) {
+	const value = core.getInput(name).trim().toLowerCase();
+	if (TRUE_VALUES.has(value)) return true;
+	if (FALSE_VALUES.has(value)) return false;
+	throw new Error(`Input \`${name}\` must be a boolean-like value, received \`${value}\`.`);
+}
+function parseRepository$1(input) {
+	const parts = input.split("/").map((part) => part.trim());
+	if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error(`Input \`repository\` must be in owner/repo format, received \`${input}\`.`);
+	return {
+		owner: parts[0],
+		repo: parts[1]
+	};
+}
+function normalizeName(input) {
+	return input.trim().toLowerCase();
+}
+//#endregion
+//#region src/actions/fail-when/index.ts
+async function runFailWhen() {
+	const inputs = readInputs$1();
+	const { owner, repo } = parseRepository(inputs.repository);
+	const octokit = github.getOctokit(inputs.githubToken);
+	const pullRequest = await resolveContextPullRequest({
+		octokit,
+		owner,
+		pullRequestNumber: inputs.pullRequestNumber,
+		repo
+	});
+	if (!inputs.shouldFail) {
+		core.notice("should-fail evaluated to false. Skipping.");
+		core.setOutput("failed", "false");
+		return;
+	}
+	core.setOutput("failed", "true");
+	core.setOutput("reason", inputs.reason);
+	let commentBody = "";
+	if (inputs.comment) {
+		commentBody = buildFailCommentBody({
+			actor: github.context.actor,
+			comment: inputs.comment,
+			reason: inputs.reason,
+			runUrl: buildRunUrl()
+		});
+		core.setOutput("comment", serializeCommentOutput$1(commentBody));
+		await writeSummary$1(commentBody);
+		if (pullRequest) try {
+			await postPullRequestComment$1({
+				body: commentBody,
+				octokit,
+				owner,
+				pullRequestNumber: pullRequest.number,
+				repo
+			});
+		} catch (error) {
+			core.warning(`Failed to post pull request comment: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+	throw new Error(inputs.reason);
+}
+function readInputs$1() {
+	return {
+		comment: getOptionalInput("fail-comment"),
+		githubToken: core.getInput("github-token", { required: true }).trim(),
+		pullRequestNumber: parsePullRequestNumber$1(getOptionalInput("pull-request")),
+		reason: core.getInput("reason", { required: true }).trim(),
+		repository: core.getInput("repository", { required: true }).trim(),
+		shouldFail: getBooleanInput("should-fail")
+	};
+}
+function parsePullRequestNumber$1(input) {
+	if (!input) return;
+	if (!/^\d+$/.test(input)) throw new Error(`Input \`pull-request\` must be a positive integer, received \`${input}\`.`);
+	const value = Number.parseInt(input, 10);
+	if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`Input \`pull-request\` must be a positive integer, received \`${input}\`.`);
+	return value;
+}
+function parseRepository(input) {
+	const parts = input.split("/");
+	if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error(`Input \`repository\` must be in owner/repo format, received \`${input}\`.`);
+	return {
+		owner: parts[0],
+		repo: parts[1]
+	};
+}
+async function resolveContextPullRequest(options) {
+	const { octokit, owner, pullRequestNumber, repo } = options;
+	if (pullRequestNumber) {
+		const { data } = await octokit.rest.pulls.get({
+			owner,
+			pull_number: pullRequestNumber,
+			repo
+		});
+		return { number: data.number };
+	}
+	const eventPullRequest = github.context.payload.pull_request;
+	if (eventPullRequest?.number) return { number: eventPullRequest.number };
+	const eventIssue = github.context.payload.issue;
+	if (eventIssue?.pull_request) {
+		const commentPrNumber = eventIssue.number;
+		const { data } = await octokit.rest.pulls.get({
+			owner,
+			pull_number: commentPrNumber,
+			repo
+		});
+		return { number: data.number };
+	}
+}
+function buildFailCommentBody(options) {
+	const { actor, comment, reason, runUrl } = options;
+	return [
+		`## ⚠️ Action Blocked`,
+		"",
+		`Triggered by @${actor}.`,
+		"",
+		`**Reason:** ${reason}`,
+		"",
+		comment,
+		"",
+		`---`,
+		"",
+		`[View run](${runUrl})`
+	].join("\n");
+}
+function buildRunUrl() {
+	const { owner, repo } = github.context.repo;
+	return `https://github.com/${owner}/${repo}/actions/runs/${github.context.runId}`;
+}
+function serializeCommentOutput$1(body) {
+	return JSON.stringify({ body }, null, 2);
+}
+async function writeSummary$1(body) {
+	await core.summary.addRaw(body).write();
+}
+async function postPullRequestComment$1(options) {
+	const { body, octokit, owner, pullRequestNumber, repo } = options;
+	await octokit.rest.issues.createComment({
+		body,
+		issue_number: pullRequestNumber,
+		owner,
+		repo
+	});
+}
+//#endregion
 //#region src/actions/merge/checks.ts
 function evaluateChecks(options) {
 	const { checks, requiredFailingCheck, requireGreenChecks } = options;
@@ -60,50 +223,13 @@ function serializeCommentOutput(body) {
 	return JSON.stringify({ body }, null, 2);
 }
 //#endregion
-//#region src/shared/inputs.ts
-const TRUE_VALUES = new Set([
-	"1",
-	"true",
-	"yes",
-	"on"
-]);
-const FALSE_VALUES = new Set([
-	"0",
-	"false",
-	"no",
-	"off",
-	""
-]);
-function getOptionalInput(name) {
-	const value = core.getInput(name).trim();
-	if (value.length === 0) return;
-	return value;
-}
-function getBooleanInput(name) {
-	const value = core.getInput(name).trim().toLowerCase();
-	if (TRUE_VALUES.has(value)) return true;
-	if (FALSE_VALUES.has(value)) return false;
-	throw new Error(`Input \`${name}\` must be a boolean-like value, received \`${value}\`.`);
-}
-function parseRepository(input) {
-	const parts = input.split("/").map((part) => part.trim());
-	if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error(`Input \`repository\` must be in owner/repo format, received \`${input}\`.`);
-	return {
-		owner: parts[0],
-		repo: parts[1]
-	};
-}
-function normalizeName(input) {
-	return input.trim().toLowerCase();
-}
-//#endregion
 //#region src/actions/merge/index.ts
 async function runMerge() {
 	const inputs = readInputs();
 	if (github.context.eventName === "issue_comment") {
 		if (!(github.context.payload.comment?.body ?? "").includes(inputs.triggerCommand)) throw new Error(`This workflow was triggered by a pull request comment, but the comment does not contain the configured trigger command \`${inputs.triggerCommand}\`.`);
 	}
-	const { owner, repo } = parseRepository(inputs.repository);
+	const { owner, repo } = parseRepository$1(inputs.repository);
 	const octokit = github.getOctokit(inputs.githubToken);
 	let pullRequest;
 	let checks = [];
@@ -803,7 +929,10 @@ async function run() {
 		case "merge":
 			await runMerge();
 			return;
-		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: merge.`);
+		case "fail-when":
+			await runFailWhen();
+			return;
+		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: merge, fail-when.`);
 	}
 }
 run().catch((error) => {
