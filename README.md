@@ -23,6 +23,19 @@ Public entrypoints:
 
 Both entrypoints run the same implementation.
 
+### Planned next variants
+
+The next monochange-specific variants are tracked in [`docs/monochange-action-variants-plan.md`](docs/monochange-action-variants-plan.md).
+They are planned around a shared `setup-monochange` input so every variant can auto-resolve monochange before it runs.
+
+Open implementation issues:
+
+- [#1 `setup-monochange`](https://github.com/monochange/actions/issues/1)
+- [#2 `changeset-policy`](https://github.com/monochange/actions/issues/2)
+- [#3 `release-pr`](https://github.com/monochange/actions/issues/3)
+- [#4 `publish-plan`](https://github.com/monochange/actions/issues/4)
+- [#5 `post-merge-release`](https://github.com/monochange/actions/issues/5)
+
 ---
 
 ## Why monochange needs this

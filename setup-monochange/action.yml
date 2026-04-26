@@ -1,0 +1,24 @@
+name: setup-monochange
+description: 'Resolve or install the monochange CLI and expose its path, version, and source.'
+author: monochange
+inputs:
+  setup-monochange:
+    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
+    required: false
+    default: 'true'
+  debug:
+    description: 'Enable extra debug logging.'
+    required: false
+    default: 'false'
+outputs:
+  command:
+    description: 'Resolved monochange command.'
+  version:
+    description: 'Resolved monochange version string.'
+  source:
+    description: 'How monochange was resolved (existing-mc, npx-shim, cargo-binstall, custom-command).'
+  result:
+    description: 'success or failed.'
+runs:
+  using: node24
+  main: ../dist/index.mjs

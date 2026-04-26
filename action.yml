@@ -6,8 +6,12 @@ branding:
   color: purple
 inputs:
   name:
-    description: 'Action variant to run. Supported values: merge.'
+    description: 'Action variant to run. Supported values: merge, setup-monochange, changeset-policy, release-pr, publish-plan, post-merge-release.'
     required: true
+  setup-monochange:
+    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
+    required: false
+    default: 'true'
   github-token:
     description: 'GitHub token used to inspect and fast-forward pull requests.'
     required: false
