@@ -7,9 +7,13 @@ inputs:
     required: false
     default: 'true'
   github-token:
-    description: 'GitHub token used to inspect pull request labels and files.'
+    description: 'GitHub token used to manage pull request comments.'
     required: false
     default: ${{ github.token }}
+  repository:
+    description: 'Target repository in owner/repo format.'
+    required: false
+    default: ${{ github.repository }}
   changed-paths:
     description: 'Comma-separated list of changed paths to check.'
     required: false
@@ -22,7 +26,7 @@ inputs:
   comment-on-failure:
     description: 'Whether to post a PR comment when the policy check fails.'
     required: false
-    default: 'false'
+    default: 'true'
   dry-run:
     description: 'Validate without posting comments or failing.'
     required: false
@@ -33,11 +37,13 @@ inputs:
     default: 'false'
 outputs:
   result:
-    description: 'success, dry-run, or failed.'
+    description: 'success, skipped, dry-run, or failed.'
   json:
     description: 'Raw JSON output from mc affected.'
   summary:
     description: 'Text summary of affected packages.'
+  comment:
+    description: 'Markdown comment body from mc affected when changeset verification fails.'
 runs:
   using: node24
   main: ../dist/index.mjs
