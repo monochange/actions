@@ -692,10 +692,18 @@ Install the `monochange` CLI from cargo or via `cargo binstall`. Falls back to i
 Validate that all affected packages have appropriate changesets.
 
 ```yaml
+- id: changed
+  uses: tj-actions/changed-files@v46
+  with:
+    separator: ','
+
 - uses: monochange/actions/changeset-policy@v0.4.0
   with:
-    dry-run: false
+    changed-paths: ${{ steps.changed.outputs.all_changed_files }}
+    comment-on-failure: true
 ```
+
+Failure comments use the `comment` field from `mc affected` and are deleted after the PR passes or is skipped.
 
 ---
 

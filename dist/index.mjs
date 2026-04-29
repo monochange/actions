@@ -20431,6 +20431,7 @@ async function getMcVersion(command, prefixArgs = []) {
 
 //#endregion
 //#region src/actions/changeset-policy/index.ts
+const COMMENT_MARKER = "<!-- monochange:changeset-policy -->";
 function readInputs$5() {
 	return {
 		changedPaths: getOptionalInput$1("changed-paths"),
@@ -20478,12 +20479,119 @@ async function runChangesetPolicy() {
 		setOutput("result", "dry-run");
 		return;
 	}
-	const stdout = await execRequired(mc.command, args);
-	const parsed = parseMixedOutput(stdout);
-	setOutput("result", "success");
+	const result = await exec(mc.command, args);
+	const stdout = result.stdout.trim();
+	const stderr = result.stderr.trim();
+	const parsed = parseMixedOutput(stdout || stderr);
+	const summary = changesetSummary(parsed) || stderr || stdout || "changeset-policy completed";
+	const comment = changesetComment(parsed);
+	const skipped = changesetSkipped(parsed);
+	const failed = !skipped && (result.exitCode !== 0 || changesetStatus(parsed) === "failed");
 	setOutput("json", JSON.stringify(parsed ?? null));
-	setOutput("summary", stdout.slice(0, 65536));
-	info("changeset-policy completed successfully");
+	setOutput("summary", summary);
+	setOutput("comment", comment ?? "");
+	if (comment) info(comment);
+	if (failed) {
+		setOutput("result", "failed");
+		if (inputs.commentOnFailure && comment) await upsertPolicyCommentSafely(inputs, comment);
+		throw new Error(summary);
+	}
+	await deleteExistingPolicyCommentsSafely(inputs);
+	setOutput("result", skipped ? "skipped" : "success");
+	info(skipped ? "changeset-policy skipped" : "changeset-policy completed successfully");
+}
+function changesetStatus(parsed) {
+	if (!isRecord(parsed)) return;
+	const status = parsed.status;
+	return typeof status === "string" ? status : void 0;
+}
+function changesetSkipped(parsed) {
+	if (!isRecord(parsed)) return false;
+	return parsed.skip === true || parsed.skipped === true || parsed.status === "skipped";
+}
+function changesetSummary(parsed) {
+	if (!isRecord(parsed)) return;
+	const summary = parsed.summary;
+	return typeof summary === "string" ? summary : void 0;
+}
+function changesetComment(parsed) {
+	if (!isRecord(parsed)) return;
+	const comment = parsed.comment;
+	return typeof comment === "string" && comment.trim() ? comment : void 0;
+}
+function isRecord(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+async function upsertPolicyCommentSafely(inputs, comment) {
+	try {
+		await upsertPolicyComment(inputs, comment);
+	} catch (error) {
+		warning(`Unable to create or update changeset-policy comment: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+async function deleteExistingPolicyCommentsSafely(inputs) {
+	try {
+		await deleteExistingPolicyComments(inputs);
+	} catch (error) {
+		warning(`Unable to delete existing changeset-policy comment: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+async function upsertPolicyComment(inputs, comment) {
+	const context = commentContext(inputs);
+	if (!context) return;
+	const body = `${comment.trim()}\n\n${COMMENT_MARKER}`;
+	const [first, ...stale] = await findPolicyComments(context);
+	await (first ? context.octokit.rest.issues.updateComment({
+		body,
+		comment_id: first.id,
+		owner: context.owner,
+		repo: context.repo
+	}) : context.octokit.rest.issues.createComment({
+		body,
+		issue_number: context.pullRequestNumber,
+		owner: context.owner,
+		repo: context.repo
+	}));
+	await Promise.all(stale.map(async (staleComment) => context.octokit.rest.issues.deleteComment({
+		comment_id: staleComment.id,
+		owner: context.owner,
+		repo: context.repo
+	})));
+}
+async function deleteExistingPolicyComments(inputs) {
+	const context = commentContext(inputs);
+	if (!context) return;
+	const comments = await findPolicyComments(context);
+	await Promise.all(comments.map(async (comment) => context.octokit.rest.issues.deleteComment({
+		comment_id: comment.id,
+		owner: context.owner,
+		repo: context.repo
+	})));
+}
+function commentContext(inputs) {
+	if (!inputs.githubToken) return;
+	const pullRequestNumber = context.payload.pull_request?.number;
+	if (!pullRequestNumber) return;
+	const [owner, repo] = inputs.repository.split("/").map((part) => part.trim());
+	if (!owner || !repo) {
+		warning(`Unable to manage changeset-policy comments: invalid repository \`${inputs.repository}\`.`);
+		return;
+	}
+	return {
+		octokit: getOctokit(inputs.githubToken),
+		owner,
+		pullRequestNumber,
+		repo
+	};
+}
+async function findPolicyComments(context) {
+	const { data } = await context.octokit.rest.issues.listComments({
+		issue_number: context.pullRequestNumber,
+		owner: context.owner,
+		per_page: 100,
+		repo: context.repo
+	});
+	return data.filter((comment) => typeof comment.body === "string" && comment.body.includes(COMMENT_MARKER));
 }
 
 //#endregion
