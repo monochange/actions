@@ -2,6 +2,10 @@ name: changeset-policy
 description: 'Run mc affected to verify changeset policy for the current pull request.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as changeset-policy.'
+    required: false
+    default: changeset-policy
   setup-monochange:
     description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
     required: false
