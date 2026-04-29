@@ -655,15 +655,22 @@ uses: monochange/actions/merge@v0.4.0
 
 ## `fail-when`
 
-Intentionally fail a workflow step with a configurable reason. Useful for manual merge blockers, policy gates, or conditional failure steps.
+Intentionally fail a workflow step with a configurable reason. Useful for manual merge blockers, policy gates, and branch-protection checks that need a clear human-readable failure.
+
+`fail-when` writes a job summary every time it intentionally fails. If `fail-comment` is provided, it also resolves the target PR and posts a formatted markdown comment. If `should-fail` is false, it skips without requiring a reason, token, repository, or pull request context.
 
 ```yaml
 - uses: monochange/actions/fail-when@v0.4.0
   with:
-    should-fail: true
-    reason: 'Release PR is not ready'
-    fail-comment: 'This PR cannot be merged yet'
+    should-fail: ${{ startsWith(github.head_ref, 'monochange/release/') }}
+    reason: Release PRs must be merged with the monochange /merge workflow.
+    fail-comment: |
+      This check fails intentionally so the normal GitHub merge button cannot be used.
+
+      After checks are green, comment `/merge` to fast-forward the release PR.
 ```
+
+See the full [`fail-when` documentation](fail-when/README.md) for inputs, outputs, permissions, PR comment behavior, examples, and troubleshooting.
 
 ---
 
