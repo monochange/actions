@@ -1,42 +1,52 @@
 name: fail-when
-description: 'Fail a workflow when a condition is true, with optional PR comment.'
+description: 'Intentionally fail a workflow when a condition is true, with summary output and optional PR comment.'
 author: monochange
 branding:
   icon: x-circle
   color: red
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as fail-when.'
+    required: false
+    default: fail-when
   github-token:
-    description: 'GitHub token used for pull request comments.'
+    description: >-
+      GitHub token used only when fail-comment is provided. Needs pull-requests: read to resolve the target PR and issues: write to post the comment.
     required: false
     default: ${{ github.token }}
   repository:
-    description: 'Target repository in owner/repo format.'
+    description: 'Target repository in owner/repo format. Used only when fail-comment is provided.'
     required: false
     default: ${{ github.repository }}
   pull-request:
-    description: 'Optional pull request number. Leave empty to use the current PR event context or auto-detect a single open release pull request.'
+    description: >-
+      Optional pull request number for fail-comment. Leave empty to use the current pull_request event context or the current issue_comment PR context.
     required: false
   should-fail:
-    description: 'When true, the action fails with the provided reason. Supports GitHub Actions expressions.'
+    description: >-
+      Boolean-like condition result. When true, the action writes outputs and a summary, optionally posts fail-comment to the PR, then fails with reason. When false, the action skips successfully.
     required: false
     default: 'false'
   reason:
-    description: 'Failure reason shown in the action summary and used as the thrown error message when should-fail is true.'
+    description: 'Failure reason shown in the thrown error, action summary, reason output, and optional pull request comment.'
     required: false
-    default: ''
+    default: 'fail-when condition evaluated to true.'
   fail-comment:
-    description: 'Optional comment body to post on the pull request when should-fail is true. Supports markdown.'
+    description: >-
+      Optional markdown to include in a pull request comment when should-fail is true. If omitted, the action never calls the GitHub API.
     required: false
     default: ''
 outputs:
   failed:
-    description: 'Whether the action failed (true) or skipped (false).'
+    description: 'Whether the action intentionally failed (true) or skipped (false).'
   reason:
     description: 'The failure reason when should-fail was true.'
   comment:
-    description: 'JSON representation of the posted comment body, if any.'
+    description: 'JSON representation of the generated comment body, if fail-comment was provided.'
   pull-request-number:
-    description: 'Resolved pull request number.'
+    description: 'Resolved pull request number that received the comment, if any.'
+  result:
+    description: 'Skipped result value when should-fail was false.'
 runs:
   using: node24
   main: ../dist/index.mjs

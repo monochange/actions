@@ -28,6 +28,10 @@ export default defineConfig({
   },
   pack: {
     clean: true,
+    deps: {
+      alwaysBundle: ['@actions/core', '@actions/exec', '@actions/github'],
+      onlyBundle: false,
+    },
     dts: false,
     entry: {
       index: 'src/main.ts',
