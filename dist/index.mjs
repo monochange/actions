@@ -20413,10 +20413,8 @@ async function resolveMonochange(setupInput) {
 	};
 }
 async function getMcVersion(command, prefixArgs = []) {
-	const args = [...prefixArgs, "--version"];
-	if (command !== "mc") args.unshift(command);
-	const bin = args[0];
-	const binArgs = args.slice(1);
+	const bin = command;
+	const binArgs = [...prefixArgs, "--version"];
 	try {
 		const result = await exec(bin, binArgs, {
 			ignoreReturnCode: true,

@@ -33,6 +33,10 @@ describe('resolveMonochange', () => {
       source: 'existing-mc',
       version: 'monochange 1.2.3',
     });
+    expect(mockExec).toHaveBeenCalledWith('mc', ['--version'], {
+      ignoreReturnCode: true,
+      silent: true,
+    });
   });
 
   it('falls back to npx when mc not found', async () => {
@@ -112,6 +116,10 @@ describe('resolveMonochange', () => {
       source: 'existing-mc',
       version: 'monochange 1.0.0',
     });
+    expect(mockExec).toHaveBeenCalledWith('mc', ['--version'], {
+      ignoreReturnCode: true,
+      silent: true,
+    });
   });
 
   it('throws when setupInput is false and mc is missing', async () => {
@@ -131,6 +139,10 @@ describe('resolveMonochange', () => {
       command: '/opt/bin/mc',
       source: 'custom-command',
       version: 'monochange 4.0.0',
+    });
+    expect(mockExec).toHaveBeenCalledWith('/opt/bin/mc', ['--version'], {
+      ignoreReturnCode: true,
+      silent: true,
     });
   });
 
