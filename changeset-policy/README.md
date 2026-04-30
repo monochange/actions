@@ -53,9 +53,9 @@ jobs:
 
 ## Outputs
 
-| Output    | Description                                  |
-| --------- | -------------------------------------------- |
-| `result`  | `success`, `skipped`, `dry-run`, or `failed` |
-| `json`    | Raw JSON from `mc step:affected-packages`                  |
-| `summary` | Text summary                                 |
-| `comment` | Markdown comment body from `mc step:affected-packages`     |
+| Output    | Description                                            |
+| --------- | ------------------------------------------------------ |
+| `result`  | `success`, `skipped`, `dry-run`, or `failed`           |
+| `json`    | Raw JSON from `mc step:affected-packages`              |
+| `summary` | Text summary                                           |
+| `comment` | Markdown comment body from `mc step:affected-packages` |
