@@ -155,13 +155,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function extractContentWithoutMarker(body: string | undefined | null): string {
-  if (!body) {
-    return '';
-  }
-
-  const markerIndex = body.indexOf(COMMENT_MARKER);
-
-  return markerIndex === -1 ? body : body.slice(0, markerIndex).trim();
+  return body!.slice(0, body!.indexOf(COMMENT_MARKER)).trim();
 }
 
 function wrapPreviousFailure(previousContent: string): string {

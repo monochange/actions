@@ -31,7 +31,7 @@ jobs:
       (
         github.event_name == 'issue_comment' &&
         github.event.issue.pull_request &&
-        contains(github.event.comment.body, '/fast-forward')
+        github.event.comment.body == '/merge'
       )
     runs-on: ubuntu-latest
     permissions:
@@ -42,23 +42,23 @@ jobs:
     steps:
       - name: fast-forward release PR from workflow dispatch
         if: github.event_name == 'workflow_dispatch'
-        uses: monochange/actions/merge@v0.1.0
+        uses: monochange/actions/merge@v0.5.2
         with:
           github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
           pull-request: ${{ inputs.pull_request }}
           base-branch: main
           head-branch-prefix: monochange/release/
           required-failing-check: release-pr-manual-merge-blocker
-          require-actor-push-permission: 'true'
+          minimum-reviewer-permission: admin
           comment: ${{ inputs.comment }}
 
-      - name: fast-forward release PR from /fast-forward comment
+      - name: fast-forward release PR from /merge comment
         if: github.event_name == 'issue_comment'
-        uses: monochange/actions/merge@v0.1.0
+        uses: monochange/actions/merge@v0.5.2
         with:
           github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
           base-branch: main
           head-branch-prefix: monochange/release/
           required-failing-check: release-pr-manual-merge-blocker
-          require-actor-push-permission: 'true'
+          minimum-reviewer-permission: admin
           comment: always

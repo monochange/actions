@@ -20521,9 +20521,7 @@ function isRecord(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function extractContentWithoutMarker(body) {
-	if (!body) return "";
-	const markerIndex = body.indexOf(COMMENT_MARKER);
-	return markerIndex === -1 ? body : body.slice(0, markerIndex).trim();
+	return body.slice(0, body.indexOf(COMMENT_MARKER)).trim();
 }
 function wrapPreviousFailure(previousContent) {
 	return `\n\n<details>\n<summary>Previous failures</summary>\n\n${previousContent}\n\n</details>`;
