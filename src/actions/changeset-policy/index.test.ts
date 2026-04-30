@@ -82,7 +82,12 @@ describe('runChangesetPolicy', () => {
     await runChangesetPolicy();
 
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockExec).toHaveBeenCalledWith('mc', ['step:affected-packages', '--format', 'json', '--verify']);
+    expect(mockExec).toHaveBeenCalledWith('mc', [
+      'step:affected-packages',
+      '--format',
+      'json',
+      '--verify',
+    ]);
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 
@@ -355,7 +360,12 @@ describe('runChangesetPolicy', () => {
     await runChangesetPolicy();
 
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockExec).toHaveBeenCalledWith('mc', ['step:affected-packages', '--format', 'json', '--verify']);
+    expect(mockExec).toHaveBeenCalledWith('mc', [
+      'step:affected-packages',
+      '--format',
+      'json',
+      '--verify',
+    ]);
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
     expect(octokit.rest.issues.updateComment).toHaveBeenCalledWith({
       body: '✅ **changeset-policy now passes**\n\n<details>\n<summary>Previous failures</summary>\n\nold\n\n</details>\n\n<!-- monochange:changeset-policy -->',
