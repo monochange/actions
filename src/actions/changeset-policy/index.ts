@@ -190,30 +190,33 @@ async function upsertPolicyComment(inputs: ChangesetPolicyInputs, comment: strin
 
   const newContent = comment.trim();
   const comments = await findPolicyComments(context);
-  const [first, ...stale] = comments;
 
-  if (first) {
-    const oldContent = extractContentWithoutMarker(first.body);
-
-    if (oldContent === newContent) {
-      // Same failure — don't update the comment
-      core.info('Failure comment unchanged, skipping update');
-    } else {
-      const body = `${newContent}${wrapPreviousFailure(oldContent)}\n\n${COMMENT_MARKER}`;
-
-      await context.octokit.rest.issues.updateComment({
-        body,
-        comment_id: first.id,
-        owner: context.owner,
-        repo: context.repo,
-      });
-    }
-  } else {
+  if (comments.length === 0 || !comments[0]) {
     const body = `${newContent}\n\n${COMMENT_MARKER}`;
 
     await context.octokit.rest.issues.createComment({
       body,
       issue_number: context.pullRequestNumber,
+      owner: context.owner,
+      repo: context.repo,
+    });
+
+    return;
+  }
+
+  const first = comments[0];
+  const stale = comments.slice(1);
+  const oldContent = extractContentWithoutMarker(first.body);
+
+  if (oldContent === newContent) {
+    // Same failure — don't update the comment
+    core.info('Failure comment unchanged, skipping update');
+  } else {
+    const body = `${newContent}${wrapPreviousFailure(oldContent)}\n\n${COMMENT_MARKER}`;
+
+    await context.octokit.rest.issues.updateComment({
+      body,
+      comment_id: first.id,
       owner: context.owner,
       repo: context.repo,
     });
@@ -249,11 +252,12 @@ async function markPolicyPassed(inputs: ChangesetPolicyInputs): Promise<void> {
 
   const comments = await findPolicyComments(context);
 
-  if (comments.length === 0) {
+  if (comments.length === 0 || !comments[0]) {
     return;
   }
 
-  const [first, ...stale] = comments;
+  const first = comments[0];
+  const stale = comments.slice(1);
   const oldContent = extractContentWithoutMarker(first.body);
   const body = `✅ **changeset-policy now passes**${wrapPreviousFailure(oldContent)}\n\n${COMMENT_MARKER}`;
 
