@@ -82,7 +82,7 @@ describe('runChangesetPolicy', () => {
     await runChangesetPolicy();
 
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockExec).toHaveBeenCalledWith('mc', ['affected', '--format', 'json', '--verify']);
+    expect(mockExec).toHaveBeenCalledWith('mc', ['step:affected-packages', '--format', 'json', '--verify']);
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 
@@ -110,7 +110,7 @@ describe('runChangesetPolicy', () => {
     await runChangesetPolicy();
 
     expect(mockExec).toHaveBeenCalledWith('mc', [
-      'affected',
+      'step:affected-packages',
       '--format',
       'json',
       '--verify',
@@ -148,11 +148,11 @@ describe('runChangesetPolicy', () => {
     mockExec.mockResolvedValue({
       exitCode: 1,
       stderr: '',
-      stdout: '{"status":"failed","summary":"mc affected failed"}',
+      stdout: '{"status":"failed","summary":"mc step:affected-packages failed"}',
     });
-    mockParse.mockReturnValue({ status: 'failed', summary: 'mc affected failed' });
+    mockParse.mockReturnValue({ status: 'failed', summary: 'mc step:affected-packages failed' });
 
-    await expect(runChangesetPolicy()).rejects.toThrow('mc affected failed');
+    await expect(runChangesetPolicy()).rejects.toThrow('mc step:affected-packages failed');
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'failed');
   });
 
@@ -355,7 +355,7 @@ describe('runChangesetPolicy', () => {
     await runChangesetPolicy();
 
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockExec).toHaveBeenCalledWith('mc', ['affected', '--format', 'json', '--verify']);
+    expect(mockExec).toHaveBeenCalledWith('mc', ['step:affected-packages', '--format', 'json', '--verify']);
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
     expect(octokit.rest.issues.updateComment).toHaveBeenCalledWith({
       body: '✅ **changeset-policy now passes**\n\n<details>\n<summary>Previous failures</summary>\n\nold\n\n</details>\n\n<!-- monochange:changeset-policy -->',

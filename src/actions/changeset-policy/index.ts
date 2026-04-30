@@ -58,7 +58,7 @@ export async function runChangesetPolicy(): Promise<void> {
 
   core.info(`Using monochange ${mc.version} from ${mc.source}`);
 
-  const args = ['affected', '--format', 'json', '--verify'];
+  const args = ['step:affected-packages', '--format', 'json', '--verify'];
 
   if (inputs.changedPaths) {
     args.push('--paths', inputs.changedPaths);

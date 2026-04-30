@@ -1,9 +1,9 @@
 # changeset-policy action
 
-Run `mc affected` to verify changeset policy for the current pull request.
+Run `mc step:affected-packages` to verify changeset policy for the current pull request.
 
 When `comment-on-failure` is enabled, the action posts the `comment` field returned by
-`mc affected`. Repeated failures with the same comment body do not produce duplicate
+`mc step:affected-packages`. Repeated failures with the same comment body do not produce duplicate
 updates. When the failure message changes, the previous failure is preserved in a
 collapsed `<details>` section. Once the PR passes or is skipped, the action updates
 the existing comment with a ✅ checkmark and preserves the previous failure history
@@ -56,6 +56,6 @@ jobs:
 | Output    | Description                                  |
 | --------- | -------------------------------------------- |
 | `result`  | `success`, `skipped`, `dry-run`, or `failed` |
-| `json`    | Raw JSON from `mc affected`                  |
+| `json`    | Raw JSON from `mc step:affected-packages`                  |
 | `summary` | Text summary                                 |
-| `comment` | Markdown comment body from `mc affected`     |
+| `comment` | Markdown comment body from `mc step:affected-packages`     |

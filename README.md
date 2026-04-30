@@ -703,7 +703,7 @@ Validate that all affected packages have appropriate changesets.
     comment-on-failure: true
 ```
 
-Failure comments use the `comment` field from `mc affected` and are deleted after the PR passes or is skipped.
+Failure comments use the `comment` field from `mc step:affected-packages` and are deleted after the PR passes or is skipped.
 
 ---
 

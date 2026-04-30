@@ -95,7 +95,7 @@ Expected shared helpers:
 | Variant              | Implementation path               | Wrapper path          | Primary command(s)                                                 | Notes                                                                       |
 | -------------------- | --------------------------------- | --------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
 | `setup-monochange`   | `src/actions/setup-monochange/`   | `setup-monochange/`   | `mc --version`, `npx @monochange/cli`, `cargo binstall monochange` | Exposes the shared bootstrap flow directly and outputs the resolved command |
-| `changeset-policy`   | `src/actions/changeset-policy/`   | `changeset-policy/`   | `mc affected --format json --verify ...`                           | Must resolve monochange first via the shared bootstrap input                |
+| `changeset-policy`   | `src/actions/changeset-policy/`   | `changeset-policy/`   | `mc step:affected-packages --format json --verify ...`                           | Must resolve monochange first via the shared bootstrap input                |
 | `release-pr`         | `src/actions/release-pr/`         | `release-pr/`         | `mc release-pr`                                                    | Must resolve monochange first via the shared bootstrap input                |
 | `post-merge-release` | `src/actions/post-merge-release/` | `post-merge-release/` | `mc release-record`, `mc tag-release`, `mc publish-release`        | Must support merged release commits on non-`main` target branches           |
 | `publish-plan`       | `src/actions/publish-plan/`       | `publish-plan/`       | `mc publish-plan`                                                  | Read-only planning plus CI-snippet output                                   |
@@ -161,7 +161,7 @@ Preferred behavior:
 - first resolve monochange through the shared bootstrap helper
 - use explicit `changed-paths` and `labels` when provided
 - otherwise detect PR files and labels from the GitHub API
-- run `mc affected --format json --verify`
+- run `mc step:affected-packages --format json --verify`
 - expose raw JSON and a compact summary as outputs
 
 ### `release-pr`
