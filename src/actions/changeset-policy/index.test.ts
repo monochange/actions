@@ -89,6 +89,7 @@ describe('runChangesetPolicy', () => {
   it('logs debug info', async () => {
     mockCore.getInput.mockImplementation((name: string) => {
       if (name === 'debug') return 'true';
+
       return '';
     });
 
@@ -102,6 +103,7 @@ describe('runChangesetPolicy', () => {
       if (name === 'changed-paths') return 'src/';
       if (name === 'labels') return 'bug,feature';
       if (name === 'skip-labels') return 'skip';
+
       return '';
     });
 
@@ -124,6 +126,7 @@ describe('runChangesetPolicy', () => {
   it('outputs dry-run without running command', async () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'dry-run') return 'true';
+
       return '';
     });
 
@@ -184,6 +187,7 @@ describe('runChangesetPolicy', () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'comment-on-failure') return 'true';
       if (name === 'github-token') return 'token';
+
       return '';
     });
     mockExec.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '{"status":"failed"}' });
@@ -202,6 +206,7 @@ describe('runChangesetPolicy', () => {
       if (name === 'comment-on-failure') return 'true';
       if (name === 'github-token') return 'token';
       if (name === 'repository') return 'mono/change';
+
       return '';
     });
     mockExec.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '{"status":"failed"}' });
@@ -222,6 +227,7 @@ describe('runChangesetPolicy', () => {
       if (name === 'comment-on-failure') return 'true';
       if (name === 'github-token') return 'token';
       if (name === 'repository') return 'mono/change';
+
       return '';
     });
     mockExec.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '{"status":"failed"}' });
@@ -239,6 +245,7 @@ describe('runChangesetPolicy', () => {
   it('skips comment cleanup when pull request context is unavailable', async () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'github-token') return 'token';
+
       return '';
     });
     const octokit = mockOctokit([{ body: 'old\n<!-- monochange:changeset-policy -->', id: 123 }]);
@@ -254,6 +261,7 @@ describe('runChangesetPolicy', () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'github-token') return 'token';
       if (name === 'repository') return 'invalid';
+
       return '';
     });
     const octokit = mockOctokit([{ body: 'old\n<!-- monochange:changeset-policy -->', id: 123 }]);
@@ -266,46 +274,74 @@ describe('runChangesetPolicy', () => {
     expect(octokit.rest.issues.listComments).not.toHaveBeenCalled();
   });
 
-  it('warns but still succeeds when deleting existing comments fails', async () => {
+  it('marks existing failure comment with checkmark when policy passes', async () => {
+    githubMock.context.payload = { pull_request: { head: { ref: 'feature/core' }, number: 42 } };
+    mockCore.getInput.mockImplementation((name) => {
+      if (name === 'github-token') return 'token';
+      if (name === 'repository') return 'mono/change';
+
+      return '';
+    });
+    mockParse.mockReturnValue({ status: 'passed', summary: 'passed' });
+    const octokit = mockOctokit([{ body: 'old\n<!-- monochange:changeset-policy -->', id: 123 }]);
+
+    await runChangesetPolicy();
+
+    expect(octokit.rest.issues.updateComment).toHaveBeenCalledWith({
+      body: '✅ **changeset-policy now passes**\n\n<details>\n<summary>Previous failures</summary>\n\nold\n\n</details>\n\n<!-- monochange:changeset-policy -->',
+      comment_id: 123,
+      owner: 'mono',
+      repo: 'change',
+    });
+    expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
+  });
+
+  it('does not create or update comments when policy passes and there is no existing comment', async () => {
+    githubMock.context.payload = { pull_request: { head: { ref: 'feature/core' }, number: 42 } };
+    mockCore.getInput.mockImplementation((name) => {
+      if (name === 'github-token') return 'token';
+      if (name === 'repository') return 'mono/change';
+
+      return '';
+    });
+    mockParse.mockReturnValue({ status: 'passed', summary: 'passed' });
+    const octokit = mockOctokit([]);
+
+    await runChangesetPolicy();
+
+    expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.updateComment).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
+  });
+
+  it('warns but still succeeds when marking comment as passed fails', async () => {
     githubMock.context.payload = { pull_request: { number: 42 } };
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'github-token') return 'token';
       if (name === 'repository') return 'mono/change';
+
       return '';
     });
     const octokit = mockOctokit([{ body: 'old\n<!-- monochange:changeset-policy -->', id: 123 }]);
-    octokit.rest.issues.deleteComment.mockRejectedValue('delete failed');
+    octokit.rest.issues.updateComment.mockRejectedValue(new Error('update failed'));
 
     await runChangesetPolicy();
 
     expect(mockCore.warning).toHaveBeenCalledWith(
-      'Unable to delete existing changeset-policy comment: delete failed',
+      'Unable to update changeset-policy comment for success: update failed',
     );
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 
-  it('formats delete comment errors in warnings', async () => {
-    githubMock.context.payload = { pull_request: { number: 42 } };
-    mockCore.getInput.mockImplementation((name) => {
-      if (name === 'github-token') return 'token';
-      if (name === 'repository') return 'mono/change';
-      return '';
-    });
-    const octokit = mockOctokit([{ body: 'old\n<!-- monochange:changeset-policy -->', id: 123 }]);
-    octokit.rest.issues.deleteComment.mockRejectedValue(new Error('delete failed'));
-
-    await runChangesetPolicy();
-
-    expect(mockCore.warning).toHaveBeenCalledWith(
-      'Unable to delete existing changeset-policy comment: delete failed',
-    );
-  });
-
-  it('outputs skipped and clears comments when monochange reports a skip', async () => {
+  it('marks existing failure comment with checkmark when monochange reports a skip', async () => {
     githubMock.context.payload = { pull_request: { head: { ref: 'feature/core' }, number: 12 } };
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'github-token') return 'token';
       if (name === 'repository') return 'mono/change';
+
       return '';
     });
     mockExec.mockResolvedValue({
@@ -321,11 +357,13 @@ describe('runChangesetPolicy', () => {
     expect(mockResolve).toHaveBeenCalledWith('true');
     expect(mockExec).toHaveBeenCalledWith('mc', ['affected', '--format', 'json', '--verify']);
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
-    expect(octokit.rest.issues.deleteComment).toHaveBeenCalledWith({
+    expect(octokit.rest.issues.updateComment).toHaveBeenCalledWith({
+      body: '✅ **changeset-policy now passes**\n\n<details>\n<summary>Previous failures</summary>\n\nold\n\n</details>\n\n<!-- monochange:changeset-policy -->',
       comment_id: 123,
       owner: 'mono',
       repo: 'change',
     });
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
   });
 
   it('posts the monochange comment when policy fails', async () => {
@@ -334,6 +372,7 @@ describe('runChangesetPolicy', () => {
       if (name === 'comment-on-failure') return 'true';
       if (name === 'github-token') return 'token';
       if (name === 'repository') return 'mono/change';
+
       return '';
     });
     mockExec.mockResolvedValue({
@@ -365,12 +404,13 @@ describe('runChangesetPolicy', () => {
     });
   });
 
-  it('updates an existing failure comment instead of creating duplicates', async () => {
+  it('updates an existing failure comment with previous failures collapsed', async () => {
     githubMock.context.payload = { pull_request: { head: { ref: 'feature/core' }, number: 42 } };
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'comment-on-failure') return 'true';
       if (name === 'github-token') return 'token';
       if (name === 'repository') return 'mono/change';
+
       return '';
     });
     mockExec.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '{"status":"failed"}' });
@@ -383,7 +423,7 @@ describe('runChangesetPolicy', () => {
     await expect(runChangesetPolicy()).rejects.toThrow('failed');
 
     expect(octokit.rest.issues.updateComment).toHaveBeenCalledWith({
-      body: 'new comment\n\n<!-- monochange:changeset-policy -->',
+      body: 'new comment\n\n<details>\n<summary>Previous failures</summary>\n\nold\n\n</details>\n\n<!-- monochange:changeset-policy -->',
       comment_id: 1,
       owner: 'mono',
       repo: 'change',
@@ -395,24 +435,25 @@ describe('runChangesetPolicy', () => {
     });
   });
 
-  it('deletes an existing failure comment when policy passes', async () => {
+  it('does not update the comment when the same failure occurs again', async () => {
     githubMock.context.payload = { pull_request: { head: { ref: 'feature/core' }, number: 42 } };
     mockCore.getInput.mockImplementation((name) => {
+      if (name === 'comment-on-failure') return 'true';
       if (name === 'github-token') return 'token';
       if (name === 'repository') return 'mono/change';
+
       return '';
     });
-    mockParse.mockReturnValue({ status: 'passed', summary: 'passed' });
-    const octokit = mockOctokit([{ body: 'old\n<!-- monochange:changeset-policy -->', id: 123 }]);
+    mockExec.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '{"status":"failed"}' });
+    mockParse.mockReturnValue({ comment: 'failure comment', status: 'failed', summary: 'failed' });
+    const octokit = mockOctokit([
+      { body: 'failure comment\n<!-- monochange:changeset-policy -->', id: 1 },
+    ]);
 
-    await runChangesetPolicy();
+    await expect(runChangesetPolicy()).rejects.toThrow('failed');
 
-    expect(octokit.rest.issues.deleteComment).toHaveBeenCalledWith({
-      comment_id: 123,
-      owner: 'mono',
-      repo: 'change',
-    });
-    expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+    expect(mockCore.info).toHaveBeenCalledWith('Failure comment unchanged, skipping update');
     expect(octokit.rest.issues.updateComment).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
   });
 });

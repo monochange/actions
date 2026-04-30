@@ -106,7 +106,7 @@ export async function runChangesetPolicy(): Promise<void> {
     throw new Error(summary);
   }
 
-  await deleteExistingPolicyCommentsSafely(inputs);
+  await markPolicyPassedSafely(inputs);
 
   core.setOutput('result', skipped ? 'skipped' : 'success');
   core.info(skipped ? 'changeset-policy skipped' : 'changeset-policy completed successfully');
@@ -154,6 +154,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function extractContentWithoutMarker(body: string | undefined | null): string {
+  if (!body) {
+    return '';
+  }
+
+  const markerIndex = body.indexOf(COMMENT_MARKER);
+
+  return markerIndex === -1 ? body : body.slice(0, markerIndex).trim();
+}
+
+function wrapPreviousFailure(previousContent: string): string {
+  return `\n\n<details>\n<summary>Previous failures</summary>\n\n${previousContent}\n\n</details>`;
+}
+
 async function upsertPolicyCommentSafely(
   inputs: ChangesetPolicyInputs,
   comment: string,
@@ -167,16 +181,6 @@ async function upsertPolicyCommentSafely(
   }
 }
 
-async function deleteExistingPolicyCommentsSafely(inputs: ChangesetPolicyInputs): Promise<void> {
-  try {
-    await deleteExistingPolicyComments(inputs);
-  } catch (error) {
-    core.warning(
-      `Unable to delete existing changeset-policy comment: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-}
-
 async function upsertPolicyComment(inputs: ChangesetPolicyInputs, comment: string): Promise<void> {
   const context = commentContext(inputs);
 
@@ -184,23 +188,36 @@ async function upsertPolicyComment(inputs: ChangesetPolicyInputs, comment: strin
     return;
   }
 
-  const body = `${comment.trim()}\n\n${COMMENT_MARKER}`;
+  const newContent = comment.trim();
   const comments = await findPolicyComments(context);
   const [first, ...stale] = comments;
 
-  await (first
-    ? context.octokit.rest.issues.updateComment({
+  if (first) {
+    const oldContent = extractContentWithoutMarker(first.body);
+
+    if (oldContent === newContent) {
+      // Same failure — don't update the comment
+      core.info('Failure comment unchanged, skipping update');
+    } else {
+      const body = `${newContent}${wrapPreviousFailure(oldContent)}\n\n${COMMENT_MARKER}`;
+
+      await context.octokit.rest.issues.updateComment({
         body,
         comment_id: first.id,
         owner: context.owner,
         repo: context.repo,
-      })
-    : context.octokit.rest.issues.createComment({
-        body,
-        issue_number: context.pullRequestNumber,
-        owner: context.owner,
-        repo: context.repo,
-      }));
+      });
+    }
+  } else {
+    const body = `${newContent}\n\n${COMMENT_MARKER}`;
+
+    await context.octokit.rest.issues.createComment({
+      body,
+      issue_number: context.pullRequestNumber,
+      owner: context.owner,
+      repo: context.repo,
+    });
+  }
 
   await Promise.all(
     stale.map(async (staleComment) =>
@@ -213,7 +230,17 @@ async function upsertPolicyComment(inputs: ChangesetPolicyInputs, comment: strin
   );
 }
 
-async function deleteExistingPolicyComments(inputs: ChangesetPolicyInputs): Promise<void> {
+async function markPolicyPassedSafely(inputs: ChangesetPolicyInputs): Promise<void> {
+  try {
+    await markPolicyPassed(inputs);
+  } catch (error) {
+    core.warning(
+      `Unable to update changeset-policy comment for success: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+async function markPolicyPassed(inputs: ChangesetPolicyInputs): Promise<void> {
   const context = commentContext(inputs);
 
   if (!context) {
@@ -222,10 +249,25 @@ async function deleteExistingPolicyComments(inputs: ChangesetPolicyInputs): Prom
 
   const comments = await findPolicyComments(context);
 
+  if (comments.length === 0) {
+    return;
+  }
+
+  const [first, ...stale] = comments;
+  const oldContent = extractContentWithoutMarker(first.body);
+  const body = `✅ **changeset-policy now passes**${wrapPreviousFailure(oldContent)}\n\n${COMMENT_MARKER}`;
+
+  await context.octokit.rest.issues.updateComment({
+    body,
+    comment_id: first.id,
+    owner: context.owner,
+    repo: context.repo,
+  });
+
   await Promise.all(
-    comments.map(async (comment) =>
+    stale.map(async (staleComment) =>
       context.octokit.rest.issues.deleteComment({
-        comment_id: comment.id,
+        comment_id: staleComment.id,
         owner: context.owner,
         repo: context.repo,
       }),
@@ -258,6 +300,7 @@ function commentContext(inputs: ChangesetPolicyInputs):
     core.warning(
       `Unable to manage changeset-policy comments: invalid repository \`${inputs.repository}\`.`,
     );
+
     return undefined;
   }
 
