@@ -20494,7 +20494,7 @@ async function runChangesetPolicy() {
 		if (inputs.commentOnFailure && comment) await upsertPolicyCommentSafely(inputs, comment);
 		throw new Error(summary);
 	}
-	await deleteExistingPolicyCommentsSafely(inputs);
+	await markPolicyPassedSafely(inputs);
 	setOutput("result", skipped ? "skipped" : "success");
 	info(skipped ? "changeset-policy skipped" : "changeset-policy completed successfully");
 }
@@ -20520,6 +20520,14 @@ function changesetComment(parsed) {
 function isRecord(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+function extractContentWithoutMarker(body) {
+	if (!body) return "";
+	const markerIndex = body.indexOf(COMMENT_MARKER);
+	return markerIndex === -1 ? body : body.slice(0, markerIndex).trim();
+}
+function wrapPreviousFailure(previousContent) {
+	return `\n\n<details>\n<summary>Previous failures</summary>\n\n${previousContent}\n\n</details>`;
+}
 async function upsertPolicyCommentSafely(inputs, comment) {
 	try {
 		await upsertPolicyComment(inputs, comment);
@@ -20527,41 +20535,63 @@ async function upsertPolicyCommentSafely(inputs, comment) {
 		warning(`Unable to create or update changeset-policy comment: ${error instanceof Error ? error.message : String(error)}`);
 	}
 }
-async function deleteExistingPolicyCommentsSafely(inputs) {
-	try {
-		await deleteExistingPolicyComments(inputs);
-	} catch (error) {
-		warning(`Unable to delete existing changeset-policy comment: ${error instanceof Error ? error.message : String(error)}`);
-	}
-}
 async function upsertPolicyComment(inputs, comment) {
 	const context = commentContext(inputs);
 	if (!context) return;
-	const body = `${comment.trim()}\n\n${COMMENT_MARKER}`;
-	const [first, ...stale] = await findPolicyComments(context);
-	await (first ? context.octokit.rest.issues.updateComment({
-		body,
-		comment_id: first.id,
-		owner: context.owner,
-		repo: context.repo
-	}) : context.octokit.rest.issues.createComment({
-		body,
-		issue_number: context.pullRequestNumber,
-		owner: context.owner,
-		repo: context.repo
-	}));
+	const newContent = comment.trim();
+	const comments = await findPolicyComments(context);
+	if (comments.length === 0 || !comments[0]) {
+		const body = `${newContent}\n\n${COMMENT_MARKER}`;
+		await context.octokit.rest.issues.createComment({
+			body,
+			issue_number: context.pullRequestNumber,
+			owner: context.owner,
+			repo: context.repo
+		});
+		return;
+	}
+	const first = comments[0];
+	const stale = comments.slice(1);
+	const oldContent = extractContentWithoutMarker(first.body);
+	if (oldContent === newContent) info("Failure comment unchanged, skipping update");
+	else {
+		const body = `${newContent}${wrapPreviousFailure(oldContent)}\n\n${COMMENT_MARKER}`;
+		await context.octokit.rest.issues.updateComment({
+			body,
+			comment_id: first.id,
+			owner: context.owner,
+			repo: context.repo
+		});
+	}
 	await Promise.all(stale.map(async (staleComment) => context.octokit.rest.issues.deleteComment({
 		comment_id: staleComment.id,
 		owner: context.owner,
 		repo: context.repo
 	})));
 }
-async function deleteExistingPolicyComments(inputs) {
+async function markPolicyPassedSafely(inputs) {
+	try {
+		await markPolicyPassed(inputs);
+	} catch (error) {
+		warning(`Unable to update changeset-policy comment for success: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+async function markPolicyPassed(inputs) {
 	const context = commentContext(inputs);
 	if (!context) return;
 	const comments = await findPolicyComments(context);
-	await Promise.all(comments.map(async (comment) => context.octokit.rest.issues.deleteComment({
-		comment_id: comment.id,
+	if (comments.length === 0 || !comments[0]) return;
+	const first = comments[0];
+	const stale = comments.slice(1);
+	const body = `✅ **changeset-policy now passes**${wrapPreviousFailure(extractContentWithoutMarker(first.body))}\n\n${COMMENT_MARKER}`;
+	await context.octokit.rest.issues.updateComment({
+		body,
+		comment_id: first.id,
+		owner: context.owner,
+		repo: context.repo
+	});
+	await Promise.all(stale.map(async (staleComment) => context.octokit.rest.issues.deleteComment({
+		comment_id: staleComment.id,
 		owner: context.owner,
 		repo: context.repo
 	})));

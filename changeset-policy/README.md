@@ -3,8 +3,11 @@
 Run `mc affected` to verify changeset policy for the current pull request.
 
 When `comment-on-failure` is enabled, the action posts the `comment` field returned by
-`mc affected`; once the PR passes or is skipped, the action deletes any previous comment it
-created.
+`mc affected`. Repeated failures with the same comment body do not produce duplicate
+updates. When the failure message changes, the previous failure is preserved in a
+collapsed `<details>` section. Once the PR passes or is skipped, the action updates
+the existing comment with a ✅ checkmark and preserves the previous failure history
+a collapsed section.
 
 ```yaml
 name: changeset policy
