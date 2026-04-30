@@ -20464,7 +20464,7 @@ async function runChangesetPolicy() {
 	const mc = await resolveMonochange(inputs.setupMonochange);
 	info(`Using monochange ${mc.version} from ${mc.source}`);
 	const args = [
-		"affected",
+		"step:affected-packages",
 		"--format",
 		"json",
 		"--verify"

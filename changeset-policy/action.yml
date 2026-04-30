@@ -1,5 +1,5 @@
 name: changeset-policy
-description: 'Run mc affected to verify changeset policy for the current pull request.'
+description: 'Run mc step:affected-packages to verify changeset policy for the current pull request.'
 author: monochange
 inputs:
   name:
@@ -43,11 +43,11 @@ outputs:
   result:
     description: 'success, skipped, dry-run, or failed.'
   json:
-    description: 'Raw JSON output from mc affected.'
+    description: 'Raw JSON output from mc step:affected-packages.'
   summary:
     description: 'Text summary of affected packages.'
   comment:
-    description: 'Markdown comment body from mc affected when changeset verification fails.'
+    description: 'Markdown comment body from mc step:affected-packages when changeset verification fails.'
 runs:
   using: node24
   main: ../dist/index.mjs
