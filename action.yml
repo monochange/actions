@@ -31,8 +31,16 @@ inputs:
     description: 'Required prefix for the release pull request head branch.'
     required: false
     default: monochange/release/
+  merge-method:
+    description: 'How to update the base branch. fast-forward preserves the head commit SHA; cherry-pick replays each PR commit with -x so checks run on new SHAs while preserving commit messages and author metadata.'
+    required: false
+    default: fast-forward
+    type: choice
+    options:
+      - fast-forward
+      - cherry-pick
   required-failing-check:
-    description: 'Optional check name that is expected to fail before the fast-forward update.'
+    description: 'Optional check name that is expected to fail before the merge update.'
     required: false
     default: release-pr-manual-merge-blocker
   allow-cross-repository:
@@ -79,22 +87,26 @@ inputs:
     required: false
     default: '/merge'
   should-fail:
-    description: 'When true, the action fails with the provided reason. Supports GitHub Actions expressions. Use this to block merges conditionally (e.g., on a protected branch).'
+    description: 'Boolean-like condition result for the fail-when variant. When true, fail-when writes outputs and a summary, optionally posts fail-comment to the PR, then fails with reason.'
     required: false
     default: 'false'
   reason:
-    description: 'Failure reason shown in the action summary and used as the thrown error message when should-fail is true.'
+    description: 'Failure reason shown in the thrown error, action summary, reason output, and optional pull request comment when should-fail is true.'
     required: false
-    default: ''
+    default: 'fail-when condition evaluated to true.'
   fail-comment:
-    description: 'Optional comment body to post on the pull request when should-fail is true. Supports markdown.'
+    description: 'Optional markdown to include in a pull request comment when should-fail is true. If omitted, fail-when never calls the GitHub API.'
     required: false
     default: ''
 outputs:
   result:
-    description: 'Final action result.'
+    description: 'Final action result. For fail-when, this is skipped when should-fail is false and failed when the dispatcher catches the intentional failure.'
+  failed:
+    description: 'For fail-when, whether the action intentionally failed (true) or skipped (false).'
+  reason:
+    description: 'For fail-when, the failure reason when should-fail was true.'
   merged:
-    description: 'Whether the pull request was fast-forwarded.'
+    description: 'Whether the pull request was merged into the base branch.'
   pull-request-number:
     description: 'Resolved pull request number.'
   pull-request-url:
@@ -104,9 +116,9 @@ outputs:
   head-sha:
     description: 'Head commit SHA used for validation.'
   fast-forward-sha:
-    description: 'Commit SHA pushed to the base branch after a successful fast-forward, or the candidate SHA reported during dry-run mode.'
+    description: 'Commit SHA pushed to the base branch after a successful merge, or the candidate SHA reported during dry-run mode. Kept for backwards compatibility.'
   comment:
-    description: 'JSON comment payload with a body field.'
+    description: 'JSON comment payload with a body field. For fail-when, this is the generated fail-comment body when provided.'
   rebased:
     description: 'Whether the head branch was rebased onto the base branch before the fast-forward.'
 runs:

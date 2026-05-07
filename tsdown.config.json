@@ -10,5 +10,9 @@
   "treeshake": true,
   "dts": false,
   "minify": false,
-  "report": false
+  "report": false,
+  "deps": {
+    "alwaysBundle": ["@actions/core", "@actions/exec", "@actions/github"],
+    "onlyBundle": false
+  }
 }

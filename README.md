@@ -8,7 +8,7 @@ This repository exists so monochange can own the critical parts of its workflow 
 
 The first action in this repository is `merge`.
 
-It is intentionally modeled after [`sequoia-pgp/fast-forward`](https://github.com/sequoia-pgp/fast-forward): it performs a **fast-forward-only** update of the base branch so the release commit lands unchanged.
+It is intentionally modeled after [`sequoia-pgp/fast-forward`](https://github.com/sequoia-pgp/fast-forward): by default it performs a **fast-forward-only** update of the base branch so the release commit lands unchanged. Set `merge-method: cherry-pick` to replay each PR commit with `git cherry-pick -x`, preserving commit messages and authors while producing new SHAs that rerun checks on the base branch.
 
 That means it does **not** create a merge commit.
 
@@ -16,7 +16,7 @@ That means it does **not** create a merge commit.
 
 Currently implemented:
 
-- `merge` - fast-forward a monochange release pull request onto its base branch
+- `merge` - merge a monochange release pull request onto its base branch with fast-forward or cherry-pick
 - `fail-when` - intentionally fail a workflow step with a configurable reason
 - `setup-monochange` - install monochange CLI from cargo or binstall
 - `changeset-policy` - validate changeset policy for affected packages
@@ -398,6 +398,7 @@ with:
 | `pull-request`                | no       | empty                             | Explicit PR number. Must be a positive integer when provided.                                                                                                     |
 | `base-branch`                 | no       | `main`                            | Expected base branch for the release PR.                                                                                                                          |
 | `head-branch-prefix`          | no       | `monochange/release/`             | Required prefix for the release PR head branch.                                                                                                                   |
+| `merge-method`                | no       | `fast-forward`                    | How to update the base branch. Use `fast-forward` to preserve the PR head SHA, or `cherry-pick` to replay commits with `-x` and create new base-branch SHAs.      |
 | `required-failing-check`      | no       | `release-pr-manual-merge-blocker` | Name of the intentionally failing blocker check. Pass an empty string to disable this special rule.                                                               |
 | `allow-cross-repository`      | no       | `'false'`                         | Whether pull requests from forks are allowed.                                                                                                                     |
 | `require-green-checks`        | no       | `'true'`                          | Whether all checks must be complete and successful apart from the configured blocker check.                                                                       |
@@ -414,17 +415,17 @@ with:
 
 ## Outputs
 
-| Output                | Description                                                                            |
-| --------------------- | -------------------------------------------------------------------------------------- |
-| `result`              | Final result. Currently `fast-forwarded`, `dry-run`, or `failed`.                      |
-| `merged`              | `'true'` when a fast-forward update was performed, otherwise `'false'`.                |
-| `rebased`             | `'true'` when the head branch was rebased onto the base branch before fast-forwarding. |
-| `pull-request-number` | Resolved PR number.                                                                    |
-| `pull-request-url`    | Resolved PR URL.                                                                       |
-| `base-sha`            | Base branch SHA before validation/push.                                                |
-| `head-sha`            | Head SHA used for validation.                                                          |
-| `fast-forward-sha`    | The SHA pushed to the base branch, or the candidate SHA reported during dry-run mode.  |
-| `comment`             | JSON string with a `body` field containing the summary comment text.                   |
+| Output                | Description                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `result`              | Final result. Currently `fast-forwarded`, `cherry-picked`, `dry-run`, or `failed`.                            |
+| `merged`              | `'true'` when the base branch was updated, otherwise `'false'`.                                               |
+| `rebased`             | `'true'` when the head branch was rebased onto the base branch before fast-forwarding.                        |
+| `pull-request-number` | Resolved PR number.                                                                                           |
+| `pull-request-url`    | Resolved PR URL.                                                                                              |
+| `base-sha`            | Base branch SHA before validation/push.                                                                       |
+| `head-sha`            | Head SHA used for validation.                                                                                 |
+| `fast-forward-sha`    | The SHA pushed to the base branch, or the candidate SHA reported during dry-run mode. Kept for compatibility. |
+| `comment`             | JSON string with a `body` field containing the summary comment text.                                          |
 
 ### Example: consume outputs
 
@@ -655,15 +656,22 @@ uses: monochange/actions/merge@v0.4.0
 
 ## `fail-when`
 
-Intentionally fail a workflow step with a configurable reason. Useful for manual merge blockers, policy gates, or conditional failure steps.
+Intentionally fail a workflow step with a configurable reason. Useful for manual merge blockers, policy gates, and branch-protection checks that need a clear human-readable failure.
+
+`fail-when` writes a job summary every time it intentionally fails. If `fail-comment` is provided, it also resolves the target PR and posts a formatted markdown comment. If `should-fail` is false, it skips without requiring a reason, token, repository, or pull request context.
 
 ```yaml
 - uses: monochange/actions/fail-when@v0.4.0
   with:
-    should-fail: true
-    reason: 'Release PR is not ready'
-    fail-comment: 'This PR cannot be merged yet'
+    should-fail: ${{ startsWith(github.head_ref, 'monochange/release/') }}
+    reason: Release PRs must be merged with the monochange /merge workflow.
+    fail-comment: |
+      This check fails intentionally so the normal GitHub merge button cannot be used.
+
+      After checks are green, comment `/merge` to fast-forward the release PR.
 ```
+
+See the full [`fail-when` documentation](fail-when/README.md) for inputs, outputs, permissions, PR comment behavior, examples, and troubleshooting.
 
 ---
 
@@ -685,10 +693,18 @@ Install the `monochange` CLI from cargo or via `cargo binstall`. Falls back to i
 Validate that all affected packages have appropriate changesets.
 
 ```yaml
+- id: changed
+  uses: tj-actions/changed-files@v46
+  with:
+    separator: ','
+
 - uses: monochange/actions/changeset-policy@v0.4.0
   with:
-    dry-run: false
+    changed-paths: ${{ steps.changed.outputs.all_changed_files }}
+    comment-on-failure: true
 ```
+
+Failure comments use the `comment` field from `mc step:affected-packages` and are deleted after the PR passes or is skipped.
 
 ---
 

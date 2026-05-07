@@ -1,15 +1,23 @@
 name: changeset-policy
-description: 'Run mc affected to verify changeset policy for the current pull request.'
+description: 'Run mc step:affected-packages to verify changeset policy for the current pull request.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as changeset-policy.'
+    required: false
+    default: changeset-policy
   setup-monochange:
     description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
     required: false
     default: 'true'
   github-token:
-    description: 'GitHub token used to inspect pull request labels and files.'
+    description: 'GitHub token used to manage pull request comments.'
     required: false
     default: ${{ github.token }}
+  repository:
+    description: 'Target repository in owner/repo format.'
+    required: false
+    default: ${{ github.repository }}
   changed-paths:
     description: 'Comma-separated list of changed paths to check.'
     required: false
@@ -22,7 +30,7 @@ inputs:
   comment-on-failure:
     description: 'Whether to post a PR comment when the policy check fails.'
     required: false
-    default: 'false'
+    default: 'true'
   dry-run:
     description: 'Validate without posting comments or failing.'
     required: false
@@ -33,11 +41,13 @@ inputs:
     default: 'false'
 outputs:
   result:
-    description: 'success, dry-run, or failed.'
+    description: 'success, skipped, dry-run, or failed.'
   json:
-    description: 'Raw JSON output from mc affected.'
+    description: 'Raw JSON output from mc step:affected-packages.'
   summary:
     description: 'Text summary of affected packages.'
+  comment:
+    description: 'Markdown comment body from mc step:affected-packages when changeset verification fails.'
 runs:
   using: node24
   main: ../dist/index.mjs

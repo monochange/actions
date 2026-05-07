@@ -4,6 +4,12 @@ import * as github from '@actions/github';
 import { getBooleanInput, getOptionalInput } from '../../shared/inputs';
 
 // ------------------------------------------------------------------------------
+// Constants
+// ------------------------------------------------------------------------------
+
+const DEFAULT_FAILURE_REASON = 'fail-when condition evaluated to true.';
+
+// ------------------------------------------------------------------------------
 // Types
 // ------------------------------------------------------------------------------
 
@@ -15,81 +21,50 @@ type Issue = { number: number; pull_request?: unknown };
 // ------------------------------------------------------------------------------
 
 export async function runFailWhen(): Promise<void> {
-  const inputs = readInputs();
-
-  const { owner, repo } = parseRepository(inputs.repository);
-  const octokit = github.getOctokit(inputs.githubToken);
-
-  const pullRequest = await resolveContextPullRequest({
-    octokit,
-    owner,
-    pullRequestNumber: inputs.pullRequestNumber,
-    repo,
-  });
-
-  if (!inputs.shouldFail) {
+  if (!getBooleanInput('should-fail')) {
     core.notice('should-fail evaluated to false. Skipping.');
     core.setOutput('failed', 'false');
+    core.setOutput('result', 'skipped');
 
     return;
   }
 
+  const reason = getOptionalInput('reason') ?? DEFAULT_FAILURE_REASON;
+  const comment = getOptionalInput('fail-comment');
+  const summaryBody = comment
+    ? buildFailCommentBody({
+        actor: github.context.actor,
+        comment,
+        reason,
+        runUrl: buildRunUrl(),
+      })
+    : buildFailureSummary(reason);
+
   core.setOutput('failed', 'true');
-  core.setOutput('reason', inputs.reason);
+  core.setOutput('reason', reason);
+  await safeWriteSummary(summaryBody);
 
-  // Build a nicely formatted comment when a custom one is provided.
-  let commentBody = '';
-
-  if (inputs.comment) {
-    commentBody = buildFailCommentBody({
-      actor: github.context.actor,
-      comment: inputs.comment,
-      reason: inputs.reason,
-      runUrl: buildRunUrl(),
-    });
-
-    core.setOutput('comment', serializeCommentOutput(commentBody));
-    await writeSummary(commentBody);
-
-    if (pullRequest) {
-      try {
-        await postPullRequestComment({
-          body: commentBody,
-          octokit,
-          owner,
-          pullRequestNumber: pullRequest.number,
-          repo,
-        });
-      } catch (error) {
-        core.warning(
-          `Failed to post pull request comment: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    }
+  if (comment) {
+    core.setOutput('comment', serializeCommentOutput(summaryBody));
+    await tryPostPullRequestComment(summaryBody);
   }
 
-  throw new Error(inputs.reason);
+  throw new Error(reason);
 }
 
 // ------------------------------------------------------------------------------
 // Inputs
 // ------------------------------------------------------------------------------
 
-function readInputs(): {
-  comment: string | undefined;
+function readCommentInputs(): {
   githubToken: string;
   pullRequestNumber: number | undefined;
-  reason: string;
   repository: string;
-  shouldFail: boolean;
 } {
   return {
-    comment: getOptionalInput('fail-comment'),
     githubToken: core.getInput('github-token', { required: true }).trim(),
     pullRequestNumber: parsePullRequestNumber(getOptionalInput('pull-request')),
-    reason: core.getInput('reason', { required: true }).trim(),
     repository: core.getInput('repository', { required: true }).trim(),
-    shouldFail: getBooleanInput('should-fail'),
   };
 }
 
@@ -112,7 +87,7 @@ function parsePullRequestNumber(input: string | undefined): number | undefined {
 }
 
 function parseRepository(input: string): { owner: string; repo: string } {
-  const parts = input.split('/');
+  const parts = input.split('/').map((part) => part.trim());
 
   if (parts.length !== 2 || !parts[0] || !parts[1]) {
     throw new Error(`Input \`repository\` must be in owner/repo format, received \`${input}\`.`);
@@ -122,8 +97,43 @@ function parseRepository(input: string): { owner: string; repo: string } {
 }
 
 // ------------------------------------------------------------------------------
-// Pull-request resolution
+// Pull-request comments
 // ------------------------------------------------------------------------------
+
+async function tryPostPullRequestComment(body: string): Promise<void> {
+  const inputs = readCommentInputs();
+  const { owner, repo } = parseRepository(inputs.repository);
+  const octokit = github.getOctokit(inputs.githubToken);
+
+  const pullRequest = await resolveContextPullRequest({
+    octokit,
+    owner,
+    pullRequestNumber: inputs.pullRequestNumber,
+    repo,
+  });
+
+  if (!pullRequest) {
+    core.warning(
+      'fail-comment was provided, but no pull request could be resolved from `pull-request`, the current pull_request event, or the current issue_comment event.',
+    );
+
+    return;
+  }
+
+  core.setOutput('pull-request-number', String(pullRequest.number));
+
+  try {
+    await postPullRequestComment({
+      body,
+      octokit,
+      owner,
+      pullRequestNumber: pullRequest.number,
+      repo,
+    });
+  } catch (error) {
+    core.warning(`Failed to post pull request comment: ${formatError(error)}`);
+  }
+}
 
 async function resolveContextPullRequest(options: {
   octokit: ReturnType<typeof github.getOctokit>;
@@ -169,53 +179,6 @@ async function resolveContextPullRequest(options: {
   return undefined;
 }
 
-// ------------------------------------------------------------------------------
-// Comment formatting
-// ------------------------------------------------------------------------------
-
-function buildFailCommentBody(options: {
-  actor: string;
-  comment: string;
-  reason: string;
-  runUrl: string;
-}): string {
-  const { actor, comment, reason, runUrl } = options;
-
-  const lines = [
-    `## ⚠️ Action Blocked`,
-    '',
-    `Triggered by @${actor}.`,
-    '',
-    `**Reason:** ${reason}`,
-    '',
-    comment,
-    '',
-    `---`,
-    '',
-    `[View run](${runUrl})`,
-  ];
-
-  return lines.join('\n');
-}
-
-function buildRunUrl(): string {
-  const { owner, repo } = github.context.repo;
-
-  return `https://github.com/${owner}/${repo}/actions/runs/${github.context.runId}`;
-}
-
-function serializeCommentOutput(body: string): string {
-  return JSON.stringify({ body }, null, 2);
-}
-
-async function writeSummary(body: string): Promise<void> {
-  await core.summary.addRaw(body).write();
-}
-
-// ------------------------------------------------------------------------------
-// PR comment posting
-// ------------------------------------------------------------------------------
-
 async function postPullRequestComment(options: {
   body: string;
   octokit: ReturnType<typeof github.getOctokit>;
@@ -231,4 +194,63 @@ async function postPullRequestComment(options: {
     owner,
     repo,
   });
+}
+
+// ------------------------------------------------------------------------------
+// Formatting
+// ------------------------------------------------------------------------------
+
+function buildFailureSummary(reason: string): string {
+  return [
+    '## ⚠️ Action Blocked',
+    '',
+    `**Reason:** ${reason}`,
+    '',
+    `[View run](${buildRunUrl()})`,
+  ].join('\n');
+}
+
+function buildFailCommentBody(options: {
+  actor: string;
+  comment: string;
+  reason: string;
+  runUrl: string;
+}): string {
+  const { actor, comment, reason, runUrl } = options;
+
+  return [
+    '## ⚠️ Action Blocked',
+    '',
+    `Triggered by @${actor}.`,
+    '',
+    `**Reason:** ${reason}`,
+    '',
+    comment,
+    '',
+    '---',
+    '',
+    `[View run](${runUrl})`,
+  ].join('\n');
+}
+
+function buildRunUrl(): string {
+  const { owner, repo } = github.context.repo;
+
+  return `https://github.com/${owner}/${repo}/actions/runs/${github.context.runId}`;
+}
+
+function serializeCommentOutput(body: string): string {
+  return JSON.stringify({ body }, null, 2);
+}
+
+async function safeWriteSummary(body: string): Promise<void> {
+  try {
+    await core.summary.addRaw(body).write();
+  } catch (error) {
+    core.warning(`Failed to write action summary: ${formatError(error)}`);
+  }
+}
+
+function formatError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
