@@ -19,8 +19,8 @@ importers:
         version: 9.1.1
     devDependencies:
       '@rslint/tsgo':
-        specifier: ^0.5.0
-        version: 0.5.0
+        specifier: ^0.5.1
+        version: 0.5.1
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
@@ -843,38 +843,38 @@ packages:
   '@rolldown/pluginutils@1.0.0-rc.17':
     resolution: {integrity: sha512-n8iosDOt6Ig1UhJ2AYqoIhHWh/isz0xpicHTzpKBeotdVsTEcxsSA/i3EVM7gQAj0rU27OLAxCjzlj15IWY7bg==}
 
-  '@rslint/tsgo-darwin-arm64@0.5.0':
-    resolution: {integrity: sha512-Qu7mqMAeZl2qoUzvh0+OlpV9tg89EHZA/FZfxapvdrT1+MYS5b8IWdtUfAr+W0ye/k7jGVTkHkzA9AT+6LPtqg==}
+  '@rslint/tsgo-darwin-arm64@0.5.1':
+    resolution: {integrity: sha512-QpFEM1GpOcZxnRFIY1DojbITem4nH8YisWREdZoLtkLP7R6yGqvvYBcMg3VOzHRW9VBxE0eIQuaB5zpt3Ez2Ew==}
     cpu: [arm64]
     os: [darwin]
 
-  '@rslint/tsgo-darwin-x64@0.5.0':
-    resolution: {integrity: sha512-mWS+isUswYarGw4RNiuhknA8tZG0Rn35E/AZGhOkxWnroC1KdqHQzlv2L8r7mnCT9h8zv+YTqSC+Z3GuSVJ1Sw==}
+  '@rslint/tsgo-darwin-x64@0.5.1':
+    resolution: {integrity: sha512-AS9zYheZriuIwq5JdP78lyBP5yFa/lmiozycmyGR5QhU01MmcsB2tI7555e5rSCuc2za4cGH0obDJvvuw0cfPA==}
     cpu: [x64]
     os: [darwin]
 
-  '@rslint/tsgo-linux-arm64@0.5.0':
-    resolution: {integrity: sha512-K59bb8/Hl2zwUnviSPKb+VYgA6SAFmoX+RBvTR9ux+XTRmx68PpS9Bh+92JDS0nNgqahTtQFnZJpig8U1shVtw==}
+  '@rslint/tsgo-linux-arm64@0.5.1':
+    resolution: {integrity: sha512-oFe2+KfnHE4AHRRyrDE5pMQDt1qPtxaUQP8CmBudWog16NzNWqZjiVgogJw7079jpT0gZWaKn755xHKWbFKuGA==}
     cpu: [arm64]
     os: [linux]
 
-  '@rslint/tsgo-linux-x64@0.5.0':
-    resolution: {integrity: sha512-DB4e8CYac+wfeemghTbORw9CB4peDAK9LjmOdwA2LDlVe8YhKaunKrzUW9KhvBW3h+7c2QIz9XtVizVzpxKMNg==}
+  '@rslint/tsgo-linux-x64@0.5.1':
+    resolution: {integrity: sha512-9GTE0lTr8dwnODGWF+8Y5BXDmWdqK9tXc0GrLfqkAISvvgHGSpQJArWCzP26kATR+HcSIPuNR955DbWezIB7MA==}
     cpu: [x64]
     os: [linux]
 
-  '@rslint/tsgo-win32-arm64@0.5.0':
-    resolution: {integrity: sha512-Mk3feVMRwTAV0yFM4mkrIJZ4iENoiQyqLd7AMOXVuX8cr92EFxIlLjWUVc0hk1l/80OI8l0/06WrfIaaOwetPg==}
+  '@rslint/tsgo-win32-arm64@0.5.1':
+    resolution: {integrity: sha512-9SsIGb+8EsRL+/yBmXx9p62XL7fGVC2b868Tg9YO21Bz4q0SKsUXEHEnJejDFGuaFd+coYA9VFGJhMmpoSinBw==}
     cpu: [arm64]
     os: [win32]
 
-  '@rslint/tsgo-win32-x64@0.5.0':
-    resolution: {integrity: sha512-doyJUtOFSFp3AG96bGLbhQAPhaMogZOgRaLfEBuyq4U1jSpllznklAVde7lSSjTzWxU11XWvAEYg2L6wDCYrQQ==}
+  '@rslint/tsgo-win32-x64@0.5.1':
+    resolution: {integrity: sha512-pphFmNHDR/f6Bd31u+PR3WAkAYDB06bMcpjMXUC1/F7CSjGvZT06SLqCsHyvut45XSLtNcrGJxzRp7OwTYH/Zg==}
     cpu: [x64]
     os: [win32]
 
-  '@rslint/tsgo@0.5.0':
-    resolution: {integrity: sha512-GHGupt4cMzE7kmIhQom1zmdBUSRjSVQT1tWbbaCMgw56TDD9MCy3R80+bMsNtxXfVqy0hR02G7M4ue3SUAHZgw==}
+  '@rslint/tsgo@0.5.1':
+    resolution: {integrity: sha512-KzMNQWeaqHBmOdRX2WxEhZKdpUHdXqdXx0OZTrXdU5JCwSxFq/p3mfyZPWuv06zV60w7wr1yVI7EcX9wzVtWXg==}
     hasBin: true
 
   '@standard-schema/spec@1.1.0':
@@ -1355,6 +1355,10 @@ packages:
 
   postcss@8.5.10:
     resolution: {integrity: sha512-pMMHxBOZKFU6HgAZ4eyGnwXF/EvPGGqUr0MnZ5+99485wwW41kW91A4LOGxSHhgugZmSChL5AlElNdwlNgcnLQ==}
+    engines: {node: ^10 || ^12 || >=14}
+
+  postcss@8.5.12:
+    resolution: {integrity: sha512-W62t/Se6rA0Az3DfCL0AqJwXuKwBeYg6nOaIgzP+xZ7N5BFCI7DYi1qs6ygUYT6rvfi6t9k65UMLJC+PHZpDAA==}
     engines: {node: ^10 || ^12 || >=14}
 
   quansync@1.0.0:
@@ -2095,32 +2099,32 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.0-rc.17': {}
 
-  '@rslint/tsgo-darwin-arm64@0.5.0':
+  '@rslint/tsgo-darwin-arm64@0.5.1':
     optional: true
 
-  '@rslint/tsgo-darwin-x64@0.5.0':
+  '@rslint/tsgo-darwin-x64@0.5.1':
     optional: true
 
-  '@rslint/tsgo-linux-arm64@0.5.0':
+  '@rslint/tsgo-linux-arm64@0.5.1':
     optional: true
 
-  '@rslint/tsgo-linux-x64@0.5.0':
+  '@rslint/tsgo-linux-x64@0.5.1':
     optional: true
 
-  '@rslint/tsgo-win32-arm64@0.5.0':
+  '@rslint/tsgo-win32-arm64@0.5.1':
     optional: true
 
-  '@rslint/tsgo-win32-x64@0.5.0':
+  '@rslint/tsgo-win32-x64@0.5.1':
     optional: true
 
-  '@rslint/tsgo@0.5.0':
+  '@rslint/tsgo@0.5.1':
     optionalDependencies:
-      '@rslint/tsgo-darwin-arm64': 0.5.0
-      '@rslint/tsgo-darwin-x64': 0.5.0
-      '@rslint/tsgo-linux-arm64': 0.5.0
-      '@rslint/tsgo-linux-x64': 0.5.0
-      '@rslint/tsgo-win32-arm64': 0.5.0
-      '@rslint/tsgo-win32-x64': 0.5.0
+      '@rslint/tsgo-darwin-arm64': 0.5.1
+      '@rslint/tsgo-darwin-x64': 0.5.1
+      '@rslint/tsgo-linux-arm64': 0.5.1
+      '@rslint/tsgo-linux-x64': 0.5.1
+      '@rslint/tsgo-win32-arm64': 0.5.1
+      '@rslint/tsgo-win32-x64': 0.5.1
 
   '@standard-schema/spec@1.1.0': {}
 
@@ -2557,6 +2561,12 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
+  postcss@8.5.12:
+    dependencies:
+      nanoid: 3.3.11
+      picocolors: 1.1.1
+      source-map-js: 1.2.1
+
   quansync@1.0.0: {}
 
   resolve-pkg-maps@1.0.0: {}
@@ -2737,7 +2747,7 @@ snapshots:
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
-      postcss: 8.5.10
+      postcss: 8.5.12
       rolldown: 1.0.0-rc.17
       tinyglobby: 0.2.16
     optionalDependencies:
