@@ -16,6 +16,7 @@ import {
 import { getBooleanInput, getOptionalInput, parseRepository } from '../../shared/inputs';
 
 type Octokit = ReturnType<typeof github.getOctokit>;
+type MergeMethod = 'cherry-pick' | 'fast-forward';
 type PullRequest = Awaited<ReturnType<Octokit['rest']['pulls']['get']>>['data'];
 
 type MergeInputs = {
@@ -30,6 +31,7 @@ type MergeInputs = {
   postUpdateWorkflow: string | undefined;
   pullRequestNumber: number | undefined;
   repository: string;
+  mergeMethod: MergeMethod;
   minimumReviewerPermission: 'admin' | 'maintain' | 'push';
   requireGreenChecks: boolean;
   requiredFailingCheck: string | undefined;
@@ -121,7 +123,7 @@ export async function runMerge(): Promise<void> {
 
     setCommonOutputs({ pullRequest, workspace });
 
-    if (!workspace.canFastForward) {
+    if (inputs.mergeMethod === 'fast-forward' && !workspace.canFastForward) {
       if (inputs.updateBranchOnFailure) {
         core.notice(
           `Fast-forward not possible. Rebase ${workspace.headBranch} onto ${workspace.baseBranch} and retry.`,
@@ -264,25 +266,31 @@ export async function runMerge(): Promise<void> {
       return;
     }
 
-    await fastForwardBaseBranch({
-      debug: inputs.debug,
-      workspace,
-    });
+    const mergeSha =
+      inputs.mergeMethod === 'cherry-pick'
+        ? await cherryPickBaseBranch({ debug: inputs.debug, workspace })
+        : await fastForwardBaseBranch({ debug: inputs.debug, workspace });
+
+    workspace.headSha = mergeSha;
+    core.setOutput('head-sha', workspace.headSha);
 
     commentBody = buildCommentBody({
       actor: github.context.actor,
       checkEvaluation,
       checks,
       errorMessage: undefined,
-      outcome: 'fast-forwarded',
+      outcome: inputs.mergeMethod === 'cherry-pick' ? 'cherry-picked' : 'fast-forwarded',
       pullRequest,
       workspace,
     });
 
     core.notice(
-      `Fast-forwarded ${workspace.baseBranch} to ${workspace.headSha} from PR #${pullRequest.number}.`,
+      `${inputs.mergeMethod === 'cherry-pick' ? 'Cherry-picked' : 'Fast-forwarded'} ${workspace.baseBranch} to ${workspace.headSha} from PR #${pullRequest.number}.`,
     );
-    core.setOutput('result', 'fast-forwarded');
+    core.setOutput(
+      'result',
+      inputs.mergeMethod === 'cherry-pick' ? 'cherry-picked' : 'fast-forwarded',
+    );
     core.setOutput('merged', 'true');
     core.setOutput('rebased', rebased ? 'true' : 'false');
     core.setOutput('fast-forward-sha', workspace.headSha);
@@ -363,6 +371,7 @@ function readInputs(): MergeInputs {
     postUpdateWorkflow: getOptionalInput('post-update-workflow'),
     pullRequestNumber: parsePullRequestNumber(pullRequest),
     repository: core.getInput('repository', { required: true }).trim(),
+    mergeMethod: normalizeMergeMethod(core.getInput('merge-method', { required: true }).trim()),
     minimumReviewerPermission: normalizeMinimumReviewerPermission(
       core.getInput('minimum-reviewer-permission', { required: true }).trim(),
     ),
@@ -389,6 +398,18 @@ function parsePullRequestNumber(input: string | undefined): number | undefined {
   }
 
   return value;
+}
+
+function normalizeMergeMethod(input: string): MergeMethod {
+  const value = input.toLowerCase().trim();
+
+  if (value === 'cherry-pick' || value === 'fast-forward') {
+    return value;
+  }
+
+  throw new Error(
+    `Input \`merge-method\` must be one of cherry-pick or fast-forward. Received \`${input}\`.`,
+  );
 }
 
 function normalizeMinimumReviewerPermission(input: string): 'admin' | 'maintain' | 'push' {
@@ -630,6 +651,16 @@ async function createFastForwardWorkspace(options: {
     debug,
   });
   await runGit({
+    args: ['config', 'user.name', 'github-actions[bot]'],
+    cwd: tempDir,
+    debug,
+  });
+  await runGit({
+    args: ['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'],
+    cwd: tempDir,
+    debug,
+  });
+  await runGit({
     args: ['fetch', '--no-tags', 'origin', `+refs/heads/${baseBranch}:refs/tmp/base`],
     authHeader,
     cwd: tempDir,
@@ -701,7 +732,7 @@ async function createFastForwardWorkspace(options: {
 async function fastForwardBaseBranch(options: {
   debug: boolean;
   workspace: FastForwardWorkspace;
-}): Promise<void> {
+}): Promise<string> {
   const { debug, workspace } = options;
 
   try {
@@ -716,6 +747,67 @@ async function fastForwardBaseBranch(options: {
 
     throw new Error(
       `Fast-forward push failed. The base branch may have advanced, the token may not be allowed to push, or branch protection may still be blocking the update. ${message}`,
+    );
+  }
+
+  return workspace.headSha;
+}
+
+async function cherryPickBaseBranch(options: {
+  debug: boolean;
+  workspace: FastForwardWorkspace;
+}): Promise<string> {
+  const { debug, workspace } = options;
+
+  try {
+    await runGit({
+      args: ['checkout', '--detach', 'refs/tmp/base'],
+      cwd: workspace.tempDir,
+      debug,
+    });
+
+    const commitList = await getGitStdout({
+      args: ['rev-list', '--reverse', 'refs/tmp/base..refs/tmp/head'],
+      cwd: workspace.tempDir,
+      debug,
+    });
+    const commits = commitList
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (commits.length === 0) {
+      throw new Error(`No commits found to cherry-pick from ${workspace.headBranch}.`);
+    }
+
+    for (const commit of commits) {
+      await runGit({ args: ['cherry-pick', '-x', commit], cwd: workspace.tempDir, debug });
+    }
+
+    const cherryPickSha = await getGitStdout({
+      args: ['rev-parse', 'HEAD'],
+      cwd: workspace.tempDir,
+      debug,
+    });
+
+    await runGit({
+      args: ['push', 'origin', `HEAD:refs/heads/${workspace.baseBranch}`],
+      authHeader: workspace.authHeader,
+      cwd: workspace.tempDir,
+      debug,
+    });
+
+    return cherryPickSha;
+  } catch (error) {
+    await exec.getExecOutput('git', ['cherry-pick', '--abort'], {
+      cwd: workspace.tempDir,
+      ignoreReturnCode: true,
+      silent: true,
+    });
+
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Cherry-pick merge failed. The base branch may have advanced, a commit may conflict, the token may not be allowed to push, or branch protection may still be blocking the update. ${message}`,
     );
   }
 }
@@ -998,7 +1090,7 @@ function buildCommentBody(options: {
   checkEvaluation: CheckEvaluation | undefined;
   checks: ActionCheck[];
   errorMessage: string | undefined;
-  outcome: 'dry-run' | 'error' | 'fast-forwarded';
+  outcome: 'cherry-picked' | 'dry-run' | 'error' | 'fast-forwarded';
   pullRequest: PullRequest | undefined;
   workspace: FastForwardWorkspace | undefined;
 }): string {
@@ -1045,6 +1137,11 @@ function buildCommentBody(options: {
   switch (outcome) {
     case 'dry-run':
       lines.push('Dry run succeeded. No branch was updated.');
+      break;
+    case 'cherry-picked':
+      lines.push(
+        `Cherry-picked commits from \`${pullRequest?.head.ref ?? 'head'}\` onto \`${workspace?.baseBranch ?? pullRequest?.base.ref ?? 'base'}\` at \`${workspace?.headSha ?? pullRequest?.head.sha ?? 'head'}\`.`,
+      );
       break;
     case 'fast-forwarded':
       lines.push(

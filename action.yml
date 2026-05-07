@@ -31,8 +31,16 @@ inputs:
     description: 'Required prefix for the release pull request head branch.'
     required: false
     default: monochange/release/
+  merge-method:
+    description: 'How to update the base branch. fast-forward preserves the head commit SHA; cherry-pick replays each PR commit with -x so checks run on new SHAs while preserving commit messages and author metadata.'
+    required: false
+    default: fast-forward
+    type: choice
+    options:
+      - fast-forward
+      - cherry-pick
   required-failing-check:
-    description: 'Optional check name that is expected to fail before the fast-forward update.'
+    description: 'Optional check name that is expected to fail before the merge update.'
     required: false
     default: release-pr-manual-merge-blocker
   allow-cross-repository:
@@ -98,7 +106,7 @@ outputs:
   reason:
     description: 'For fail-when, the failure reason when should-fail was true.'
   merged:
-    description: 'Whether the pull request was fast-forwarded.'
+    description: 'Whether the pull request was merged into the base branch.'
   pull-request-number:
     description: 'Resolved pull request number.'
   pull-request-url:
@@ -108,7 +116,7 @@ outputs:
   head-sha:
     description: 'Head commit SHA used for validation.'
   fast-forward-sha:
-    description: 'Commit SHA pushed to the base branch after a successful fast-forward, or the candidate SHA reported during dry-run mode.'
+    description: 'Commit SHA pushed to the base branch after a successful merge, or the candidate SHA reported during dry-run mode. Kept for backwards compatibility.'
   comment:
     description: 'JSON comment payload with a body field. For fail-when, this is the generated fail-comment body when provided.'
   rebased:
