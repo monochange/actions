@@ -70,8 +70,8 @@ describe('runChangesetPolicy', () => {
     mockCore.getInput.mockReturnValue('');
     mockOctokit();
     mockResolve.mockResolvedValue({
-      command: 'mc',
-      source: 'existing-mc',
+      command: 'monochange',
+      source: 'existing-monochange',
       version: '1.0.0',
     });
     mockExec.mockResolvedValue({ exitCode: 0, stderr: '', stdout: '{"packages":[]}' });
@@ -82,8 +82,9 @@ describe('runChangesetPolicy', () => {
     await runChangesetPolicy();
 
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockExec).toHaveBeenCalledWith('mc', [
-      'step:affected-packages',
+    expect(mockExec).toHaveBeenCalledWith('monochange', [
+      'step',
+      'affected-packages',
       '--format',
       'json',
       '--verify',
@@ -114,8 +115,9 @@ describe('runChangesetPolicy', () => {
 
     await runChangesetPolicy();
 
-    expect(mockExec).toHaveBeenCalledWith('mc', [
-      'step:affected-packages',
+    expect(mockExec).toHaveBeenCalledWith('monochange', [
+      'step',
+      'affected-packages',
       '--format',
       'json',
       '--verify',
@@ -153,11 +155,14 @@ describe('runChangesetPolicy', () => {
     mockExec.mockResolvedValue({
       exitCode: 1,
       stderr: '',
-      stdout: '{"status":"failed","summary":"mc step:affected-packages failed"}',
+      stdout: '{"status":"failed","summary":"monochange step affected-packages failed"}',
     });
-    mockParse.mockReturnValue({ status: 'failed', summary: 'mc step:affected-packages failed' });
+    mockParse.mockReturnValue({
+      status: 'failed',
+      summary: 'monochange step affected-packages failed',
+    });
 
-    await expect(runChangesetPolicy()).rejects.toThrow('mc step:affected-packages failed');
+    await expect(runChangesetPolicy()).rejects.toThrow('monochange step affected-packages failed');
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'failed');
   });
 
@@ -410,8 +415,9 @@ describe('runChangesetPolicy', () => {
     await runChangesetPolicy();
 
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockExec).toHaveBeenCalledWith('mc', [
-      'step:affected-packages',
+    expect(mockExec).toHaveBeenCalledWith('monochange', [
+      'step',
+      'affected-packages',
       '--format',
       'json',
       '--verify',

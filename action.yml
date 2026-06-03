@@ -9,7 +9,7 @@ inputs:
     description: 'Action variant to run. Supported values: merge, setup-monochange, changeset-policy, release-pr, publish-plan, post-merge-release, fail-when.'
     required: true
   setup-monochange:
-    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
+    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing monochange on PATH, any other string = custom command.'
     required: false
     default: 'true'
   github-token:

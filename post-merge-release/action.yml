@@ -3,7 +3,7 @@ description: 'After a release PR merges, tag the release and publish packages.'
 author: monochange
 inputs:
   setup-monochange:
-    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
+    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing monochange on PATH, any other string = custom command.'
     required: false
     default: 'true'
   ref:

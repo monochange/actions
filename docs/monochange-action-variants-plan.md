@@ -47,7 +47,7 @@ This is now a **shared bootstrap behavior**, not a one-off precondition.
 
 - `setup-monochange` exposes the bootstrap flow directly as its own variant
 - every other variant must call the same shared bootstrap helper as its first meaningful operation
-- no variant should assume `mc` already exists without first honoring the shared input described below
+- no variant should assume `monochange` already exists without first honoring the shared input described below
 
 ### 2. Shared `setup-monochange` input
 
@@ -56,14 +56,14 @@ Every variant should support a `setup-monochange` input.
 Because GitHub Actions inputs are strings, this input should be parsed with the following semantics:
 
 - `true` — default; automatically resolve monochange, using an existing install if available and installing or shimming it if not
-- `false` — do not install; require monochange to already be available on `PATH` as `mc`
-- any other non-empty string — treat the value as the monochange binary or command to use, for example `/opt/bin/mc` or `npx @monochange/cli`
+- `false` — do not install; require monochange to already be available on `PATH` as `monochange`
+- any other non-empty string — treat the value as the monochange binary or command to use, for example `/opt/bin/monochange` or `npx @monochange/cli`
 
 Recommended behavior:
 
 1. if `setup-monochange` is a string command/path, use that exact command as the source of truth
-2. if `setup-monochange` is `false`, require `mc` to already exist
-3. if `setup-monochange` is `true`, try existing `mc` first, then auto-setup monochange if missing
+2. if `setup-monochange` is `false`, require `monochange` to already exist
+3. if `setup-monochange` is `true`, try existing `monochange` first, then auto-setup monochange if missing
 
 If the user supplies a custom string command and that command does not work, the action should fail clearly rather than silently falling back to another executable.
 
@@ -73,7 +73,7 @@ The shared bootstrap helper should make it easy for every variant to expose:
 
 - resolved monochange command
 - detected monochange version
-- resolution mode or source, e.g. `existing-mc`, `npx-shim`, `cargo-binstall`, `custom-command`
+- resolution mode or source, e.g. `existing-monochange`, `npx-shim`, `cargo-binstall`, `custom-command`
 
 ### 4. Shared helpers to add
 
@@ -92,13 +92,13 @@ Expected shared helpers:
 
 ## Planned variants
 
-| Variant              | Implementation path               | Wrapper path          | Primary command(s)                                                 | Notes                                                                       |
-| -------------------- | --------------------------------- | --------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| `setup-monochange`   | `src/actions/setup-monochange/`   | `setup-monochange/`   | `mc --version`, `npx @monochange/cli`, `cargo binstall monochange` | Exposes the shared bootstrap flow directly and outputs the resolved command |
-| `changeset-policy`   | `src/actions/changeset-policy/`   | `changeset-policy/`   | `mc step:affected-packages --format json --verify ...`             | Must resolve monochange first via the shared bootstrap input                |
-| `release-pr`         | `src/actions/release-pr/`         | `release-pr/`         | `mc release-pr`                                                    | Must resolve monochange first via the shared bootstrap input                |
-| `post-merge-release` | `src/actions/post-merge-release/` | `post-merge-release/` | `mc release-record`, `mc tag-release`, `mc publish-release`        | Must support merged release commits on non-`main` target branches           |
-| `publish-plan`       | `src/actions/publish-plan/`       | `publish-plan/`       | `mc publish-plan`                                                  | Read-only planning plus CI-snippet output                                   |
+| Variant              | Implementation path               | Wrapper path          | Primary command(s)                                                                                 | Notes                                                                       |
+| -------------------- | --------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `setup-monochange`   | `src/actions/setup-monochange/`   | `setup-monochange/`   | `monochange --version`, `npx @monochange/cli`, `cargo binstall monochange`                         | Exposes the shared bootstrap flow directly and outputs the resolved command |
+| `changeset-policy`   | `src/actions/changeset-policy/`   | `changeset-policy/`   | `monochange step affected-packages --format json --verify ...`                                     | Must resolve monochange first via the shared bootstrap input                |
+| `release-pr`         | `src/actions/release-pr/`         | `release-pr/`         | `monochange run release-pr`                                                                        | Must resolve monochange first via the shared bootstrap input                |
+| `post-merge-release` | `src/actions/post-merge-release/` | `post-merge-release/` | `monochange step release-record`, `monochange step tag-release`, `monochange step publish-release` | Must support merged release commits on non-`main` target branches           |
+| `publish-plan`       | `src/actions/publish-plan/`       | `publish-plan/`       | `monochange run publish-plan`                                                                      | Read-only planning plus CI-snippet output                                   |
 
 ## Delivery order
 
@@ -121,7 +121,7 @@ Goals:
 
 - provide the reusable bootstrap implementation every other variant will call internally
 - still work as a standalone action variant for workflows that want an explicit setup step
-- prefer an `mc`-compatible wrapper around `npx @monochange/cli`
+- prefer a `monochange`-compatible wrapper around `npx @monochange/cli`
 - default to latest, but allow version pinning
 - fall back to `cargo binstall monochange`
 - do not install ecosystem-specific toolchains or publishing dependencies
@@ -129,8 +129,8 @@ Goals:
 Likely behavior:
 
 1. if `setup-monochange` is a custom string, validate and use it
-2. else if an existing `mc` works, use it
-3. else create an `mc` shim that shells out to `npx @monochange/cli[@version]`
+2. else if an existing `monochange` works, use it
+3. else create a `monochange` shim that shells out to `npx @monochange/cli[@version]`
 4. else fall back to `cargo binstall monochange`
 
 Preferred outputs:
@@ -161,14 +161,14 @@ Preferred behavior:
 - first resolve monochange through the shared bootstrap helper
 - use explicit `changed-paths` and `labels` when provided
 - otherwise detect PR files and labels from the GitHub API
-- run `mc step:affected-packages --format json --verify`
+- run `monochange step affected-packages --format json --verify`
 - expose raw JSON and a compact summary as outputs
 
 ### `release-pr`
 
 Goals:
 
-- wrap `mc release-pr` behind the standard action interface
+- wrap `monochange run release-pr` behind the standard action interface
 - make monochange bootstrap the very first step
 - expose machine-readable outputs for downstream workflows
 
@@ -207,17 +207,17 @@ It should operate on the actual target branch or configured branch input and rel
 Preferred behavior:
 
 1. resolve monochange through the shared bootstrap helper
-2. inspect `mc release-record --from <ref> --format json`
+2. inspect `monochange step release-record --from <ref> --format json`
 3. detect whether the release commit is reachable from the target branch
 4. skip cleanly when the commit is still only on the release PR branch
-5. run `mc tag-release --from <ref>`
-6. run `mc publish-release` so provider release publication and related issue comments stay in monochange’s configured flow
+5. run `monochange step tag-release --from <ref>`
+6. run `monochange step publish-release` so provider release publication and related issue comments stay in monochange’s configured flow
 
 ### `publish-plan`
 
 Goals:
 
-- provide a thin but ergonomic wrapper around `mc publish-plan`
+- provide a thin but ergonomic wrapper around `monochange run publish-plan`
 - keep it read-only
 - make its outputs easy to feed into GitHub Actions matrices and summaries
 

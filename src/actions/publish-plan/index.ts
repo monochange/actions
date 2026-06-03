@@ -44,11 +44,11 @@ export async function runPublishPlan(): Promise<void> {
     core.info(`publish-plan inputs: ${JSON.stringify(inputs, null, 2)}`);
   }
 
-  const mc = await resolveMonochange(inputs.setupMonochange);
+  const monochange = await resolveMonochange(inputs.setupMonochange);
 
-  core.info(`Using monochange ${mc.version} from ${mc.source}`);
+  core.info(`Using monochange ${monochange.version} from ${monochange.source}`);
 
-  const args = ['publish-plan', '--format', inputs.format, '--mode', inputs.mode];
+  const args = ['run', 'publish-plan', '--format', inputs.format, '--mode', inputs.mode];
 
   if (inputs.ci) {
     args.push('--ci', inputs.ci);
@@ -58,7 +58,7 @@ export async function runPublishPlan(): Promise<void> {
     args.push('--package', pkg);
   }
 
-  const stdout = await execRequired(mc.command, args);
+  const stdout = await execRequired(monochange.command, args);
   const parsed = parseMixedOutput(stdout);
 
   core.setOutput('result', 'success');

@@ -32,8 +32,8 @@ describe('runPublishPlan', () => {
     vi.clearAllMocks();
     mockCore.getInput.mockReturnValue('');
     mockResolve.mockResolvedValue({
-      command: 'mc',
-      source: 'existing-mc',
+      command: 'monochange',
+      source: 'existing-monochange',
       version: '1.0.0',
     });
     mockExec.mockResolvedValue('{"packages":[]}');
@@ -44,7 +44,8 @@ describe('runPublishPlan', () => {
     await runPublishPlan();
 
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockExec).toHaveBeenCalledWith('mc', [
+    expect(mockExec).toHaveBeenCalledWith('monochange', [
+      'run',
       'publish-plan',
       '--format',
       'json',
@@ -64,7 +65,7 @@ describe('runPublishPlan', () => {
     await runPublishPlan();
 
     expect(mockCore.info).toHaveBeenCalled();
-    expect(mockExec).toHaveBeenCalledWith('mc', expect.arrayContaining(['--ci', 'github']));
+    expect(mockExec).toHaveBeenCalledWith('monochange', expect.arrayContaining(['--ci', 'github']));
   });
 
   it('passes package filters', async () => {
@@ -76,7 +77,7 @@ describe('runPublishPlan', () => {
     await runPublishPlan();
 
     expect(mockExec).toHaveBeenCalledWith(
-      'mc',
+      'monochange',
       expect.arrayContaining([
         'publish-plan',
         '--format',
@@ -123,8 +124,8 @@ describe('runPublishPlan', () => {
   });
 
   it('throws when execRequired fails', async () => {
-    mockExec.mockRejectedValue(new Error('mc publish-plan failed'));
+    mockExec.mockRejectedValue(new Error('monochange run publish-plan failed'));
 
-    await expect(runPublishPlan()).rejects.toThrow('mc publish-plan failed');
+    await expect(runPublishPlan()).rejects.toThrow('monochange run publish-plan failed');
   });
 });

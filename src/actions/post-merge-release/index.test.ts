@@ -32,8 +32,8 @@ describe('runPostMergeRelease', () => {
     vi.clearAllMocks();
     mockCore.getInput.mockReturnValue('');
     mockResolve.mockResolvedValue({
-      command: 'mc',
-      source: 'existing-mc',
+      command: 'monochange',
+      source: 'existing-monochange',
       version: '1.0.0',
     });
     mockExec.mockResolvedValue('');
@@ -45,15 +45,16 @@ describe('runPostMergeRelease', () => {
 
     await runPostMergeRelease();
 
-    expect(mockExec).toHaveBeenCalledWith('mc', [
+    expect(mockExec).toHaveBeenCalledWith('monochange', [
+      'step',
       'release-record',
       '--from',
       'HEAD',
       '--format',
       'json',
     ]);
-    expect(mockExec).toHaveBeenCalledWith('mc', ['tag-release', '--from', 'HEAD']);
-    expect(mockExec).toHaveBeenCalledWith('mc', ['publish-release']);
+    expect(mockExec).toHaveBeenCalledWith('monochange', ['step', 'tag-release', '--from', 'HEAD']);
+    expect(mockExec).toHaveBeenCalledWith('monochange', ['step', 'publish-release']);
     expect(mockCore.setOutput).toHaveBeenCalledWith('tagged', 'true');
     expect(mockCore.setOutput).toHaveBeenCalledWith('published', 'true');
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
@@ -82,7 +83,7 @@ describe('runPostMergeRelease', () => {
 
   it('sets published=false when publish-release fails', async () => {
     mockExec.mockImplementation(async (_cmd, args) => {
-      if (args[0] === 'publish-release') {
+      if (args[0] === 'step' && args[1] === 'publish-release') {
         throw new Error('publish failed');
       }
 
@@ -103,7 +104,8 @@ describe('runPostMergeRelease', () => {
 
     await runPostMergeRelease();
 
-    expect(mockExec).toHaveBeenCalledWith('mc', [
+    expect(mockExec).toHaveBeenCalledWith('monochange', [
+      'step',
       'release-record',
       '--from',
       'HEAD',
@@ -112,7 +114,8 @@ describe('runPostMergeRelease', () => {
       '--branch',
       'release',
     ]);
-    expect(mockExec).toHaveBeenCalledWith('mc', [
+    expect(mockExec).toHaveBeenCalledWith('monochange', [
+      'step',
       'tag-release',
       '--from',
       'HEAD',
@@ -123,7 +126,7 @@ describe('runPostMergeRelease', () => {
 
   it('handles non-Error thrown during publish-release', async () => {
     mockExec.mockImplementation(async (_cmd, args) => {
-      if (args[0] === 'publish-release') {
+      if (args[0] === 'step' && args[1] === 'publish-release') {
         return Promise.reject('plain string error');
       }
       return '';

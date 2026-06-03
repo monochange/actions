@@ -683,7 +683,7 @@ Install the `monochange` CLI from cargo or via `cargo binstall`. Falls back to i
 - uses: monochange/actions/setup-monochange@v0.4.0
   with:
     setup-monochange: true
-    command: mc
+    command: monochange
 ```
 
 ---
@@ -704,7 +704,7 @@ Validate that all affected packages have appropriate changesets.
     comment-on-failure: true
 ```
 
-Failure comments use the `comment` field from `mc step:affected-packages` and are deleted after the PR passes or is skipped.
+Failure comments use the `comment` field from `monochange step affected-packages` and are deleted after the PR passes or is skipped.
 
 ---
 

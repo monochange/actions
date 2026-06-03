@@ -35,20 +35,20 @@ export async function runPostMergeRelease(): Promise<void> {
     core.info(`post-merge-release inputs: ${JSON.stringify(inputs, null, 2)}`);
   }
 
-  const mc = await resolveMonochange(inputs.setupMonochange);
+  const monochange = await resolveMonochange(inputs.setupMonochange);
 
-  core.info(`Using monochange ${mc.version} from ${mc.source}`);
+  core.info(`Using monochange ${monochange.version} from ${monochange.source}`);
 
-  const recordArgs = ['release-record', '--from', inputs.ref, '--format', 'json'];
+  const recordArgs = ['step', 'release-record', '--from', inputs.ref, '--format', 'json'];
 
   if (inputs.targetBranch) {
     recordArgs.push('--branch', inputs.targetBranch);
   }
 
   if (inputs.dryRun) {
-    core.info(`Dry-run: would run \`${mc.command} ${recordArgs.join(' ')}\``);
-    core.info(`Dry-run: would run \`${mc.command} tag-release --from ${inputs.ref}\``);
-    core.info(`Dry-run: would run \`${mc.command} publish-release\``);
+    core.info(`Dry-run: would run \`${monochange.command} ${recordArgs.join(' ')}\``);
+    core.info(`Dry-run: would run \`${monochange.command} step tag-release --from ${inputs.ref}\``);
+    core.info(`Dry-run: would run \`${monochange.command} publish-release\``);
     core.setOutput('result', 'dry-run');
     core.setOutput('tagged', 'false');
     core.setOutput('published', 'false');
@@ -57,7 +57,7 @@ export async function runPostMergeRelease(): Promise<void> {
   }
 
   // 1. Inspect release record
-  const recordStdout = await execRequired(mc.command, recordArgs);
+  const recordStdout = await execRequired(monochange.command, recordArgs);
   const record = parseMixedOutput(recordStdout);
 
   if (!record) {
@@ -70,19 +70,19 @@ export async function runPostMergeRelease(): Promise<void> {
   }
 
   // 2. Tag release
-  const tagArgs = ['tag-release', '--from', inputs.ref];
+  const tagArgs = ['step', 'tag-release', '--from', inputs.ref];
 
   if (inputs.targetBranch) {
     tagArgs.push('--branch', inputs.targetBranch);
   }
 
-  await execRequired(mc.command, tagArgs);
+  await execRequired(monochange.command, tagArgs);
 
   core.setOutput('tagged', 'true');
 
   // 3. Publish release
   try {
-    await execRequired(mc.command, ['publish-release']);
+    await execRequired(monochange.command, ['step', 'publish-release']);
     core.setOutput('published', 'true');
   } catch (error) {
     core.warning(

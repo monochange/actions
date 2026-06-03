@@ -3,7 +3,11 @@ import * as core from '@actions/core';
 import { exec, execRequired } from './exec';
 import { parseMixedOutput } from './json';
 
-export type MonochangeSource = 'existing-mc' | 'npx-shim' | 'cargo-binstall' | 'custom-command';
+export type MonochangeSource =
+  | 'existing-monochange'
+  | 'npx-shim'
+  | 'cargo-binstall'
+  | 'custom-command';
 
 export interface ResolvedMonochange {
   command: string;
@@ -15,7 +19,7 @@ export async function resolveMonochange(setupInput: string): Promise<ResolvedMon
   const lower = setupInput.trim().toLowerCase();
 
   if (lower === 'false') {
-    const version = await getMcVersion('mc');
+    const version = await getMonochangeVersion('monochange');
 
     if (!version) {
       throw new Error(
@@ -24,19 +28,19 @@ export async function resolveMonochange(setupInput: string): Promise<ResolvedMon
       );
     }
 
-    return { command: 'mc', version, source: 'existing-mc' };
+    return { command: 'monochange', version, source: 'existing-monochange' };
   }
 
   if (lower === 'true' || lower === '') {
-    const existingVersion = await getMcVersion('mc');
+    const existingVersion = await getMonochangeVersion('monochange');
 
     if (existingVersion) {
-      return { command: 'mc', version: existingVersion, source: 'existing-mc' };
+      return { command: 'monochange', version: existingVersion, source: 'existing-monochange' };
     }
 
     core.info('monochange not found on PATH; trying npx @monochange/cli');
 
-    const npxVersion = await getMcVersion('npx', ['-y', '@monochange/cli']);
+    const npxVersion = await getMonochangeVersion('npx', ['-y', '@monochange/cli']);
 
     if (npxVersion) {
       return {
@@ -50,10 +54,10 @@ export async function resolveMonochange(setupInput: string): Promise<ResolvedMon
 
     try {
       await execRequired('cargo', ['binstall', 'monochange', '-y']);
-      const cargoVersion = await getMcVersion('mc');
+      const cargoVersion = await getMonochangeVersion('monochange');
 
       if (cargoVersion) {
-        return { command: 'mc', version: cargoVersion, source: 'cargo-binstall' };
+        return { command: 'monochange', version: cargoVersion, source: 'cargo-binstall' };
       }
     } catch {
       // fall through to error
@@ -65,18 +69,18 @@ export async function resolveMonochange(setupInput: string): Promise<ResolvedMon
     );
   }
 
-  const version = await getMcVersion(setupInput);
+  const version = await getMonochangeVersion(setupInput);
 
   if (!version) {
     throw new Error(
-      `setup-monochange command \`${setupInput}\` did not produce a valid mc --version output.`,
+      `setup-monochange command \`${setupInput}\` did not produce a valid monochange --version output.`,
     );
   }
 
   return { command: setupInput, version, source: 'custom-command' };
 }
 
-async function getMcVersion(
+async function getMonochangeVersion(
   command: string,
   prefixArgs: string[] = [],
 ): Promise<string | undefined> {

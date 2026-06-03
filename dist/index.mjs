@@ -20366,23 +20366,23 @@ function parseMixedOutput(text) {
 async function resolveMonochange(setupInput) {
 	const lower = setupInput.trim().toLowerCase();
 	if (lower === "false") {
-		const version = await getMcVersion("mc");
+		const version = await getMonochangeVersion("monochange");
 		if (!version) throw new Error("monochange is not available on PATH and setup-monochange is false. Install monochange manually or use setup-monochange: true.");
 		return {
-			command: "mc",
+			command: "monochange",
 			version,
-			source: "existing-mc"
+			source: "existing-monochange"
 		};
 	}
 	if (lower === "true" || lower === "") {
-		const existingVersion = await getMcVersion("mc");
+		const existingVersion = await getMonochangeVersion("monochange");
 		if (existingVersion) return {
-			command: "mc",
+			command: "monochange",
 			version: existingVersion,
-			source: "existing-mc"
+			source: "existing-monochange"
 		};
 		info("monochange not found on PATH; trying npx @monochange/cli");
-		const npxVersion = await getMcVersion("npx", ["-y", "@monochange/cli"]);
+		const npxVersion = await getMonochangeVersion("npx", ["-y", "@monochange/cli"]);
 		if (npxVersion) return {
 			command: "npx -y @monochange/cli",
 			version: npxVersion,
@@ -20395,24 +20395,24 @@ async function resolveMonochange(setupInput) {
 				"monochange",
 				"-y"
 			]);
-			const cargoVersion = await getMcVersion("mc");
+			const cargoVersion = await getMonochangeVersion("monochange");
 			if (cargoVersion) return {
-				command: "mc",
+				command: "monochange",
 				version: cargoVersion,
 				source: "cargo-binstall"
 			};
 		} catch {}
 		throw new Error("Could not resolve monochange automatically. Install monochange manually, use cargo binstall, or provide a custom command.");
 	}
-	const version = await getMcVersion(setupInput);
-	if (!version) throw new Error(`setup-monochange command \`${setupInput}\` did not produce a valid mc --version output.`);
+	const version = await getMonochangeVersion(setupInput);
+	if (!version) throw new Error(`setup-monochange command \`${setupInput}\` did not produce a valid monochange --version output.`);
 	return {
 		command: setupInput,
 		version,
 		source: "custom-command"
 	};
 }
-async function getMcVersion(command, prefixArgs = []) {
+async function getMonochangeVersion(command, prefixArgs = []) {
 	const bin = command;
 	const binArgs = [...prefixArgs, "--version"];
 	try {
@@ -20461,10 +20461,11 @@ async function runChangesetPolicy() {
 		...inputs,
 		githubToken: "[redacted]"
 	}, null, 2)}`);
-	const mc = await resolveMonochange(inputs.setupMonochange);
-	info(`Using monochange ${mc.version} from ${mc.source}`);
+	const monochange = await resolveMonochange(inputs.setupMonochange);
+	info(`Using monochange ${monochange.version} from ${monochange.source}`);
 	const args = [
-		"step:affected-packages",
+		"step",
+		"affected-packages",
 		"--format",
 		"json",
 		"--verify"
@@ -20473,11 +20474,11 @@ async function runChangesetPolicy() {
 	if (inputs.labels) args.push("--labels", inputs.labels);
 	if (inputs.skipLabels) args.push("--skip-labels", inputs.skipLabels);
 	if (inputs.dryRun) {
-		info(`Dry-run: would run \`${mc.command} ${args.join(" ")}\``);
+		info(`Dry-run: would run \`${monochange.command} ${args.join(" ")}\``);
 		setOutput("result", "dry-run");
 		return;
 	}
-	const result = await exec(mc.command, args);
+	const result = await exec(monochange.command, args);
 	const stdout = result.stdout.trim();
 	const stderr = result.stderr.trim();
 	const parsed = parseMixedOutput(stdout || stderr);
@@ -21690,9 +21691,10 @@ function getBoolean$2(name) {
 async function runPostMergeRelease() {
 	const inputs = readInputs$3();
 	if (inputs.debug) info(`post-merge-release inputs: ${JSON.stringify(inputs, null, 2)}`);
-	const mc = await resolveMonochange(inputs.setupMonochange);
-	info(`Using monochange ${mc.version} from ${mc.source}`);
+	const monochange = await resolveMonochange(inputs.setupMonochange);
+	info(`Using monochange ${monochange.version} from ${monochange.source}`);
 	const recordArgs = [
+		"step",
 		"release-record",
 		"--from",
 		inputs.ref,
@@ -21701,15 +21703,15 @@ async function runPostMergeRelease() {
 	];
 	if (inputs.targetBranch) recordArgs.push("--branch", inputs.targetBranch);
 	if (inputs.dryRun) {
-		info(`Dry-run: would run \`${mc.command} ${recordArgs.join(" ")}\``);
-		info(`Dry-run: would run \`${mc.command} tag-release --from ${inputs.ref}\``);
-		info(`Dry-run: would run \`${mc.command} publish-release\``);
+		info(`Dry-run: would run \`${monochange.command} ${recordArgs.join(" ")}\``);
+		info(`Dry-run: would run \`${monochange.command} step tag-release --from ${inputs.ref}\``);
+		info(`Dry-run: would run \`${monochange.command} publish-release\``);
 		setOutput("result", "dry-run");
 		setOutput("tagged", "false");
 		setOutput("published", "false");
 		return;
 	}
-	const record = parseMixedOutput(await execRequired(mc.command, recordArgs));
+	const record = parseMixedOutput(await execRequired(monochange.command, recordArgs));
 	if (!record) {
 		info("No release record found for the given ref. Skipping.");
 		setOutput("result", "skipped");
@@ -21718,15 +21720,16 @@ async function runPostMergeRelease() {
 		return;
 	}
 	const tagArgs = [
+		"step",
 		"tag-release",
 		"--from",
 		inputs.ref
 	];
 	if (inputs.targetBranch) tagArgs.push("--branch", inputs.targetBranch);
-	await execRequired(mc.command, tagArgs);
+	await execRequired(monochange.command, tagArgs);
 	setOutput("tagged", "true");
 	try {
-		await execRequired(mc.command, ["publish-release"]);
+		await execRequired(monochange.command, ["step", "publish-release"]);
 		setOutput("published", "true");
 	} catch (error) {
 		warning(`publish-release failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -21762,9 +21765,10 @@ function getBoolean$1(name) {
 async function runPublishPlan() {
 	const inputs = readInputs$2();
 	if (inputs.debug) info(`publish-plan inputs: ${JSON.stringify(inputs, null, 2)}`);
-	const mc = await resolveMonochange(inputs.setupMonochange);
-	info(`Using monochange ${mc.version} from ${mc.source}`);
+	const monochange = await resolveMonochange(inputs.setupMonochange);
+	info(`Using monochange ${monochange.version} from ${monochange.source}`);
 	const args = [
+		"run",
 		"publish-plan",
 		"--format",
 		inputs.format,
@@ -21773,7 +21777,7 @@ async function runPublishPlan() {
 	];
 	if (inputs.ci) args.push("--ci", inputs.ci);
 	for (const pkg of inputs.packages) args.push("--package", pkg);
-	const stdout = await execRequired(mc.command, args);
+	const stdout = await execRequired(monochange.command, args);
 	const parsed = parseMixedOutput(stdout);
 	setOutput("result", "success");
 	setOutput("json", JSON.stringify(parsed ?? null));
@@ -21812,10 +21816,10 @@ async function runReleasePr() {
 		...inputs,
 		githubToken: "[redacted]"
 	}, null, 2)}`);
-	const mc = await resolveMonochange(inputs.setupMonochange);
-	info(`Using monochange ${mc.version} from ${mc.source}`);
+	const monochange = await resolveMonochange(inputs.setupMonochange);
+	info(`Using monochange ${monochange.version} from ${monochange.source}`);
 	if (inputs.dryRun) {
-		info(`Dry-run: would run \`${mc.command} release-pr --format ${inputs.format}\``);
+		info(`Dry-run: would run \`${monochange.command} run release-pr --format ${inputs.format}\``);
 		setOutput("result", "dry-run");
 		setOutput("head-branch", "");
 		setOutput("base-branch", "");
@@ -21825,12 +21829,13 @@ async function runReleasePr() {
 		return;
 	}
 	const args = [
+		"run",
 		"release-pr",
 		"--format",
 		inputs.format
 	];
 	if (inputs.githubToken) exportVariable("GITHUB_TOKEN", inputs.githubToken);
-	const parsed = parseMixedOutput(await execRequired(mc.command, args, { cwd: inputs.workingDirectory }));
+	const parsed = parseMixedOutput(await execRequired(monochange.command, args, { cwd: inputs.workingDirectory }));
 	const parsedRecord = typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : void 0;
 	setOutput("result", "success");
 	setOutput("json", JSON.stringify(parsedRecord ?? null));

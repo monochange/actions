@@ -23,23 +23,23 @@ describe('resolveMonochange', () => {
     vi.clearAllMocks();
   });
 
-  it('returns existing mc when found and setupInput is true', async () => {
+  it('returns existing monochange when found and setupInput is true', async () => {
     mockExec.mockResolvedValue({ exitCode: 0, stderr: '', stdout: '  monochange 1.2.3  ' });
 
     const result = await resolveMonochange('true');
 
     expect(result).toEqual({
-      command: 'mc',
-      source: 'existing-mc',
+      command: 'monochange',
+      source: 'existing-monochange',
       version: 'monochange 1.2.3',
     });
-    expect(mockExec).toHaveBeenCalledWith('mc', ['--version'], {
+    expect(mockExec).toHaveBeenCalledWith('monochange', ['--version'], {
       ignoreReturnCode: true,
       silent: true,
     });
   });
 
-  it('falls back to npx when mc not found', async () => {
+  it('falls back to npx when monochange not found', async () => {
     mockExec
       .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' })
       .mockResolvedValueOnce({ exitCode: 0, stderr: '', stdout: '  monochange 2.0.0  ' });
@@ -63,13 +63,13 @@ describe('resolveMonochange', () => {
     const result = await resolveMonochange('true');
 
     expect(result).toEqual({
-      command: 'mc',
+      command: 'monochange',
       source: 'cargo-binstall',
       version: 'monochange 3.0.0',
     });
   });
 
-  it('throws when cargo binstall succeeds but mc is still not found', async () => {
+  it('throws when cargo binstall succeeds but monochange is still not found', async () => {
     mockExec
       .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' })
       .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' });
@@ -92,7 +92,7 @@ describe('resolveMonochange', () => {
     );
   });
 
-  it('throws when mc returns exitCode 0 but empty stdout', async () => {
+  it('throws when monochange returns exitCode 0 but empty stdout', async () => {
     mockExec.mockResolvedValue({ exitCode: 0, stderr: '', stdout: '' });
 
     await expect(resolveMonochange('false')).rejects.toThrow('monochange is not available on PATH');
@@ -101,28 +101,28 @@ describe('resolveMonochange', () => {
   it('throws when custom command returns exitCode 0 but empty stdout', async () => {
     mockExec.mockResolvedValue({ exitCode: 0, stderr: '', stdout: '' });
 
-    await expect(resolveMonochange('/opt/bin/mc')).rejects.toThrow(
-      'did not produce a valid mc --version output',
+    await expect(resolveMonochange('/opt/bin/monochange')).rejects.toThrow(
+      'did not produce a valid monochange --version output',
     );
   });
 
-  it('returns existing mc when setupInput is false', async () => {
+  it('returns existing monochange when setupInput is false', async () => {
     mockExec.mockResolvedValue({ exitCode: 0, stderr: '', stdout: 'monochange 1.0.0' });
 
     const result = await resolveMonochange('false');
 
     expect(result).toEqual({
-      command: 'mc',
-      source: 'existing-mc',
+      command: 'monochange',
+      source: 'existing-monochange',
       version: 'monochange 1.0.0',
     });
-    expect(mockExec).toHaveBeenCalledWith('mc', ['--version'], {
+    expect(mockExec).toHaveBeenCalledWith('monochange', ['--version'], {
       ignoreReturnCode: true,
       silent: true,
     });
   });
 
-  it('throws when setupInput is false and mc is missing', async () => {
+  it('throws when setupInput is false and monochange is missing', async () => {
     mockExec.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '' });
 
     await expect(resolveMonochange('false')).rejects.toThrow(
@@ -133,14 +133,14 @@ describe('resolveMonochange', () => {
   it('uses custom command when provided', async () => {
     mockExec.mockResolvedValue({ exitCode: 0, stderr: '', stdout: 'monochange 4.0.0' });
 
-    const result = await resolveMonochange('/opt/bin/mc');
+    const result = await resolveMonochange('/opt/bin/monochange');
 
     expect(result).toEqual({
-      command: '/opt/bin/mc',
+      command: '/opt/bin/monochange',
       source: 'custom-command',
       version: 'monochange 4.0.0',
     });
-    expect(mockExec).toHaveBeenCalledWith('/opt/bin/mc', ['--version'], {
+    expect(mockExec).toHaveBeenCalledWith('/opt/bin/monochange', ['--version'], {
       ignoreReturnCode: true,
       silent: true,
     });
@@ -150,7 +150,7 @@ describe('resolveMonochange', () => {
     mockExec.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '' });
 
     await expect(resolveMonochange('/bad/path')).rejects.toThrow(
-      'did not produce a valid mc --version output',
+      'did not produce a valid monochange --version output',
     );
   });
 });
@@ -159,18 +159,18 @@ describe('runMcCommand', () => {
   it('runs the command and logs it', async () => {
     mockExecRequired.mockResolvedValue('output');
 
-    const result = await runMcCommand({ args: ['status'], command: 'mc' });
+    const result = await runMcCommand({ args: ['status'], command: 'monochange' });
 
     expect(result).toBe('output');
-    expect(mockCoreInfo).toHaveBeenCalledWith('Running: mc status');
+    expect(mockCoreInfo).toHaveBeenCalledWith('Running: monochange status');
   });
 
   it('passes cwd when provided', async () => {
     mockExecRequired.mockResolvedValue('output');
 
-    await runMcCommand({ args: ['status'], command: 'mc', cwd: '/tmp' });
+    await runMcCommand({ args: ['status'], command: 'monochange', cwd: '/tmp' });
 
-    expect(mockExecRequired).toHaveBeenCalledWith('mc', ['status'], { cwd: '/tmp' });
+    expect(mockExecRequired).toHaveBeenCalledWith('monochange', ['status'], { cwd: '/tmp' });
   });
 });
 
@@ -178,7 +178,7 @@ describe('runMcJsonCommand', () => {
   it('parses JSON output', async () => {
     mockExecRequired.mockResolvedValue('{"a":1}');
 
-    const result = await runMcJsonCommand({ args: ['status'], command: 'mc' });
+    const result = await runMcJsonCommand({ args: ['status'], command: 'monochange' });
 
     expect(result).toEqual({ a: 1 });
   });

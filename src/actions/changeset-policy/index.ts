@@ -54,11 +54,11 @@ export async function runChangesetPolicy(): Promise<void> {
     );
   }
 
-  const mc = await resolveMonochange(inputs.setupMonochange);
+  const monochange = await resolveMonochange(inputs.setupMonochange);
 
-  core.info(`Using monochange ${mc.version} from ${mc.source}`);
+  core.info(`Using monochange ${monochange.version} from ${monochange.source}`);
 
-  const args = ['step:affected-packages', '--format', 'json', '--verify'];
+  const args = ['step', 'affected-packages', '--format', 'json', '--verify'];
 
   if (inputs.changedPaths) {
     args.push('--paths', inputs.changedPaths);
@@ -73,13 +73,13 @@ export async function runChangesetPolicy(): Promise<void> {
   }
 
   if (inputs.dryRun) {
-    core.info(`Dry-run: would run \`${mc.command} ${args.join(' ')}\``);
+    core.info(`Dry-run: would run \`${monochange.command} ${args.join(' ')}\``);
     core.setOutput('result', 'dry-run');
 
     return;
   }
 
-  const result = await exec(mc.command, args);
+  const result = await exec(monochange.command, args);
   const stdout = result.stdout.trim();
   const stderr = result.stderr.trim();
   const parsed = parseMixedOutput(stdout || stderr);
