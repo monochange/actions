@@ -45,7 +45,7 @@ export async function runReleasePr(): Promise<void> {
 
   if (inputs.dryRun) {
     core.info(
-      `Dry-run: would run \`${monochange.command} run release-pr --format ${inputs.format}\``,
+      `Dry-run: would run \`${monochange.command} step open-release-request --format ${inputs.format}\``,
     );
     core.setOutput('result', 'dry-run');
     core.setOutput('head-branch', '');
@@ -57,7 +57,7 @@ export async function runReleasePr(): Promise<void> {
     return;
   }
 
-  const args = ['run', 'release-pr', '--format', inputs.format];
+  const args = ['step', 'open-release-request', '--format', inputs.format];
 
   if (inputs.githubToken) {
     core.exportVariable('GITHUB_TOKEN', inputs.githubToken);

@@ -121,11 +121,13 @@ describe('runChangesetPolicy', () => {
       '--format',
       'json',
       '--verify',
-      '--paths',
+      '--changed-paths',
       'src/',
-      '--labels',
-      'bug,feature',
-      '--skip-labels',
+      '--label',
+      'bug',
+      '--label',
+      'feature',
+      '--skip-label',
       'skip',
     ]);
   });

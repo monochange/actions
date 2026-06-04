@@ -1,6 +1,6 @@
 # publish-plan action
 
-Run `monochange run publish-plan` and expose the plan as JSON, summary, and CI outputs.
+Run `monochange step plan-publish-rate-limits` and expose the plan as JSON, summary, and CI outputs.
 
 ```yaml
 uses: monochange/actions/publish-plan@v0.1.0

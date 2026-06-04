@@ -48,9 +48,13 @@ describe('runReleasePr', () => {
   it('runs release-pr and sets outputs', async () => {
     await runReleasePr();
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockExec).toHaveBeenCalledWith('monochange', ['run', 'release-pr', '--format', 'json'], {
-      cwd: '.',
-    });
+    expect(mockExec).toHaveBeenCalledWith(
+      'monochange',
+      ['step', 'open-release-request', '--format', 'json'],
+      {
+        cwd: '.',
+      },
+    );
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
     expect(mockCore.setOutput).toHaveBeenCalledWith('release-request-number', '42');
   });
@@ -116,8 +120,8 @@ describe('runReleasePr', () => {
   });
 
   it('throws when execRequired fails', async () => {
-    mockExec.mockRejectedValue(new Error('monochange run release-pr failed'));
+    mockExec.mockRejectedValue(new Error('monochange step open-release-request failed'));
 
-    await expect(runReleasePr()).rejects.toThrow('monochange run release-pr failed');
+    await expect(runReleasePr()).rejects.toThrow('monochange step open-release-request failed');
   });
 });

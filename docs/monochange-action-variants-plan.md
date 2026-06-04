@@ -96,9 +96,9 @@ Expected shared helpers:
 | -------------------- | --------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | `setup-monochange`   | `src/actions/setup-monochange/`   | `setup-monochange/`   | `monochange --version`, `npx @monochange/cli`, `cargo binstall monochange`                         | Exposes the shared bootstrap flow directly and outputs the resolved command |
 | `changeset-policy`   | `src/actions/changeset-policy/`   | `changeset-policy/`   | `monochange step affected-packages --format json --verify ...`                                     | Must resolve monochange first via the shared bootstrap input                |
-| `release-pr`         | `src/actions/release-pr/`         | `release-pr/`         | `monochange run release-pr`                                                                        | Must resolve monochange first via the shared bootstrap input                |
+| `release-pr`         | `src/actions/release-pr/`         | `release-pr/`         | `monochange step open-release-request`                                                             | Must resolve monochange first via the shared bootstrap input                |
 | `post-merge-release` | `src/actions/post-merge-release/` | `post-merge-release/` | `monochange step release-record`, `monochange step tag-release`, `monochange step publish-release` | Must support merged release commits on non-`main` target branches           |
-| `publish-plan`       | `src/actions/publish-plan/`       | `publish-plan/`       | `monochange run publish-plan`                                                                      | Read-only planning plus CI-snippet output                                   |
+| `publish-plan`       | `src/actions/publish-plan/`       | `publish-plan/`       | `monochange step plan-publish-rate-limits`                                                         | Read-only planning plus CI-snippet output                                   |
 
 ## Delivery order
 
@@ -168,7 +168,7 @@ Preferred behavior:
 
 Goals:
 
-- wrap `monochange run release-pr` behind the standard action interface
+- wrap `monochange step open-release-request` behind the standard action interface
 - make monochange bootstrap the very first step
 - expose machine-readable outputs for downstream workflows
 
@@ -217,7 +217,7 @@ Preferred behavior:
 
 Goals:
 
-- provide a thin but ergonomic wrapper around `monochange run publish-plan`
+- provide a thin but ergonomic wrapper around `monochange step plan-publish-rate-limits`
 - keep it read-only
 - make its outputs easy to feed into GitHub Actions matrices and summaries
 

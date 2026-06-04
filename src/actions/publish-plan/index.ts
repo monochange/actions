@@ -48,15 +48,15 @@ export async function runPublishPlan(): Promise<void> {
 
   core.info(`Using monochange ${monochange.version} from ${monochange.source}`);
 
-  const args = ['run', 'publish-plan', '--format', inputs.format, '--mode', inputs.mode];
-
-  if (inputs.ci) {
-    args.push('--ci', inputs.ci);
-  }
-
-  for (const pkg of inputs.packages) {
-    args.push('--package', pkg);
-  }
+  const readiness = core.getInput('readiness').trim() || '.monochange/publish-readiness.json';
+  const args = [
+    'step',
+    'plan-publish-rate-limits',
+    '--readiness',
+    readiness,
+    '--format',
+    inputs.format,
+  ];
 
   const stdout = await execRequired(monochange.command, args);
   const parsed = parseMixedOutput(stdout);

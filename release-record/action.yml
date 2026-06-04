@@ -1,0 +1,60 @@
+name: release-record
+description: 'Run monochange release-record action.'
+author: monochange
+inputs:
+  setup-monochange:
+    description: 'How to resolve monochange.'
+    required: false
+    default: 'true'
+  working-directory:
+    description: 'Working directory to run monochange in.'
+    required: false
+    default: '.'
+  ref:
+    description: 'Git ref to inspect.'
+    required: false
+    default: 'HEAD'
+  format:
+    description: 'Output format.'
+    required: false
+    default: 'json'
+  dry-run:
+    description: 'Preview without mutating.'
+    required: false
+    default: 'false'
+  output:
+    description: 'Output artifact path.'
+    required: false
+  resume:
+    description: 'Previous publish result to resume from.'
+    required: false
+  fail-if-missing:
+    description: 'Fail when no release record is present.'
+    required: false
+    default: 'false'
+  id:
+    description: 'Package or group id for tag selection.'
+    required: false
+  package:
+    description: 'Package or group id for tag selection.'
+    required: false
+outputs:
+  result:
+    description: 'Action result.'
+  json:
+    description: 'JSON output.'
+  summary:
+    description: 'Text summary.'
+  has-release-record:
+    description: 'Whether a release record exists.'
+  tags:
+    description: 'Release tags map.'
+  tag:
+    description: 'Selected release tag.'
+  ready:
+    description: 'Publish readiness result.'
+  output-path:
+    description: 'Output artifact path.'
+runs:
+  using: node24
+  main: ../dist/index.mjs
