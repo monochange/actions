@@ -32,8 +32,8 @@ describe('runPublishPlan', () => {
     vi.clearAllMocks();
     mockCore.getInput.mockReturnValue('');
     mockResolve.mockResolvedValue({
-      command: 'mc',
-      source: 'existing-mc',
+      command: 'monochange',
+      source: 'existing-monochange',
       version: '1.0.0',
     });
     mockExec.mockResolvedValue('{"packages":[]}');
@@ -44,30 +44,29 @@ describe('runPublishPlan', () => {
     await runPublishPlan();
 
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockExec).toHaveBeenCalledWith('mc', [
-      'publish-plan',
+    expect(mockExec).toHaveBeenCalledWith('monochange', [
+      'step',
+      'plan-publish-rate-limits',
+      '--readiness',
+      '.monochange/publish-readiness.json',
       '--format',
       'json',
-      '--mode',
-      'full',
     ]);
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 
-  it('logs debug info and passes ci input', async () => {
+  it('logs debug info', async () => {
     mockCore.getInput.mockImplementation((name: string) => {
       if (name === 'debug') return 'true';
-      if (name === 'ci') return 'github';
       return '';
     });
 
     await runPublishPlan();
 
     expect(mockCore.info).toHaveBeenCalled();
-    expect(mockExec).toHaveBeenCalledWith('mc', expect.arrayContaining(['--ci', 'github']));
   });
 
-  it('passes package filters', async () => {
+  it('reads package filters for compatibility', async () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'package') return 'pkg-a, pkg-b';
       return '';
@@ -76,17 +75,27 @@ describe('runPublishPlan', () => {
     await runPublishPlan();
 
     expect(mockExec).toHaveBeenCalledWith(
-      'mc',
+      'monochange',
+      expect.arrayContaining(['plan-publish-rate-limits']),
+    );
+  });
+
+  it('passes custom readiness input', async () => {
+    mockCore.getInput.mockImplementation((name) => {
+      if (name === 'readiness') return 'tmp/readiness.json';
+      return '';
+    });
+
+    await runPublishPlan();
+
+    expect(mockExec).toHaveBeenCalledWith(
+      'monochange',
       expect.arrayContaining([
-        'publish-plan',
+        'plan-publish-rate-limits',
+        '--readiness',
+        'tmp/readiness.json',
         '--format',
         'json',
-        '--mode',
-        'full',
-        '--package',
-        'pkg-a',
-        '--package',
-        'pkg-b',
       ]),
     );
   });
@@ -123,8 +132,10 @@ describe('runPublishPlan', () => {
   });
 
   it('throws when execRequired fails', async () => {
-    mockExec.mockRejectedValue(new Error('mc publish-plan failed'));
+    mockExec.mockRejectedValue(new Error('monochange step plan-publish-rate-limits failed'));
 
-    await expect(runPublishPlan()).rejects.toThrow('mc publish-plan failed');
+    await expect(runPublishPlan()).rejects.toThrow(
+      'monochange step plan-publish-rate-limits failed',
+    );
   });
 });

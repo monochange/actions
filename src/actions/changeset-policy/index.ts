@@ -39,6 +39,17 @@ function getOptionalInput(name: string): string | undefined {
   return value || undefined;
 }
 
+function firstNonEmpty(...values: string[]): string {
+  return values.find((value) => value !== '')!;
+}
+
+function splitList(value: string): string[] {
+  return value
+    .split(/[\n, ]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function getBoolean(name: string): boolean {
   const value = core.getInput(name).trim().toLowerCase();
 
@@ -54,36 +65,47 @@ export async function runChangesetPolicy(): Promise<void> {
     );
   }
 
-  const mc = await resolveMonochange(inputs.setupMonochange);
+  const monochange = await resolveMonochange(inputs.setupMonochange);
 
-  core.info(`Using monochange ${mc.version} from ${mc.source}`);
+  core.info(`Using monochange ${monochange.version} from ${monochange.source}`);
 
-  const args = ['step:affected-packages', '--format', 'json', '--verify'];
+  const args = ['step', 'affected-packages', '--format', 'json', '--verify'];
 
   if (inputs.changedPaths) {
-    args.push('--paths', inputs.changedPaths);
+    for (const changedPath of splitList(inputs.changedPaths)) {
+      args.push('--changed-paths', changedPath);
+    }
   }
 
   if (inputs.labels) {
-    args.push('--labels', inputs.labels);
+    for (const label of splitList(inputs.labels)) {
+      args.push('--label', label);
+    }
   }
 
   if (inputs.skipLabels) {
-    args.push('--skip-labels', inputs.skipLabels);
+    for (const label of splitList(inputs.skipLabels)) {
+      args.push('--skip-label', label);
+    }
   }
 
   if (inputs.dryRun) {
-    core.info(`Dry-run: would run \`${mc.command} ${args.join(' ')}\``);
+    core.info(`Dry-run: would run \`${monochange.command} ${args.join(' ')}\``);
     core.setOutput('result', 'dry-run');
 
     return;
   }
 
-  const result = await exec(mc.command, args);
+  const result = await exec(monochange.command, args);
   const stdout = result.stdout.trim();
   const stderr = result.stderr.trim();
-  const parsed = parseMixedOutput(stdout || stderr);
-  const summary = changesetSummary(parsed) || stderr || stdout || 'changeset-policy completed';
+  const output = stdout !== '' ? stdout : stderr;
+  const parsed = parseMixedOutput(output);
+  const parsedSummary = changesetSummary(parsed);
+  const summary =
+    parsedSummary !== '' && parsedSummary != null
+      ? parsedSummary
+      : firstNonEmpty(stderr, stdout, 'changeset-policy completed');
   const comment = changesetComment(parsed);
   const skipped = changesetSkipped(parsed);
   const failed = !skipped && (result.exitCode !== 0 || changesetStatus(parsed) === 'failed');

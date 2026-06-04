@@ -31,6 +31,26 @@ describe('exec', () => {
 
     expect(result.exitCode).toBe(1);
   });
+
+  it('handles empty command input', async () => {
+    vi.mocked(actionsExec.exec).mockResolvedValue(0);
+
+    await exec('', []);
+
+    expect(actionsExec.exec).toHaveBeenCalledWith('', [], expect.any(Object));
+  });
+
+  it('splits command shims into executable and prefix args', async () => {
+    vi.mocked(actionsExec.exec).mockResolvedValue(0);
+
+    await exec('npx -y @monochange/cli', ['check']);
+
+    expect(actionsExec.exec).toHaveBeenCalledWith(
+      'npx',
+      ['-y', '@monochange/cli', 'check'],
+      expect.any(Object),
+    );
+  });
 });
 
 describe('execRequired', () => {

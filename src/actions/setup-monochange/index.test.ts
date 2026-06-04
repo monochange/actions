@@ -23,17 +23,17 @@ describe('runSetupMonochange', () => {
 
   it('resolves monochange with default input and sets outputs', async () => {
     mockResolve.mockResolvedValue({
-      command: 'mc',
-      source: 'existing-mc',
+      command: 'monochange',
+      source: 'existing-monochange',
       version: '1.2.3',
     });
 
     await runSetupMonochange();
 
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockCore.setOutput).toHaveBeenCalledWith('command', 'mc');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('command', 'monochange');
     expect(mockCore.setOutput).toHaveBeenCalledWith('version', '1.2.3');
-    expect(mockCore.setOutput).toHaveBeenCalledWith('source', 'existing-mc');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('source', 'existing-monochange');
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 
@@ -43,8 +43,8 @@ describe('runSetupMonochange', () => {
       return '';
     });
     mockResolve.mockResolvedValue({
-      command: 'mc',
-      source: 'existing-mc',
+      command: 'monochange',
+      source: 'existing-monochange',
       version: '1.2.3',
     });
 
@@ -55,19 +55,19 @@ describe('runSetupMonochange', () => {
 
   it('passes custom setup-monochange input', async () => {
     mockCore.getInput.mockImplementation((name) => {
-      if (name === 'setup-monochange') return '/opt/bin/mc';
+      if (name === 'setup-monochange') return '/opt/bin/monochange';
       return '';
     });
     mockResolve.mockResolvedValue({
-      command: '/opt/bin/mc',
+      command: '/opt/bin/monochange',
       source: 'custom-command',
       version: '2.0.0',
     });
 
     await runSetupMonochange();
 
-    expect(mockResolve).toHaveBeenCalledWith('/opt/bin/mc');
-    expect(mockCore.setOutput).toHaveBeenCalledWith('command', '/opt/bin/mc');
+    expect(mockResolve).toHaveBeenCalledWith('/opt/bin/monochange');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('command', '/opt/bin/monochange');
   });
 
   it('throws when resolveMonochange fails', async () => {

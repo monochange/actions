@@ -6,10 +6,10 @@ branding:
   color: purple
 inputs:
   name:
-    description: 'Action variant to run. Supported values: merge, setup-monochange, changeset-policy, release-pr, publish-plan, post-merge-release, fail-when.'
+    description: 'Action variant to run. Supported values: merge, setup-monochange, changeset-policy, check, release-preview, release-record, open-release-request, release-pr, tag-release, publish-readiness, publish-packages, post-merge-release, fail-when.'
     required: true
   setup-monochange:
-    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
+    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing monochange on PATH, any other string = custom command.'
     required: false
     default: 'true'
   github-token:
@@ -98,6 +98,45 @@ inputs:
     description: 'Optional markdown to include in a pull request comment when should-fail is true. If omitted, fail-when never calls the GitHub API.'
     required: false
     default: ''
+  working-directory:
+    description: 'Working directory to run monochange in.'
+    required: false
+    default: '.'
+  ref:
+    description: 'Git ref to inspect for release-record, tag-release, and publish-readiness.'
+    required: false
+    default: 'HEAD'
+  format:
+    description: 'monochange output format for variants that support it.'
+    required: false
+    default: 'json'
+  diff:
+    description: 'Whether release-preview should include a diff.'
+    required: false
+    default: 'true'
+  output:
+    description: 'Output artifact path for publish-readiness or publish-packages.'
+    required: false
+  resume:
+    description: 'Previous publish result path to resume package publishing.'
+    required: false
+  fail-if-missing:
+    description: 'Whether release-record should fail when no release record exists.'
+    required: false
+    default: 'false'
+  id:
+    description: 'Package or group id used by tag-release to select one tag from the tags map.'
+    required: false
+  package:
+    description: 'Package or group id used by tag-release to select one tag from the tags map.'
+    required: false
+  readiness:
+    description: 'Readiness artifact path used by publish-plan compatibility mode.'
+    required: false
+  all:
+    description: 'Pass --all to publish-packages.'
+    required: false
+    default: 'false'
 outputs:
   result:
     description: 'Final action result. For fail-when, this is skipped when should-fail is false and failed when the dispatcher catches the intentional failure.'
@@ -121,6 +160,20 @@ outputs:
     description: 'JSON comment payload with a body field. For fail-when, this is the generated fail-comment body when provided.'
   rebased:
     description: 'Whether the head branch was rebased onto the base branch before the fast-forward.'
+  json:
+    description: 'JSON output for monochange command variants.'
+  summary:
+    description: 'Text summary for monochange command variants.'
+  has-release-record:
+    description: 'Whether a monochange release record exists at the requested ref.'
+  tags:
+    description: 'JSON map of release tags by package or group id.'
+  tag:
+    description: 'Selected release tag for a requested package or group id.'
+  ready:
+    description: 'Whether publish-readiness found a ready release record.'
+  output-path:
+    description: 'Path to the generated monochange artifact.'
 runs:
   using: node24
   main: dist/index.mjs

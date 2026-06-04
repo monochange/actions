@@ -18,13 +18,17 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: install monochange breaking CLI fixture
+        run: cargo install --git https://github.com/monochange/monochange --rev 2a1b3ef538507a254625d1d06dcc10f6ccf8fb7e monochange
+
       - name: use setup-monochange action
         uses: ./setup-monochange
         with:
           debug: true
+          setup-monochange: false
 
-      - name: verify mc is available
-        run: mc --version
+      - name: verify monochange is available
+        run: monochange --version
 
   merge-action-validates:
     name: merge action validates PR context

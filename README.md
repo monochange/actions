@@ -18,16 +18,29 @@ Currently implemented:
 
 - `merge` - merge a monochange release pull request onto its base branch with fast-forward or cherry-pick
 - `fail-when` - intentionally fail a workflow step with a configurable reason
-- `setup-monochange` - install monochange CLI from cargo or binstall
+- `setup-monochange` - resolve the monochange CLI
 - `changeset-policy` - validate changeset policy for affected packages
-- `release-pr` - open a release pull request
-- `publish-plan` - generate a publish plan for the current release
+- `check` - run `monochange check`
+- `release-preview` - preview `monochange step prepare-release --dry-run`
+- `release-record` - inspect the release record at a ref
+- `open-release-request` / `release-pr` - open a release pull request
+- `tag-release` - create or report release tags from a release record
+- `publish-readiness` - generate publish readiness data from a release record
+- `publish-packages` - publish packages from readiness data
+- `publish-plan` - compatibility wrapper for publish rate-limit planning
 - `post-merge-release` - tag and publish after a release PR merges
 
 Public entrypoints:
 
-- `monochange/actions@v0.4.0` with `name: merge`
+- `monochange/actions@v0.4.0` with `name: <variant>`
 - `monochange/actions/merge@v0.4.0`
+- `monochange/actions/check@v0.4.0`
+- `monochange/actions/release-preview@v0.4.0`
+- `monochange/actions/release-record@v0.4.0`
+- `monochange/actions/open-release-request@v0.4.0`
+- `monochange/actions/tag-release@v0.4.0`
+- `monochange/actions/publish-readiness@v0.4.0`
+- `monochange/actions/publish-packages@v0.4.0`
 - `monochange/actions/fail-when@v0.4.0`
 
 Both entrypoints run the same implementation.
@@ -683,7 +696,7 @@ Install the `monochange` CLI from cargo or via `cargo binstall`. Falls back to i
 - uses: monochange/actions/setup-monochange@v0.4.0
   with:
     setup-monochange: true
-    command: mc
+    command: monochange
 ```
 
 ---
@@ -704,7 +717,7 @@ Validate that all affected packages have appropriate changesets.
     comment-on-failure: true
 ```
 
-Failure comments use the `comment` field from `mc step:affected-packages` and are deleted after the PR passes or is skipped.
+Failure comments use the `comment` field from `monochange step affected-packages` and are deleted after the PR passes or is skipped.
 
 ---
 

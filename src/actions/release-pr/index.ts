@@ -39,12 +39,14 @@ export async function runReleasePr(): Promise<void> {
     );
   }
 
-  const mc = await resolveMonochange(inputs.setupMonochange);
+  const monochange = await resolveMonochange(inputs.setupMonochange);
 
-  core.info(`Using monochange ${mc.version} from ${mc.source}`);
+  core.info(`Using monochange ${monochange.version} from ${monochange.source}`);
 
   if (inputs.dryRun) {
-    core.info(`Dry-run: would run \`${mc.command} release-pr --format ${inputs.format}\``);
+    core.info(
+      `Dry-run: would run \`${monochange.command} step open-release-request --format ${inputs.format}\``,
+    );
     core.setOutput('result', 'dry-run');
     core.setOutput('head-branch', '');
     core.setOutput('base-branch', '');
@@ -55,13 +57,13 @@ export async function runReleasePr(): Promise<void> {
     return;
   }
 
-  const args = ['release-pr', '--format', inputs.format];
+  const args = ['step', 'open-release-request', '--format', inputs.format];
 
   if (inputs.githubToken) {
     core.exportVariable('GITHUB_TOKEN', inputs.githubToken);
   }
 
-  const stdout = await execRequired(mc.command, args, { cwd: inputs.workingDirectory });
+  const stdout = await execRequired(monochange.command, args, { cwd: inputs.workingDirectory });
   const parsed = parseMixedOutput(stdout);
   const parsedRecord =
     typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)

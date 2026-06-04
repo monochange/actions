@@ -32,8 +32,8 @@ describe('runReleasePr', () => {
     vi.clearAllMocks();
     mockCore.getInput.mockReturnValue('');
     mockResolve.mockResolvedValue({
-      command: 'mc',
-      source: 'existing-mc',
+      command: 'monochange',
+      source: 'existing-monochange',
       version: '1.0.0',
     });
     mockExec.mockResolvedValue('{"number":42}');
@@ -48,9 +48,13 @@ describe('runReleasePr', () => {
   it('runs release-pr and sets outputs', async () => {
     await runReleasePr();
     expect(mockResolve).toHaveBeenCalledWith('true');
-    expect(mockExec).toHaveBeenCalledWith('mc', ['release-pr', '--format', 'json'], {
-      cwd: '.',
-    });
+    expect(mockExec).toHaveBeenCalledWith(
+      'monochange',
+      ['step', 'open-release-request', '--format', 'json'],
+      {
+        cwd: '.',
+      },
+    );
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
     expect(mockCore.setOutput).toHaveBeenCalledWith('release-request-number', '42');
   });
@@ -116,8 +120,8 @@ describe('runReleasePr', () => {
   });
 
   it('throws when execRequired fails', async () => {
-    mockExec.mockRejectedValue(new Error('mc release-pr failed'));
+    mockExec.mockRejectedValue(new Error('monochange step open-release-request failed'));
 
-    await expect(runReleasePr()).rejects.toThrow('mc release-pr failed');
+    await expect(runReleasePr()).rejects.toThrow('monochange step open-release-request failed');
   });
 });

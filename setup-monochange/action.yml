@@ -3,7 +3,7 @@ description: 'Resolve or install the monochange CLI and expose its path, version
 author: monochange
 inputs:
   setup-monochange:
-    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing mc on PATH, any other string = custom command.'
+    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing monochange on PATH, any other string = custom command.'
     required: false
     default: 'true'
   debug:
@@ -16,7 +16,7 @@ outputs:
   version:
     description: 'Resolved monochange version string.'
   source:
-    description: 'How monochange was resolved (existing-mc, npx-shim, cargo-binstall, custom-command).'
+    description: 'How monochange was resolved (existing-monochange, npx-shim, cargo-binstall, custom-command).'
   result:
     description: 'success or failed.'
 runs:
