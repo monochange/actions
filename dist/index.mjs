@@ -21844,6 +21844,7 @@ async function runPublishPackages() {
 	];
 	if (resume) args.push("--resume", resume);
 	if (bool$4("all")) args.push("--all");
+	if (bool$4("stream-output")) args.push("--stream-output");
 	if (bool$4("dry-run")) {
 		info(`Dry-run: would run \`${monochange.command} ${args.join(" ")}\``);
 		setOutput("result", "dry-run");

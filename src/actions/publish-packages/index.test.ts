@@ -61,10 +61,11 @@ describe('runPublishPackages', () => {
     expect(mockCore.setOutput).toHaveBeenCalledWith('json', 'null');
   });
 
-  it('passes resume and all inputs', async () => {
+  it('passes resume, all, and stream-output inputs', async () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'resume') return 'previous.json';
       if (name === 'all') return 'true';
+      if (name === 'stream-output') return 'true';
       if (name === 'output') return 'result.json';
       return '';
     });
@@ -83,6 +84,7 @@ describe('runPublishPackages', () => {
         '--resume',
         'previous.json',
         '--all',
+        '--stream-output',
       ],
       { cwd: '.' },
     );
