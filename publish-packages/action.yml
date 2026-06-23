@@ -28,6 +28,14 @@ inputs:
   resume:
     description: 'Previous publish result to resume from.'
     required: false
+  all:
+    description: 'Pass --all to publish-packages.'
+    required: false
+    default: 'false'
+  stream-output:
+    description: 'Pass --stream-output to publish-packages so package-manager output streams while still being captured in the publish report.'
+    required: false
+    default: 'false'
   fail-if-missing:
     description: 'Fail when no release record is present.'
     required: false

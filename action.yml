@@ -137,6 +137,10 @@ inputs:
     description: 'Pass --all to publish-packages.'
     required: false
     default: 'false'
+  stream-output:
+    description: 'Pass --stream-output to publish-packages so package-manager output streams while still being captured in the publish report.'
+    required: false
+    default: 'false'
 outputs:
   result:
     description: 'Final action result. For fail-when, this is skipped when should-fail is false and failed when the dispatcher catches the intentional failure.'

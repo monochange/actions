@@ -27,6 +27,10 @@ export async function runPublishPackages(): Promise<void> {
     args.push('--all');
   }
 
+  if (bool('stream-output')) {
+    args.push('--stream-output');
+  }
+
   if (bool('dry-run')) {
     core.info(`Dry-run: would run \`${monochange.command} ${args.join(' ')}\``);
     core.setOutput('result', 'dry-run');
