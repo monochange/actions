@@ -20456,6 +20456,44 @@ async function execRequired(command, args, options) {
 }
 
 //#endregion
+//#region src/shared/inputs.ts
+const TRUE_VALUES = new Set([
+	"1",
+	"true",
+	"yes",
+	"on"
+]);
+const FALSE_VALUES = new Set([
+	"0",
+	"false",
+	"no",
+	"off",
+	""
+]);
+function getOptionalInput$1(name) {
+	const value = getInput(name).trim();
+	if (value.length === 0) return;
+	return value;
+}
+function getBooleanInput(name) {
+	const value = getInput(name).trim().toLowerCase();
+	if (TRUE_VALUES.has(value)) return true;
+	if (FALSE_VALUES.has(value)) return false;
+	throw new Error(`Input \`${name}\` must be a boolean-like value, received \`${value}\`.`);
+}
+function parseRepository$1(input) {
+	const parts = input.split("/").map((part) => part.trim());
+	if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error(`Input \`repository\` must be in owner/repo format, received \`${input}\`.`);
+	return {
+		owner: parts[0],
+		repo: parts[1]
+	};
+}
+function normalizeName(input) {
+	return input.trim().toLowerCase();
+}
+
+//#endregion
 //#region src/shared/json.ts
 function safeJsonParse(text) {
 	try {
@@ -20545,22 +20583,244 @@ async function getMonochangeVersion(command, prefixArgs = []) {
 }
 
 //#endregion
+//#region src/actions/change-classification/index.ts
+const COMMENT_MARKER$1 = "<!-- monochange:change-classification -->";
+const MAX_MARKDOWN_LENGTH = 6e4;
+function input$7(name, fallback) {
+	return getInput(name).trim() || fallback;
+}
+function readInputs$5() {
+	return {
+		base: getOptionalInput$1("base"),
+		dependencyPropagation: input$7("dependency-propagation", "public"),
+		detectionLevel: input$7("detection-level", "signature"),
+		githubToken: getInput("github-token").trim(),
+		head: input$7("head", "HEAD"),
+		includeUnchanged: getBooleanInput("include-unchanged"),
+		packages: getOptionalInput$1("packages"),
+		postComment: getBooleanInput("post-comment"),
+		pullRequest: getOptionalInput$1("pull-request"),
+		release: getOptionalInput$1("release"),
+		repository: input$7("repository", `${context.repo.owner}/${context.repo.repo}`),
+		setupMonochange: input$7("setup-monochange", "true"),
+		workingDirectory: input$7("working-directory", ".")
+	};
+}
+function splitList$1(value) {
+	return value.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean);
+}
+function isRecord$3(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSeverity(value) {
+	return value === "none" || value === "patch" || value === "minor" || value === "major";
+}
+function requiredString(record, key) {
+	const value = record[key];
+	if (typeof value !== "string") throw new Error(`monochange classification field \`${key}\` must be a string.`);
+	return value;
+}
+function requiredSeverity(record, key) {
+	const value = record[key];
+	if (!isSeverity(value)) throw new Error(`monochange classification field \`${key}\` has an invalid severity.`);
+	return value;
+}
+function stringArray(value) {
+	if (!Array.isArray(value)) return [];
+	return value.filter((item) => typeof item === "string");
+}
+function readFinding(value) {
+	if (!isRecord$3(value)) throw new Error("monochange classification findings must be objects.");
+	return {
+		bump: requiredSeverity(value, "bump"),
+		comparisons: stringArray(value.comparisons),
+		confidence: requiredString(value, "confidence"),
+		id: requiredString(value, "id"),
+		impact: requiredString(value, "impact"),
+		...typeof value.location === "string" ? { location: value.location } : {},
+		summary: requiredString(value, "summary")
+	};
+}
+function readPackage(value) {
+	if (!isRecord$3(value) || !isRecord$3(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
+	return {
+		action: requiredString(value, "action"),
+		compatibilityImpact: requiredString(value.decision, "compatibilityImpact"),
+		completeness: requiredString(value.decision, "completeness"),
+		confidence: requiredString(value.decision, "confidence"),
+		findings: value.findings.map(readFinding),
+		packageId: requiredString(value, "packageId"),
+		releaseFloor: requiredSeverity(value.decision, "releaseFloor"),
+		recommendation: requiredSeverity(value, "recommendation"),
+		reviewRequired: value.decision.reviewRequired === true,
+		summary: requiredString(value, "summary")
+	};
+}
+function readChangeClassificationReport(value) {
+	if (!isRecord$3(value) || value.schemaVersion !== 1 || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that supports schema version 1.");
+	return {
+		candidate: requiredString(value, "candidate"),
+		defaultBranch: requiredString(value, "defaultBranch"),
+		packages: value.packages.map(readPackage),
+		recommendation: requiredSeverity(value, "recommendation"),
+		schemaVersion: value.schemaVersion,
+		warnings: stringArray(value.warnings)
+	};
+}
+function tableCell(value) {
+	return value.replaceAll("|", String.raw`\|`).replaceAll("\n", " ");
+}
+function findingIcon(impact) {
+	if (impact === "breaking") return "🔴";
+	if (impact === "additive") return "🟢";
+	if (impact === "compatible") return "⚪";
+	return "🟡";
+}
+function findingLine(finding) {
+	const location = finding.location ? ` in \`${finding.location}\`` : "";
+	const comparisons = finding.comparisons.length > 0 ? `; seen in ${finding.comparisons.join(", ")}` : "";
+	return `- ${findingIcon(finding.impact)} **${finding.impact} / ${finding.bump}** — ${finding.summary}${location} (${finding.confidence} confidence${comparisons}; \`${finding.id}\`)`;
+}
+function truncateMarkdown(markdown) {
+	if (markdown.length <= MAX_MARKDOWN_LENGTH) return markdown;
+	return `${markdown.slice(0, MAX_MARKDOWN_LENGTH)}\n\n_Report truncated. Read the action JSON output for every finding._`;
+}
+function renderChangeClassificationMarkdown(report) {
+	const reviewRequired = report.packages.some((item) => item.reviewRequired);
+	const lines = [
+		"# monochange change classification",
+		"",
+		`**Proposed changeset bump: \`${report.recommendation}\`**`,
+		"",
+		`Candidate \`${report.candidate}\` was compared with default branch \`${report.defaultBranch}\`. The release floor shows compatible changes accumulated since each package release.`,
+		"",
+		reviewRequired ? "> ⚠️ At least one package has partial or unsupported analysis. Treat this report as evidence for review, not proof that unreported breaks are absent." : "> ✅ Every reported package has complete analysis for the selected detection level.",
+		"",
+		"| Package | Impact | Proposed bump | Release floor | Confidence | Completeness | Changeset |",
+		"| --- | --- | --- | --- | --- | --- | --- |",
+		...report.packages.map((item) => `| \`${tableCell(item.packageId)}\` | ${tableCell(item.compatibilityImpact)} | **${item.recommendation}** | ${item.releaseFloor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`),
+		"",
+		"## Evidence",
+		""
+	];
+	const packagesWithFindings = report.packages.filter((item) => item.findings.length > 0);
+	if (packagesWithFindings.length === 0) lines.push("No modeled compatibility findings were reported.", "");
+	else for (const item of packagesWithFindings) {
+		lines.push(`### \`${item.packageId}\``, "", item.summary, "");
+		lines.push(...item.findings.map(findingLine), "");
+	}
+	if (report.warnings.length > 0) lines.push("<details>", "<summary>Analysis warnings</summary>", "", ...report.warnings.map((warning) => `- ${warning}`), "", "</details>", "");
+	lines.push("_Generated by `monochange change classify`. Confirm low- and medium-confidence findings with ecosystem-specific checks before writing the final changeset._");
+	return truncateMarkdown(lines.join("\n"));
+}
+function pullRequestNumber(explicit) {
+	if (explicit) {
+		if (!/^\d+$/u.test(explicit) || Number(explicit) < 1) throw new Error(`Input \`pull-request\` must be a positive integer, received \`${explicit}\`.`);
+		return Number(explicit);
+	}
+	const pullRequest = context.payload.pull_request;
+	return isRecord$3(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
+}
+async function upsertComment(inputs, markdown) {
+	if (!inputs.postComment) return;
+	if (!inputs.githubToken) {
+		warning("Unable to post change-classification comment: github-token is empty.");
+		return;
+	}
+	const issueNumber = pullRequestNumber(inputs.pullRequest);
+	if (!issueNumber) {
+		warning("Unable to post change-classification comment: no pull request number is available.");
+		return;
+	}
+	const { owner, repo } = parseRepository$1(inputs.repository);
+	const octokit = getOctokit(inputs.githubToken);
+	const { data } = await octokit.rest.issues.listComments({
+		issue_number: issueNumber,
+		owner,
+		per_page: 100,
+		repo
+	});
+	const comments = data.filter((comment) => typeof comment.body === "string" && comment.body.includes(COMMENT_MARKER$1));
+	const body = `${markdown}\n\n${COMMENT_MARKER$1}`;
+	const current = comments[0];
+	if (!current) await octokit.rest.issues.createComment({
+		body,
+		issue_number: issueNumber,
+		owner,
+		repo
+	});
+	else if (current.body === body) info("Change-classification comment is unchanged.");
+	else await octokit.rest.issues.updateComment({
+		body,
+		comment_id: current.id,
+		owner,
+		repo
+	});
+	await Promise.all(comments.slice(1).map(async (comment) => octokit.rest.issues.deleteComment({
+		comment_id: comment.id,
+		owner,
+		repo
+	})));
+}
+async function upsertCommentSafely(inputs, markdown) {
+	try {
+		await upsertComment(inputs, markdown);
+	} catch (error) {
+		warning(`Unable to post change-classification comment: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+async function runChangeClassification() {
+	const inputs = readInputs$5();
+	const monochange = await resolveMonochange(inputs.setupMonochange);
+	const args = [
+		"change",
+		"classify",
+		"--format",
+		"json",
+		"--head",
+		inputs.head,
+		"--detection-level",
+		inputs.detectionLevel,
+		"--dependency-propagation",
+		inputs.dependencyPropagation
+	];
+	if (inputs.base) args.push("--base", inputs.base);
+	if (inputs.release) args.push("--release", inputs.release);
+	if (inputs.includeUnchanged) args.push("--include-unchanged");
+	if (inputs.packages) for (const packageId of splitList$1(inputs.packages)) args.push("--package", packageId);
+	info(`Using monochange ${monochange.version} from ${monochange.source}`);
+	const parsed = parseMixedOutput(await execRequired(monochange.command, args, { cwd: inputs.workingDirectory }));
+	const report = readChangeClassificationReport(parsed);
+	const markdown = renderChangeClassificationMarkdown(report);
+	const reviewRequired = report.packages.some((item) => item.reviewRequired);
+	const summary$1 = `monochange proposes a ${report.recommendation} changeset across ${report.packages.length} package(s)${reviewRequired ? "; review is required" : ""}.`;
+	setOutput("json", JSON.stringify(parsed));
+	setOutput("markdown", markdown);
+	setOutput("recommendation", report.recommendation);
+	setOutput("review-required", String(reviewRequired));
+	setOutput("summary", summary$1);
+	await summary.addRaw(markdown).write();
+	await upsertCommentSafely(inputs, markdown);
+	setOutput("result", "success");
+}
+
+//#endregion
 //#region src/actions/changeset-policy/index.ts
 const COMMENT_MARKER = "<!-- monochange:changeset-policy -->";
 function readInputs$4() {
 	return {
-		changedPaths: getOptionalInput$1("changed-paths"),
+		changedPaths: getOptionalInput("changed-paths"),
 		commentOnFailure: getBoolean$2("comment-on-failure"),
 		debug: getBoolean$2("debug"),
 		dryRun: getBoolean$2("dry-run"),
 		githubToken: getInput("github-token").trim(),
-		labels: getOptionalInput$1("labels"),
+		labels: getOptionalInput("labels"),
 		repository: getInput("repository") || context.repo.owner + "/" + context.repo.repo,
 		setupMonochange: getInput("setup-monochange").trim() || "true",
-		skipLabels: getOptionalInput$1("skip-labels")
+		skipLabels: getOptionalInput("skip-labels")
 	};
 }
-function getOptionalInput$1(name) {
+function getOptionalInput(name) {
 	return getInput(name).trim() || void 0;
 }
 function firstNonEmpty(...values) {
@@ -20762,44 +21022,6 @@ async function runCheck() {
 }
 
 //#endregion
-//#region src/shared/inputs.ts
-const TRUE_VALUES = new Set([
-	"1",
-	"true",
-	"yes",
-	"on"
-]);
-const FALSE_VALUES = new Set([
-	"0",
-	"false",
-	"no",
-	"off",
-	""
-]);
-function getOptionalInput(name) {
-	const value = getInput(name).trim();
-	if (value.length === 0) return;
-	return value;
-}
-function getBooleanInput(name) {
-	const value = getInput(name).trim().toLowerCase();
-	if (TRUE_VALUES.has(value)) return true;
-	if (FALSE_VALUES.has(value)) return false;
-	throw new Error(`Input \`${name}\` must be a boolean-like value, received \`${value}\`.`);
-}
-function parseRepository$1(input) {
-	const parts = input.split("/").map((part) => part.trim());
-	if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error(`Input \`repository\` must be in owner/repo format, received \`${input}\`.`);
-	return {
-		owner: parts[0],
-		repo: parts[1]
-	};
-}
-function normalizeName(input) {
-	return input.trim().toLowerCase();
-}
-
-//#endregion
 //#region src/actions/fail-when/index.ts
 const DEFAULT_FAILURE_REASON = "fail-when condition evaluated to true.";
 async function runFailWhen() {
@@ -20809,8 +21031,8 @@ async function runFailWhen() {
 		setOutput("result", "skipped");
 		return;
 	}
-	const reason = getOptionalInput("reason") ?? DEFAULT_FAILURE_REASON;
-	const comment = getOptionalInput("fail-comment");
+	const reason = getOptionalInput$1("reason") ?? DEFAULT_FAILURE_REASON;
+	const comment = getOptionalInput$1("fail-comment");
 	const summaryBody = comment ? buildFailCommentBody({
 		actor: context.actor,
 		comment,
@@ -20829,7 +21051,7 @@ async function runFailWhen() {
 function readCommentInputs() {
 	return {
 		githubToken: getInput("github-token", { required: true }).trim(),
-		pullRequestNumber: parsePullRequestNumber$1(getOptionalInput("pull-request")),
+		pullRequestNumber: parsePullRequestNumber$1(getOptionalInput$1("pull-request")),
 		repository: getInput("repository", { required: true }).trim()
 	};
 }
@@ -21235,9 +21457,9 @@ async function runMerge() {
 	}
 }
 function readInputs$3() {
-	const comment = getOptionalInput("comment");
-	const pullRequest = getOptionalInput("pull-request");
-	const requiredFailingCheck = getOptionalInput("required-failing-check");
+	const comment = getOptionalInput$1("comment");
+	const pullRequest = getOptionalInput$1("pull-request");
+	const requiredFailingCheck = getOptionalInput$1("required-failing-check");
 	return {
 		allowCrossRepository: getBooleanInput("allow-cross-repository"),
 		baseBranch: getInput("base-branch", { required: true }).trim(),
@@ -21246,8 +21468,8 @@ function readInputs$3() {
 		dryRun: getBooleanInput("dry-run"),
 		githubToken: getInput("github-token", { required: true }).trim(),
 		headBranchPrefix: getInput("head-branch-prefix", { required: true }).trim(),
-		postUpdateScript: getOptionalInput("post-update-script"),
-		postUpdateWorkflow: getOptionalInput("post-update-workflow"),
+		postUpdateScript: getOptionalInput$1("post-update-script"),
+		postUpdateWorkflow: getOptionalInput$1("post-update-workflow"),
 		pullRequestNumber: parsePullRequestNumber(pullRequest),
 		repository: getInput("repository", { required: true }).trim(),
 		mergeMethod: normalizeMergeMethod(getInput("merge-method", { required: true }).trim()),
@@ -22253,6 +22475,9 @@ async function run() {
 	const pathName = process.env.GITHUB_ACTION_PATH?.split("/").pop();
 	const name = normalizeName(inputName !== "" ? inputName : pathName ?? "");
 	switch (name) {
+		case "change-classification":
+			await runChangeClassification();
+			return;
 		case "merge":
 			await runMerge();
 			return;
@@ -22292,7 +22517,7 @@ async function run() {
 		case "fail-when":
 			await runFailWhen();
 			return;
-		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: merge, setup-monochange, changeset-policy, check, release-preview, release-record, open-release-request, release-pr, tag-release, publish-readiness, publish-packages, post-merge-release, fail-when.`);
+		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: change-classification, merge, setup-monochange, changeset-policy, check, release-preview, release-record, open-release-request, release-pr, tag-release, publish-readiness, publish-packages, post-merge-release, fail-when.`);
 	}
 }
 run().catch((error) => {

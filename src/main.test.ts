@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@actions/core');
+vi.mock('./actions/change-classification', () => ({ runChangeClassification: vi.fn() }));
 vi.mock('./actions/merge', () => ({ runMerge: vi.fn() }));
 vi.mock('./actions/setup-monochange', () => ({ runSetupMonochange: vi.fn() }));
 vi.mock('./actions/changeset-policy', () => ({ runChangesetPolicy: vi.fn() }));

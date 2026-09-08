@@ -1,0 +1,72 @@
+name: change-classification
+description: 'Classify pull request changes against the default branch and latest release, then surface the evidence.'
+author: monochange
+inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as change-classification.'
+    required: false
+    default: change-classification
+  setup-monochange:
+    description: 'How to resolve monochange. true = auto-resolve, false = require monochange on PATH, any other string = custom command.'
+    required: false
+    default: 'true'
+  github-token:
+    description: 'GitHub token used to create or update the pull request comment.'
+    required: false
+    default: ${{ github.token }}
+  repository:
+    description: 'Target repository in owner/repo format.'
+    required: false
+    default: ${{ github.repository }}
+  pull-request:
+    description: 'Pull request number. Defaults to the current pull_request event.'
+    required: false
+  working-directory:
+    description: 'Working directory to run monochange in.'
+    required: false
+    default: '.'
+  base:
+    description: 'Default-branch git ref. By default monochange resolves origin/HEAD, main, or master.'
+    required: false
+  head:
+    description: 'Candidate git ref.'
+    required: false
+    default: HEAD
+  release:
+    description: 'Release git ref override. By default each release owner uses its latest reachable tag.'
+    required: false
+  packages:
+    description: 'Comma- or newline-separated package ids or names to include.'
+    required: false
+  detection-level:
+    description: 'Analysis level: basic, signature, or semantic.'
+    required: false
+    default: signature
+  dependency-propagation:
+    description: 'Dependency propagation mode: none or public.'
+    required: false
+    default: public
+  include-unchanged:
+    description: 'Include packages with no current pull request findings.'
+    required: false
+    default: 'false'
+  post-comment:
+    description: 'Create or update one pull request comment with the classification report.'
+    required: false
+    default: 'true'
+outputs:
+  result:
+    description: 'success when classification completed.'
+  json:
+    description: 'Versioned monochange change-classification JSON.'
+  markdown:
+    description: 'Markdown report written to the job summary and optional pull request comment.'
+  recommendation:
+    description: 'Overall proposed changeset bump: major, minor, patch, or none.'
+  review-required:
+    description: 'Whether any package has partial, unsupported, or otherwise reviewable evidence.'
+  summary:
+    description: 'One-line classification summary.'
+runs:
+  using: node24
+  main: ../dist/index.mjs
