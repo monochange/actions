@@ -19,6 +19,7 @@ Currently implemented:
 - `merge` - merge a monochange release pull request onto its base branch with fast-forward or cherry-pick
 - `fail-when` - intentionally fail a workflow step with a configurable reason
 - `setup-monochange` - resolve the monochange CLI
+- `change-classification` - propose changeset bumps from default-branch and latest-release evidence
 - `changeset-policy` - validate changeset policy for affected packages
 - `check` - run `monochange check`
 - `release-preview` - preview `monochange step prepare-release --dry-run`
@@ -33,6 +34,7 @@ Currently implemented:
 Public entrypoints:
 
 - `monochange/actions@v0.4.0` with `name: <variant>`
+- `monochange/actions/change-classification@v0`
 - `monochange/actions/merge@v0.4.0`
 - `monochange/actions/check@v0.4.0`
 - `monochange/actions/release-preview@v0.4.0`
@@ -718,6 +720,26 @@ Validate that all affected packages have appropriate changesets.
 ```
 
 Failure comments use the `comment` field from `monochange step affected-packages` and are deleted after the PR passes or is skipped.
+
+---
+
+## `change-classification`
+
+Propose the changeset bump for each package by comparing the pull request with both the default branch and its latest release. The action publishes versioned JSON, writes an evidence table to the job summary, and creates or updates one pull request comment.
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    fetch-depth: 0
+    ref: ${{ github.event.pull_request.head.sha }}
+
+- id: classify
+  uses: monochange/actions/change-classification@v0
+  with:
+    dependency-propagation: public
+```
+
+Use the `recommendation` output for the overall `major`, `minor`, `patch`, or `none` proposal. Inspect `review-required`, package completeness, confidence, and finding comparisons before writing a changeset. See the full [`change-classification` documentation](change-classification/README.md).
 
 ---
 

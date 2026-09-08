@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const variants = [
+  'change-classification',
   'check',
   'release-preview',
   'release-record',
