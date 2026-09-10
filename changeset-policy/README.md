@@ -24,32 +24,59 @@ jobs:
   changeset-policy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - id: changed
         uses: tj-actions/changed-files@v46
         with:
           separator: ','
 
-      - uses: monochange/actions/changeset-policy@v0.4.0
+      - uses: monochange/actions/changeset-policy@v0
         with:
           changed-paths: ${{ steps.changed.outputs.all_changed_files }}
           comment-on-failure: true
 ```
 
+## API classification bump alignment
+
+Set `from` to a base git ref (for example `origin/main`) to let monochange compute changed
+packages from git history instead of an explicit path list. This additionally enables the
+API classification bump alignment gate: when the changesets attached to the pull request
+understate the bump that `monochange change classify` derives from API findings, the policy
+fails with the offending package and both bumps in the summary. Changesets that declare a
+higher bump than classification recommends only produce a warning, and changesets with
+`bump: none` or an explicit target version are skipped by the alignment check.
+
+`from` requires a full-history checkout (`fetch-depth: 0`) so the base ref resolves, and it
+takes priority over `changed-paths`.
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    fetch-depth: 0
+
+- uses: monochange/actions/changeset-policy@v0
+  with:
+    from: origin/main
+    comment-on-failure: true
+```
+
 ## Inputs
 
-| Input                | Required | Default                    | Description                              |
-| -------------------- | -------- | -------------------------- | ---------------------------------------- |
-| `setup-monochange`   | no       | `true`                     | How to resolve monochange                |
-| `github-token`       | no       | `${{ github.token }}`      | GitHub token for PR comments             |
-| `repository`         | no       | `${{ github.repository }}` | Target repository in `owner/repo` format |
-| `changed-paths`      | no       | —                          | Comma-separated changed paths            |
-| `labels`             | no       | —                          | Comma-separated labels to consider       |
-| `skip-labels`        | no       | —                          | Comma-separated skip labels              |
-| `comment-on-failure` | no       | `true`                     | Post/update PR comment on failure        |
-| `dry-run`            | no       | `false`                    | Validate without posting or failing      |
-| `debug`              | no       | `false`                    | Enable extra debug logging               |
+| Input                | Required | Default                    | Description                                                                                            |
+| -------------------- | -------- | -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `setup-monochange`   | no       | `true`                     | How to resolve monochange                                                                              |
+| `github-token`       | no       | `${{ github.token }}`      | GitHub token for PR comments                                                                           |
+| `repository`         | no       | `${{ github.repository }}` | Target repository in `owner/repo` format                                                               |
+| `changed-paths`      | no       | —                          | Comma-separated changed paths                                                                          |
+| `from`               | no       | —                          | Base git ref to compare against; enables API classification bump alignment and ignores `changed-paths` |
+| `labels`             | no       | —                          | Comma-separated labels to consider                                                                     |
+| `skip-labels`        | no       | —                          | Comma-separated skip labels                                                                            |
+| `comment-on-failure` | no       | `true`                     | Post/update PR comment on failure                                                                      |
+| `dry-run`            | no       | `false`                    | Validate without posting or failing                                                                    |
+| `debug`              | no       | `false`                    | Enable extra debug logging                                                                             |
 
 ## Outputs
 

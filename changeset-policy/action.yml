@@ -19,7 +19,10 @@ inputs:
     required: false
     default: ${{ github.repository }}
   changed-paths:
-    description: 'Comma-separated list of changed paths to check.'
+    description: 'Comma-separated list of changed paths to check. Ignored when from is set.'
+    required: false
+  from:
+    description: 'Base git ref (e.g. origin/main) to compare against instead of explicit changed paths. Requires a full-history checkout and enables API classification bump alignment: changesets that understate the classified impact fail the policy.'
     required: false
   labels:
     description: 'Comma-separated list of labels to consider.'

@@ -10,6 +10,7 @@ export interface ChangesetPolicyInputs {
   setupMonochange: string;
   githubToken: string;
   changedPaths: string | undefined;
+  from: string | undefined;
   labels: string | undefined;
   skipLabels: string | undefined;
   commentOnFailure: boolean;
@@ -24,6 +25,7 @@ function readInputs(): ChangesetPolicyInputs {
     commentOnFailure: getBoolean('comment-on-failure'),
     debug: getBoolean('debug'),
     dryRun: getBoolean('dry-run'),
+    from: getOptionalInput('from'),
     githubToken: core.getInput('github-token').trim(),
     labels: getOptionalInput('labels'),
     repository:
@@ -70,6 +72,10 @@ export async function runChangesetPolicy(): Promise<void> {
   core.info(`Using monochange ${monochange.version} from ${monochange.source}`);
 
   const args = ['step', 'affected-packages', '--format', 'json', '--verify'];
+
+  if (inputs.from) {
+    args.push('--from', inputs.from);
+  }
 
   if (inputs.changedPaths) {
     for (const changedPath of splitList(inputs.changedPaths)) {
