@@ -20850,7 +20850,7 @@ function readPackage(value) {
 	};
 }
 function readChangeClassificationReport(value) {
-	if (!isRecord$3(value) || value.schemaVersion !== 1 || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that supports schema version 1.");
+	if (!isRecord$3(value) || typeof value.schemaVersion !== "number" || !Number.isInteger(value.schemaVersion) || value.schemaVersion < 1 || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 1 or newer.");
 	return {
 		candidate: requiredString(value, "candidate"),
 		defaultBranch: requiredString(value, "defaultBranch"),
@@ -21006,6 +21006,7 @@ function readInputs$4() {
 		commentOnFailure: getBoolean$2("comment-on-failure"),
 		debug: getBoolean$2("debug"),
 		dryRun: getBoolean$2("dry-run"),
+		from: getOptionalInput("from"),
 		githubToken: getInput("github-token").trim(),
 		labels: getOptionalInput("labels"),
 		repository: getInput("repository") || context.repo.owner + "/" + context.repo.repo,
@@ -21046,6 +21047,7 @@ async function runChangesetPolicy() {
 		"json",
 		"--verify"
 	];
+	if (inputs.from) args.push("--from", inputs.from);
 	if (inputs.changedPaths) for (const changedPath of splitList(inputs.changedPaths)) args.push("--changed-paths", changedPath);
 	if (inputs.labels) for (const label of splitList(inputs.labels)) args.push("--label", label);
 	if (inputs.skipLabels) for (const label of splitList(inputs.skipLabels)) args.push("--skip-label", label);

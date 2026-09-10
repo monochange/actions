@@ -174,11 +174,21 @@ describe('change-classification report', () => {
     expect(markdown).toContain('Report truncated');
   });
 
+  it('accepts schema version 1 and newer reports from updated monochange versions', () => {
+    for (const schemaVersion of [1, 2, 3]) {
+      const report = readChangeClassificationReport({ ...rawReport(), schemaVersion });
+
+      expect(report.schemaVersion).toBe(schemaVersion);
+    }
+  });
+
   it.each([
     undefined,
     null,
     {},
-    { packages: [], schemaVersion: 2 },
+    { packages: [], schemaVersion: '1' },
+    { packages: [], schemaVersion: 0 },
+    { packages: [], schemaVersion: 1.5 },
     { packages: null, schemaVersion: 1 },
   ])('rejects unsupported top-level report %#', (value) => {
     expect(() => readChangeClassificationReport(value)).toThrow(

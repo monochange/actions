@@ -107,6 +107,7 @@ describe('runChangesetPolicy', () => {
   it('passes optional inputs', async () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'changed-paths') return 'src/';
+      if (name === 'from') return 'origin/main';
       if (name === 'labels') return 'bug,feature';
       if (name === 'skip-labels') return 'skip';
 
@@ -121,6 +122,8 @@ describe('runChangesetPolicy', () => {
       '--format',
       'json',
       '--verify',
+      '--from',
+      'origin/main',
       '--changed-paths',
       'src/',
       '--label',
@@ -129,6 +132,26 @@ describe('runChangesetPolicy', () => {
       'feature',
       '--skip-label',
       'skip',
+    ]);
+  });
+
+  it('omits --from when the input is not set', async () => {
+    mockCore.getInput.mockImplementation((name) => {
+      if (name === 'changed-paths') return 'src/';
+
+      return '';
+    });
+
+    await runChangesetPolicy();
+
+    expect(mockExec).toHaveBeenCalledWith('monochange', [
+      'step',
+      'affected-packages',
+      '--format',
+      'json',
+      '--verify',
+      '--changed-paths',
+      'src/',
     ]);
   });
 

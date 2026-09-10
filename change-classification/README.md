@@ -65,4 +65,4 @@ Comments are advisory. If a fork pull request receives a read-only token, commen
 | `review-required` | `true` when at least one package needs human or agent review |
 | `summary`         | One-line result                                              |
 
-Until the classifier is available in a tagged monochange CLI release, install a build containing `change classify` first and use `setup-monochange: false`, or pass its command through `setup-monochange`.
+The action accepts every change-classification report with `schemaVersion` 1 or newer, so newer monochange CLI releases can add findings and coverage detail without breaking the action. The evidence fields the action reads (packages, decisions, findings) are stable across those schema versions.

@@ -713,13 +713,15 @@ Validate that all affected packages have appropriate changesets.
   with:
     separator: ','
 
-- uses: monochange/actions/changeset-policy@v0.4.0
+- uses: monochange/actions/changeset-policy@v0
   with:
     changed-paths: ${{ steps.changed.outputs.all_changed_files }}
     comment-on-failure: true
 ```
 
-Failure comments use the `comment` field from `monochange step affected-packages` and are deleted after the PR passes or is skipped.
+Failure comments use the `comment` field from `monochange step affected-packages`. When the failure message changes, the previous failure moves into a collapsed section, and once the PR passes or is skipped the comment is rewritten with a ✅ checkmark while the history is preserved.
+
+Set `from` to a base git ref (for example `origin/main`, with a `fetch-depth: 0` checkout) to compare against git history instead of an explicit path list and to enable the API classification bump alignment gate: changesets that understate the classified change type fail the policy, while higher bumps only warn. See the full [`changeset-policy` documentation](changeset-policy/README.md).
 
 ---
 
