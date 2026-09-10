@@ -160,9 +160,15 @@ function readPackage(value: unknown): PackageClassification {
 }
 
 export function readChangeClassificationReport(value: unknown): ChangeClassificationReport {
-  if (!isRecord(value) || value.schemaVersion !== 1 || !Array.isArray(value.packages)) {
+  if (
+    !isRecord(value) ||
+    typeof value.schemaVersion !== 'number' ||
+    !Number.isInteger(value.schemaVersion) ||
+    value.schemaVersion < 1 ||
+    !Array.isArray(value.packages)
+  ) {
     throw new Error(
-      'monochange did not return a supported change-classification report. Use a monochange version that supports schema version 1.',
+      'monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 1 or newer.',
     );
   }
 
