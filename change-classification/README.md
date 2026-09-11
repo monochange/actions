@@ -12,8 +12,7 @@ on:
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   classify:
@@ -34,7 +33,7 @@ jobs:
 
 `fetch-depth: 0` is required so monochange can resolve the default branch, merge base, and release tags. Checking out the pull request head SHA avoids classifying GitHub’s synthetic test-merge commit as authored source history.
 
-Comments are advisory. If a fork pull request receives a read-only token, comment creation emits a warning while the JSON output and job summary remain available.
+Comments are advisory. Creating or updating the pull request comment needs the `pull-requests: write` scope: with only `issues: write` the API returns `403 Resource not accessible by integration`, and the action emits a warning while the JSON output and job summary remain available. A fork pull request receives a read-only token, which produces the same warning.
 
 ## Inputs
 

@@ -9,6 +9,9 @@ collapsed `<details>` section. Once the PR passes or is skipped, the action upda
 the existing comment with a ✅ checkmark and preserves the previous failure history
 a collapsed section.
 
+Commenting needs the `pull-requests: write` scope. With only `issues: write` the API returns
+`403 Resource not accessible by integration` and the action emits a warning instead of the comment.
+
 ```yaml
 name: changeset policy
 
@@ -17,8 +20,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
-  issues: write
+  pull-requests: write
 
 jobs:
   changeset-policy:
