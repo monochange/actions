@@ -727,7 +727,7 @@ Set `from` to a base git ref (for example `origin/main`, with a `fetch-depth: 0`
 
 ## `change-classification`
 
-Propose the changeset bump for each package by comparing the pull request with both the default branch and its latest release. The action publishes versioned JSON, writes an evidence table to the job summary, and creates or updates one pull request comment.
+Propose the changeset bump for each package by comparing the pull request with both the default branch and its latest release. The action publishes versioned JSON, writes a per-package severity summary with collapsible evidence to the job summary, and creates or updates one pull request comment.
 
 ```yaml
 - uses: actions/checkout@v6

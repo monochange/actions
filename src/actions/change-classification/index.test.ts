@@ -145,12 +145,77 @@ describe('change-classification report', () => {
 
     expect(report.warnings).toEqual(['check generated bindings']);
     expect(markdown).toContain(String.raw`core\|runtime package`);
+    expect(markdown).toContain('| `core\\|runtime package` | 1 | 1 | 2 |');
+    expect(markdown).toContain(
+      '<summary><code>core|runtime package</code> — 1 breaking, 1 minor, 2 patch</summary>',
+    );
     expect(markdown).toContain('🔴 **breaking / major**');
     expect(markdown).toContain('🟢 **additive / minor**');
     expect(markdown).toContain('⚪ **compatible / patch**');
     expect(markdown).toContain('🟡 **unknown / patch**');
     expect(markdown).toContain('Analysis warnings');
     expect(markdown).toContain('At least one package has partial or unsupported analysis');
+  });
+
+  it('collapses package evidence into one details block per package with findings', () => {
+    const raw = rawReport();
+    const packages = raw.packages as Record<string, unknown>[];
+    packages.push({
+      action: 'keep',
+      decision: {
+        compatibilityImpact: 'compatible',
+        completeness: 'complete',
+        confidence: 'high',
+        releaseFloor: 'none',
+        reviewRequired: false,
+      },
+      findings: [],
+      packageId: 'unchanged',
+      recommendation: 'none',
+      summary: 'no package change requires a changeset',
+    });
+
+    const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
+
+    expect(markdown.match(/<details>/gu)).toHaveLength(1);
+    expect(markdown.match(/<\/details>/gu)).toHaveLength(1);
+    expect(markdown).toContain(
+      '<summary><code>core</code> — 1 breaking, 0 minor, 0 patch</summary>',
+    );
+    expect(markdown).toContain(
+      '| `unchanged` | 0 | 0 | 0 | compatible | **none** | none | high | complete | keep |',
+    );
+    expect(markdown).not.toContain('<summary><code>unchanged</code>');
+  });
+
+  it('counts each finding once by proposed bump and skips informational findings', () => {
+    const raw = rawReport();
+    const item = (raw.packages as Record<string, unknown>[])[0]!;
+    item.findings = [
+      {
+        bump: 'major',
+        comparisons: [],
+        confidence: 'high',
+        id: 'major-compatible',
+        impact: 'compatible',
+        summary: 'compatible change with a major bump',
+      },
+      {
+        bump: 'none',
+        comparisons: [],
+        confidence: 'low',
+        id: 'information-only',
+        impact: 'compatible',
+        summary: 'no release required',
+      },
+    ];
+
+    const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
+
+    expect(markdown).toContain(
+      '<summary><code>core</code> — 1 breaking, 0 minor, 0 patch</summary>',
+    );
+    expect(markdown).toContain('information-only');
   });
 
   it('renders complete empty evidence without warnings', () => {
@@ -165,13 +230,15 @@ describe('change-classification report', () => {
   });
 
   it('truncates oversized reports before the GitHub comment limit', () => {
-    const report = readChangeClassificationReport(rawReport({ findings: false }));
+    const report = readChangeClassificationReport(rawReport());
     report.warnings = ['x'.repeat(61_000)];
 
     const markdown = renderChangeClassificationMarkdown(report);
 
     expect(markdown.length).toBeLessThan(61_000);
     expect(markdown).toContain('Report truncated');
+    expect(markdown.match(/<details>/gu)).toHaveLength(2);
+    expect(markdown.match(/<\/details>/gu)).toHaveLength(2);
   });
 
   it('accepts schema version 1 and newer reports from updated monochange versions', () => {
