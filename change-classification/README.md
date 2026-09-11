@@ -4,7 +4,7 @@ Run `monochange change classify` once and publish the same evidence as action ou
 
 The report keeps the proposed bump for the current pull request separate from the release floor accumulated since the latest package release. It shows the finding, source location, analyzer confidence, completeness, comparison membership, and pending changeset action behind every package recommendation.
 
-The job summary and pull request comment open with a package table that counts breaking, minor, and patch findings per package. The individual findings and any analysis warnings stay available in collapsed `<details>` sections, so the comment stays short until a reviewer expands the package that needs attention.
+The job summary and pull request comment open with a package table that counts breaking, minor, and patch findings per package. Counts reuse the finding markers (🔴 breaking, 🟢 minor, ⚪ patch) and only list severities the package actually has, so a package without breaking findings never shows a zero count. The individual findings and any analysis warnings stay available in collapsed `<details>` sections, so the comment stays short until a reviewer expands the package that needs attention.
 
 ```yaml
 name: change classification
