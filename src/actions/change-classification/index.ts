@@ -218,8 +218,16 @@ function severityCounts(findings: Finding[]): SeverityCounts {
   return counts;
 }
 
-function severityCountsLabel(counts: SeverityCounts): string {
-  return `${counts.breaking} breaking, ${counts.minor} minor, ${counts.patch} patch`;
+// Lists only the severities a package actually has, so a package without
+// breaking findings never claims "0 breaking".
+function severitySummary(counts: SeverityCounts, empty: string): string {
+  const parts: string[] = [];
+
+  if (counts.breaking > 0) parts.push(`🔴 ${counts.breaking} breaking`);
+  if (counts.minor > 0) parts.push(`🟢 ${counts.minor} minor`);
+  if (counts.patch > 0) parts.push(`⚪ ${counts.patch} patch`);
+
+  return parts.join(', ') || empty;
 }
 
 function findingIcon(impact: string): string {
@@ -264,13 +272,12 @@ export function renderChangeClassificationMarkdown(report: ChangeClassificationR
       ? '> ⚠️ At least one package has partial or unsupported analysis. Treat this report as evidence for review, not proof that unreported breaks are absent.'
       : '> ✅ Every reported package has complete analysis for the selected detection level.',
     '',
-    '| Package | Breaking | Minor | Patch | Impact | Proposed bump | Release floor | Confidence | Completeness | Changeset |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
-    ...report.packages.map((item) => {
-      const counts = severityCounts(item.findings);
-
-      return `| \`${tableCell(item.packageId)}\` | ${counts.breaking} | ${counts.minor} | ${counts.patch} | ${tableCell(item.compatibilityImpact)} | **${item.recommendation}** | ${item.releaseFloor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`;
-    }),
+    '| Package | Findings | Impact | Proposed bump | Release floor | Confidence | Completeness | Changeset |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
+    ...report.packages.map(
+      (item) =>
+        `| \`${tableCell(item.packageId)}\` | ${severitySummary(severityCounts(item.findings), '—')} | ${tableCell(item.compatibilityImpact)} | **${item.recommendation}** | ${item.releaseFloor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`,
+    ),
     '',
     '## Evidence',
     '',
@@ -284,7 +291,7 @@ export function renderChangeClassificationMarkdown(report: ChangeClassificationR
     for (const item of packagesWithFindings) {
       lines.push(
         '<details>',
-        `<summary><code>${htmlFragment(item.packageId)}</code> — ${severityCountsLabel(severityCounts(item.findings))}</summary>`,
+        `<summary><code>${htmlFragment(item.packageId)}</code> — ${severitySummary(severityCounts(item.findings), 'no release-severity findings')}</summary>`,
         '',
         item.summary,
         '',

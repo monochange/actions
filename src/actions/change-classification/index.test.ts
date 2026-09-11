@@ -145,9 +145,11 @@ describe('change-classification report', () => {
 
     expect(report.warnings).toEqual(['check generated bindings']);
     expect(markdown).toContain(String.raw`core\|runtime package`);
-    expect(markdown).toContain('| `core\\|runtime package` | 1 | 1 | 2 |');
     expect(markdown).toContain(
-      '<summary><code>core|runtime package</code> — 1 breaking, 1 minor, 2 patch</summary>',
+      '| `core\\|runtime package` | 🔴 1 breaking, 🟢 1 minor, ⚪ 2 patch |',
+    );
+    expect(markdown).toContain(
+      '<summary><code>core|runtime package</code> — 🔴 1 breaking, 🟢 1 minor, ⚪ 2 patch</summary>',
     );
     expect(markdown).toContain('🔴 **breaking / major**');
     expect(markdown).toContain('🟢 **additive / minor**');
@@ -179,11 +181,9 @@ describe('change-classification report', () => {
 
     expect(markdown.match(/<details>/gu)).toHaveLength(1);
     expect(markdown.match(/<\/details>/gu)).toHaveLength(1);
+    expect(markdown).toContain('<summary><code>core</code> — 🔴 1 breaking</summary>');
     expect(markdown).toContain(
-      '<summary><code>core</code> — 1 breaking, 0 minor, 0 patch</summary>',
-    );
-    expect(markdown).toContain(
-      '| `unchanged` | 0 | 0 | 0 | compatible | **none** | none | high | complete | keep |',
+      '| `unchanged` | — | compatible | **none** | none | high | complete | keep |',
     );
     expect(markdown).not.toContain('<summary><code>unchanged</code>');
   });
@@ -212,10 +212,30 @@ describe('change-classification report', () => {
 
     const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
 
-    expect(markdown).toContain(
-      '<summary><code>core</code> — 1 breaking, 0 minor, 0 patch</summary>',
-    );
+    expect(markdown).toContain('<summary><code>core</code> — 🔴 1 breaking</summary>');
     expect(markdown).toContain('information-only');
+  });
+
+  it('renders informational-only packages without severity counts', () => {
+    const raw = rawReport();
+    const item = (raw.packages as Record<string, unknown>[])[0]!;
+    item.findings = [
+      {
+        bump: 'none',
+        comparisons: [],
+        confidence: 'low',
+        id: 'information-only',
+        impact: 'compatible',
+        summary: 'no release required',
+      },
+    ];
+
+    const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
+
+    expect(markdown).toContain(
+      '<summary><code>core</code> — no release-severity findings</summary>',
+    );
+    expect(markdown).toContain('| `core` | — | breaking |');
   });
 
   it('renders complete empty evidence without warnings', () => {
