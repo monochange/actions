@@ -11,7 +11,7 @@ inputs:
     default: fail-when
   github-token:
     description: >-
-      GitHub token used only when fail-comment is provided. Needs pull-requests: read to resolve the target PR and issues: write to post the comment.
+      GitHub token used only when fail-comment is provided. Needs pull-requests: write to resolve the target PR and post the comment.
     required: false
     default: ${{ github.token }}
   repository:

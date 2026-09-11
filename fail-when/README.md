@@ -46,7 +46,7 @@ Prefer expressions that return actual booleans (`${{ ... }}`) rather than hand-w
 | `should-fail`  | No       | `false`                                  | Condition result. If true, the action records outputs, writes a summary, optionally comments on a PR, then fails.                                          |
 | `reason`       | No       | `fail-when condition evaluated to true.` | Failure message used for the thrown error, `reason` output, and summary/comment body.                                                                      |
 | `fail-comment` | No       | empty                                    | Markdown body to include in a PR comment when `should-fail` is true. If omitted, the action never calls the GitHub API.                                    |
-| `github-token` | No       | `${{ github.token }}`                    | Token used only when `fail-comment` is set. Needs `pull-requests: read` to resolve PRs and `issues: write` to create comments.                             |
+| `github-token` | No       | `${{ github.token }}`                    | Token used only when `fail-comment` is set. Needs `pull-requests: write` to resolve the PR and post the comment.                                           |
 | `repository`   | No       | `${{ github.repository }}`               | Target repository in `owner/repo` format. Used only when `fail-comment` is set.                                                                            |
 | `pull-request` | No       | empty                                    | Explicit pull request number for commenting. If omitted, the action tries to resolve the current PR from `pull_request` or `issue_comment` event payloads. |
 
@@ -68,8 +68,7 @@ Set `fail-comment` to post a formatted comment on the relevant PR:
 - name: explain blocked release PR
   uses: monochange/actions/fail-when@v0.4.0
   permissions:
-    pull-requests: read
-    issues: write
+    pull-requests: write
   with:
     should-fail: ${{ github.event_name == 'pull_request' }}
     reason: Release PRs must be merged with the /merge command.
@@ -103,11 +102,12 @@ When posting comments, add these job permissions:
 
 ```yaml
 permissions:
-  pull-requests: read
-  issues: write
+  pull-requests: write
 ```
 
-`contents` permissions are not required by `fail-when`.
+`pull-requests: write` is required because the comment is created on a pull request: with only
+`issues: write` the API returns `403 Resource not accessible by integration` and the action logs a
+warning instead of the comment. `contents` permissions are not required by `fail-when`.
 
 ## Examples
 
@@ -124,8 +124,7 @@ jobs:
   block-release-pr-ui-merge:
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: read
-      issues: write
+      pull-requests: write
     steps:
       - uses: monochange/actions/fail-when@v0.4.0
         with:
@@ -161,8 +160,7 @@ jobs:
     if: github.event.issue.pull_request && contains(github.event.comment.body, '/shipit')
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: read
-      issues: write
+      pull-requests: write
     steps:
       - uses: monochange/actions/fail-when@v0.4.0
         with:
@@ -183,7 +181,7 @@ Check the rendered value of `should-fail`. GitHub evaluates `${{ ... }}` before 
 Make sure all of these are true:
 
 - `fail-comment` is non-empty,
-- the job grants `pull-requests: read` and `issues: write`, and
+- the job grants `pull-requests: write`, and
 - the action can resolve a PR from `pull-request`, a `pull_request` event, or an `issue_comment` event on a PR.
 
 ### The workflow failed with the configured reason but also logged a comment warning
