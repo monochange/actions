@@ -186,6 +186,42 @@ function tableCell(value: string): string {
   return value.replaceAll('|', String.raw`\|`).replaceAll('\n', ' ');
 }
 
+function htmlFragment(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('\n', ' ');
+}
+
+interface SeverityCounts {
+  breaking: number;
+  minor: number;
+  patch: number;
+}
+
+// Buckets each finding once by its proposed bump so `major` reads as breaking and
+// informational `none` findings stay out of the release-severity counts.
+function severityCounts(findings: Finding[]): SeverityCounts {
+  const counts: SeverityCounts = { breaking: 0, minor: 0, patch: 0 };
+
+  for (const finding of findings) {
+    if (finding.bump === 'major') {
+      counts.breaking += 1;
+    } else if (finding.bump === 'minor') {
+      counts.minor += 1;
+    } else if (finding.bump === 'patch') {
+      counts.patch += 1;
+    }
+  }
+
+  return counts;
+}
+
+function severityCountsLabel(counts: SeverityCounts): string {
+  return `${counts.breaking} breaking, ${counts.minor} minor, ${counts.patch} patch`;
+}
+
 function findingIcon(impact: string): string {
   if (impact === 'breaking') return '🔴';
   if (impact === 'additive') return '🟢';
@@ -207,7 +243,12 @@ function truncateMarkdown(markdown: string): string {
     return markdown;
   }
 
-  return `${markdown.slice(0, MAX_MARKDOWN_LENGTH)}\n\n_Report truncated. Read the action JSON output for every finding._`;
+  const truncated = markdown.slice(0, MAX_MARKDOWN_LENGTH);
+  const opened = truncated.split('<details>').length - 1;
+  const closed = truncated.split('</details>').length - 1;
+  const danglingClosers = '</details>\n\n'.repeat(Math.max(0, opened - closed));
+
+  return `${truncated}\n\n${danglingClosers}_Report truncated. Read the action JSON output for every finding._`;
 }
 
 export function renderChangeClassificationMarkdown(report: ChangeClassificationReport): string {
@@ -223,12 +264,13 @@ export function renderChangeClassificationMarkdown(report: ChangeClassificationR
       ? '> ⚠️ At least one package has partial or unsupported analysis. Treat this report as evidence for review, not proof that unreported breaks are absent.'
       : '> ✅ Every reported package has complete analysis for the selected detection level.',
     '',
-    '| Package | Impact | Proposed bump | Release floor | Confidence | Completeness | Changeset |',
-    '| --- | --- | --- | --- | --- | --- | --- |',
-    ...report.packages.map(
-      (item) =>
-        `| \`${tableCell(item.packageId)}\` | ${tableCell(item.compatibilityImpact)} | **${item.recommendation}** | ${item.releaseFloor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`,
-    ),
+    '| Package | Breaking | Minor | Patch | Impact | Proposed bump | Release floor | Confidence | Completeness | Changeset |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    ...report.packages.map((item) => {
+      const counts = severityCounts(item.findings);
+
+      return `| \`${tableCell(item.packageId)}\` | ${counts.breaking} | ${counts.minor} | ${counts.patch} | ${tableCell(item.compatibilityImpact)} | **${item.recommendation}** | ${item.releaseFloor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`;
+    }),
     '',
     '## Evidence',
     '',
@@ -240,8 +282,17 @@ export function renderChangeClassificationMarkdown(report: ChangeClassificationR
     lines.push('No modeled compatibility findings were reported.', '');
   } else {
     for (const item of packagesWithFindings) {
-      lines.push(`### \`${item.packageId}\``, '', item.summary, '');
-      lines.push(...item.findings.map(findingLine), '');
+      lines.push(
+        '<details>',
+        `<summary><code>${htmlFragment(item.packageId)}</code> — ${severityCountsLabel(severityCounts(item.findings))}</summary>`,
+        '',
+        item.summary,
+        '',
+        ...item.findings.map(findingLine),
+        '',
+        '</details>',
+        '',
+      );
     }
   }
 
