@@ -95,7 +95,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-        run: pnpm exec monochange run release --format json --commit --create-pr --write-empty-release-record
+        run: |
+          set -euo pipefail
+          # Checkout disables persisted credentials, so authenticate the
+          # release branch push explicitly. Without this the command fails with
+          # "could not read Username for 'https://github.com'".
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+          auth_header="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w 0)"
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${auth_header}"
+          pnpm exec monochange run release --format json --commit --create-pr --write-empty-release-record
 
       - name: close a stale release PR when the plan is empty
         if: steps.release_record.outputs.is_release_commit != 'true'
