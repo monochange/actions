@@ -113,10 +113,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          # With no pending changesets the release command creates no release
-          # branch, so close the release PR that no longer reflects main.
+          # The release command leaves the previous release branch in place
+          # when no changesets remain, so "the branch exists" does not mean a
+          # live release plan does. A branch with no commits beyond main is a
+          # leftover from an already-merged release: close its PR and delete
+          # the branch so the next release starts clean.
           release_branch="monochange/release/release"
-          if git ls-remote --exit-code --heads origin "$release_branch" >/dev/null 2>&1; then
+          if ! git ls-remote --exit-code --heads origin "$release_branch" >/dev/null 2>&1; then
+            echo "No release branch exists."
+            exit 0
+          fi
+
+          git fetch --quiet origin "$release_branch"
+          pending_commits="$(git rev-list --count "origin/main..FETCH_HEAD")"
+
+          if [ "$pending_commits" -gt 0 ]; then
+            echo "Release branch carries ${pending_commits} pending commit(s); leaving it alone."
             exit 0
           fi
 
@@ -128,10 +140,11 @@ jobs:
             --json number \
             --jq '.[0].number // empty')"
 
-          if [ -z "$pr_number" ]; then
-            echo "No release PR to close."
+          if [ -n "$pr_number" ]; then
+            echo "Closing stale release PR #${pr_number}."
+            gh pr close "$pr_number" --delete-branch
             exit 0
           fi
 
-          echo "Closing stale release PR #${pr_number}; no release branch remains."
-          gh pr close "$pr_number" --delete-branch
+          echo "Deleting orphaned release branch with no pending commits."
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${release_branch}"
