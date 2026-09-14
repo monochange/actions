@@ -1,0 +1,128 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  # Never cancel a release run mid-flight: it may already have pushed the
+  # release branch, and a partial update is worse than a queued run.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release-pr:
+    name: refresh release PR
+    if: github.repository_owner == 'monochange'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Full history and tags so the tag-versioned package can resolve its
+          # `v0.9.x` release baseline and move the floating aliases.
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
+          persist-credentials: false
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6.0.5
+        with:
+          version: 10.33.2
+          run_install: false
+
+      - name: setup node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: configure git
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if user_info="$(gh api user --jq '{id: .id, login: .login, name: .name}')"; then
+            user_id="$(echo "$user_info" | jq -r '.id')"
+            user_login="$(echo "$user_info" | jq -r '.login')"
+            user_name="$(echo "$user_info" | jq -r '.name // .login')"
+          else
+            user_id="41898282"
+            user_login="github-actions[bot]"
+            user_name="github-actions[bot]"
+          fi
+
+          git config user.name "$user_name"
+          git config user.email "${user_id}+${user_login}@users.noreply.github.com"
+
+      - name: refresh tags from origin
+        run: git fetch --force --tags origin
+
+      - name: detect current release commit
+        id: release_record
+        run: |
+          set -euo pipefail
+
+          if is_release_commit="$(pnpm exec monochange step release-record --from HEAD --format json --jq '.resolved_commit == .record_commit')"; then
+            echo "is_release_commit=${is_release_commit}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          subject="$(git log -1 --pretty=%s)"
+          body="$(git log -1 --pretty=%B)"
+          if [[ "$subject" == chore\(release\):* ]] || grep -q '<!-- monochange:release-record:start -->' <<<"$body"; then
+            echo "::error::Release-looking commit could not be read as a release record; failing instead of silently skipping release automation."
+            exit 1
+          fi
+
+          echo "is_release_commit=false" >> "$GITHUB_OUTPUT"
+
+      - name: prepare release pull request
+        if: steps.release_record.outputs.is_release_commit != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
+        run: pnpm exec monochange run release --format json --commit --create-pr --write-empty-release-record
+
+      - name: close a stale release PR when the plan is empty
+        if: steps.release_record.outputs.is_release_commit != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # With no pending changesets the release command creates no release
+          # branch, so close the release PR that no longer reflects main.
+          release_branch="monochange/release/release"
+          if git ls-remote --exit-code --heads origin "$release_branch" >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          pr_number="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --base main \
+            --head "$release_branch" \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [ -z "$pr_number" ]; then
+            echo "No release PR to close."
+            exit 0
+          fi
+
+          echo "Closing stale release PR #${pr_number}; no release branch remains."
+          gh pr close "$pr_number" --delete-branch

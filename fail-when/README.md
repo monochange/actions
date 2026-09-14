@@ -139,7 +139,7 @@ jobs:
 ### Use the root action dispatcher
 
 ```yaml
-- uses: monochange/actions@v0.4.0
+- uses: monochange/actions@v0.9
   with:
     name: fail-when
     should-fail: ${{ github.ref_name == 'main' }}

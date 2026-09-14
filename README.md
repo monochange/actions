@@ -33,7 +33,7 @@ Currently implemented:
 
 Public entrypoints:
 
-- `monochange/actions@v0.4.0` with `name: <variant>`
+- `monochange/actions@v0.9` with `name: <variant>`
 - `monochange/actions/change-classification@v0`
 - `monochange/actions/merge@v0.4.0`
 - `monochange/actions/check@v0.4.0`
@@ -110,7 +110,7 @@ That is intentional.
 Use this when you want a single repository-level action entrypoint.
 
 ```yaml
-uses: monochange/actions@v0.4.0
+uses: monochange/actions@v0.9
 with:
   name: merge
 ```
@@ -142,7 +142,7 @@ For most consumers, the path-based form is the clearest choice.
 
 ```yaml
 - name: fast-forward release PR
-  uses: monochange/actions@v0.4.0
+  uses: monochange/actions@v0.9
   with:
     name: merge
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
@@ -660,7 +660,7 @@ When releasing:
 Examples:
 
 ```yaml
-uses: monochange/actions@v0.4.0
+uses: monochange/actions@v0.9
 ```
 
 ```yaml
@@ -797,5 +797,5 @@ To add one later:
 
 That preserves both consumption styles:
 
-- `monochange/actions@v0.4.0` with `name: <variant>`
+- `monochange/actions@v0.9` with `name: <variant>`
 - `monochange/actions/<variant>@v0.4.0`
