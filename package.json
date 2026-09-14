@@ -1,6 +1,6 @@
 {
   "name": "@monochange/actions",
-  "version": "0.0.0",
+  "version": "0.9.3",
   "private": true,
   "description": "GitHub actions for monochange workflows.",
   "homepage": "https://github.com/monochange/actions#readme",
