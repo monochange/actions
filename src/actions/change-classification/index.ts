@@ -17,29 +17,32 @@ interface Finding {
   confidence: string;
   id: string;
   impact: string;
-  location?: string;
+  location?: string | undefined;
+  rule_id: string;
   summary: string;
 }
 
 interface PackageClassification {
   action: string;
-  compatibilityImpact: string;
+  compatibility_impact: string;
   completeness: string;
   confidence: string;
   findings: Finding[];
-  packageId: string;
-  releaseFloor: Severity;
+  package_id: string;
+  release_floor: string;
   recommendation: Severity;
-  reviewRequired: boolean;
+  review_required: boolean;
   summary: string;
 }
 
 export interface ChangeClassificationReport {
   candidate: string;
-  defaultBranch: string;
+  default_branch: string;
   packages: PackageClassification[];
   recommendation: Severity;
-  schemaVersion: number;
+  schema_version: string;
+  skipped?: boolean | undefined;
+  summary?: string | undefined;
   warnings: string[];
 }
 
@@ -50,6 +53,7 @@ interface ChangeClassificationInputs {
   githubToken: string;
   head: string;
   includeUnchanged: boolean;
+  labels: string | undefined;
   packages: string | undefined;
   postComment: boolean;
   pullRequest: string | undefined;
@@ -71,6 +75,7 @@ function readInputs(): ChangeClassificationInputs {
     githubToken: core.getInput('github-token').trim(),
     head: input('head', 'HEAD'),
     includeUnchanged: getBooleanInput('include-unchanged'),
+    labels: getOptionalInput('labels') ?? eventLabels(),
     packages: getOptionalInput('packages'),
     postComment: getBooleanInput('post-comment'),
     pullRequest: getOptionalInput('pull-request'),
@@ -86,6 +91,26 @@ function splitList(value: string): string[] {
     .split(/[\n,]+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+/**
+ * Read the current pull request labels so a release pull request skips
+ * classification without every caller wiring the `labels` input.
+ */
+function eventLabels(): string | undefined {
+  const pullRequest = github.context.payload.pull_request;
+
+  if (!isRecord(pullRequest) || !Array.isArray(pullRequest.labels)) {
+    return undefined;
+  }
+
+  const names = pullRequest.labels
+    .map((label: unknown) =>
+      isRecord(label) && typeof label.name === 'string' ? label.name : undefined,
+    )
+    .filter((name: string | undefined): name is string => typeof name === 'string');
+
+  return names.length > 0 ? names.join(',') : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -135,6 +160,7 @@ function readFinding(value: unknown): Finding {
     confidence: requiredString(value, 'confidence'),
     id: requiredString(value, 'id'),
     impact: requiredString(value, 'impact'),
+    rule_id: requiredString(value, 'rule_id'),
     ...(typeof value.location === 'string' ? { location: value.location } : {}),
     summary: requiredString(value, 'summary'),
   };
@@ -147,14 +173,14 @@ function readPackage(value: unknown): PackageClassification {
 
   return {
     action: requiredString(value, 'action'),
-    compatibilityImpact: requiredString(value.decision, 'compatibilityImpact'),
+    compatibility_impact: requiredString(value.decision, 'compatibility_impact'),
     completeness: requiredString(value.decision, 'completeness'),
     confidence: requiredString(value.decision, 'confidence'),
     findings: value.findings.map(readFinding),
-    packageId: requiredString(value, 'packageId'),
-    releaseFloor: requiredSeverity(value.decision, 'releaseFloor'),
+    package_id: requiredString(value, 'package_id'),
+    release_floor: requiredSeverity(value.decision, 'release_floor'),
     recommendation: requiredSeverity(value, 'recommendation'),
-    reviewRequired: value.decision.reviewRequired === true,
+    review_required: value.decision.review_required === true,
     summary: requiredString(value, 'summary'),
   };
 }
@@ -162,22 +188,23 @@ function readPackage(value: unknown): PackageClassification {
 export function readChangeClassificationReport(value: unknown): ChangeClassificationReport {
   if (
     !isRecord(value) ||
-    typeof value.schemaVersion !== 'number' ||
-    !Number.isInteger(value.schemaVersion) ||
-    value.schemaVersion < 1 ||
+    typeof value.schema_version !== 'string' ||
+    !/^\d+\.\d+$/u.test(value.schema_version) ||
     !Array.isArray(value.packages)
   ) {
     throw new Error(
-      'monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 1 or newer.',
+      'monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.',
     );
   }
 
   return {
     candidate: requiredString(value, 'candidate'),
-    defaultBranch: requiredString(value, 'defaultBranch'),
+    default_branch: requiredString(value, 'default_branch'),
     packages: value.packages.map(readPackage),
     recommendation: requiredSeverity(value, 'recommendation'),
-    schemaVersion: value.schemaVersion,
+    schema_version: value.schema_version,
+    skipped: value.skipped === true,
+    summary: typeof value.summary === 'string' && value.summary ? value.summary : undefined,
     warnings: stringArray(value.warnings),
   };
 }
@@ -260,15 +287,15 @@ function truncateMarkdown(markdown: string): string {
 }
 
 export function renderChangeClassificationMarkdown(report: ChangeClassificationReport): string {
-  const reviewRequired = report.packages.some((item) => item.reviewRequired);
+  const review_required = report.packages.some((item) => item.review_required);
   const lines = [
     '# monochange change classification',
     '',
     `**Proposed changeset bump: \`${report.recommendation}\`**`,
     '',
-    `Candidate \`${report.candidate}\` was compared with default branch \`${report.defaultBranch}\`. The release floor shows compatible changes accumulated since each package release.`,
+    `Candidate \`${report.candidate}\` was compared with default branch \`${report.default_branch}\`. The release floor shows compatible changes accumulated since each package release.`,
     '',
-    reviewRequired
+    review_required
       ? '> ⚠️ At least one package has partial or unsupported analysis. Treat this report as evidence for review, not proof that unreported breaks are absent.'
       : '> ✅ Every reported package has complete analysis for the selected detection level.',
     '',
@@ -276,7 +303,7 @@ export function renderChangeClassificationMarkdown(report: ChangeClassificationR
     '| --- | --- | --- | --- | --- | --- | --- | --- |',
     ...report.packages.map(
       (item) =>
-        `| \`${tableCell(item.packageId)}\` | ${severitySummary(severityCounts(item.findings), '—')} | ${tableCell(item.compatibilityImpact)} | **${item.recommendation}** | ${item.releaseFloor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`,
+        `| \`${tableCell(item.package_id)}\` | ${severitySummary(severityCounts(item.findings), '—')} | ${tableCell(item.compatibility_impact)} | **${item.recommendation}** | ${item.release_floor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`,
     ),
     '',
     '## Evidence',
@@ -291,7 +318,7 @@ export function renderChangeClassificationMarkdown(report: ChangeClassificationR
     for (const item of packagesWithFindings) {
       lines.push(
         '<details>',
-        `<summary><code>${htmlFragment(item.packageId)}</code> — ${severitySummary(severityCounts(item.findings), 'no release-severity findings')}</summary>`,
+        `<summary><code>${htmlFragment(item.package_id)}</code> — ${severitySummary(severityCounts(item.findings), 'no release-severity findings')}</summary>`,
         '',
         item.summary,
         '',
@@ -404,6 +431,44 @@ async function upsertCommentSafely(
   }
 }
 
+/**
+ * Remove the classification comment when a pull request no longer needs one,
+ * so a comment left from an earlier revision does not contradict a skipped run.
+ */
+async function deleteClassificationComment(inputs: ChangeClassificationInputs): Promise<void> {
+  if (!inputs.postComment || !inputs.githubToken) return;
+
+  const issueNumber = pullRequestNumber(inputs.pullRequest);
+
+  if (!issueNumber) return;
+
+  try {
+    const { owner, repo } = parseRepository(inputs.repository);
+    const octokit = github.getOctokit(inputs.githubToken);
+    const { data } = await octokit.rest.issues.listComments({
+      issue_number: issueNumber,
+      owner,
+      per_page: 100,
+      repo,
+    });
+
+    await Promise.all(
+      data
+        .filter(
+          (comment: { body?: string | null; id: number }) =>
+            typeof comment.body === 'string' && comment.body.includes(COMMENT_MARKER),
+        )
+        .map(async (comment: { id: number }) =>
+          octokit.rest.issues.deleteComment({ comment_id: comment.id, owner, repo }),
+        ),
+    );
+  } catch (error) {
+    core.warning(
+      `Unable to remove change-classification comment: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 export async function runChangeClassification(): Promise<void> {
   const inputs = readInputs();
   const monochange = await resolveMonochange(inputs.setupMonochange);
@@ -423,6 +488,11 @@ export async function runChangeClassification(): Promise<void> {
   if (inputs.base) args.push('--base', inputs.base);
   if (inputs.release) args.push('--release', inputs.release);
   if (inputs.includeUnchanged) args.push('--include-unchanged');
+  if (inputs.labels) {
+    for (const label of splitList(inputs.labels)) {
+      args.push('--label', label);
+    }
+  }
   if (inputs.packages) {
     for (const packageId of splitList(inputs.packages)) {
       args.push('--package', packageId);
@@ -433,14 +503,29 @@ export async function runChangeClassification(): Promise<void> {
   const stdout = await execRequired(monochange.command, args, { cwd: inputs.workingDirectory });
   const parsed = parseMixedOutput(stdout);
   const report = readChangeClassificationReport(parsed);
+
+  if (report.skipped) {
+    const summary =
+      report.summary ?? 'monochange change classification was skipped for this pull request.';
+    core.info(summary);
+    core.setOutput('json', JSON.stringify(parsed));
+    core.setOutput('markdown', '');
+    core.setOutput('recommendation', report.recommendation);
+    core.setOutput('review-required', 'false');
+    core.setOutput('summary', summary);
+    core.setOutput('result', 'skipped');
+    await deleteClassificationComment(inputs);
+    return;
+  }
+
   const markdown = renderChangeClassificationMarkdown(report);
-  const reviewRequired = report.packages.some((item) => item.reviewRequired);
-  const summary = `monochange proposes a ${report.recommendation} changeset across ${report.packages.length} package(s)${reviewRequired ? '; review is required' : ''}.`;
+  const review_required = report.packages.some((item) => item.review_required);
+  const summary = `monochange proposes a ${report.recommendation} changeset across ${report.packages.length} package(s)${review_required ? '; review is required' : ''}.`;
 
   core.setOutput('json', JSON.stringify(parsed));
   core.setOutput('markdown', markdown);
   core.setOutput('recommendation', report.recommendation);
-  core.setOutput('review-required', String(reviewRequired));
+  core.setOutput('review-required', String(review_required));
   core.setOutput('summary', summary);
   await core.summary.addRaw(markdown).write();
   await upsertCommentSafely(inputs, markdown);

@@ -44,43 +44,44 @@ const mockResolve = vi.mocked(resolveMonochange);
 
 function rawReport(options?: {
   findings?: boolean;
-  reviewRequired?: boolean;
+  review_required?: boolean;
 }): Record<string, unknown> {
   const findings = options?.findings ?? true;
 
   return {
     candidate: 'merge-tree:abc123',
-    defaultBranch: 'origin/main',
+    default_branch: 'origin/main',
     packages: [
       {
         action: 'update',
         decision: {
-          compatibilityImpact: findings ? 'breaking' : 'compatible',
-          completeness: options?.reviewRequired ? 'partial' : 'complete',
-          confidence: options?.reviewRequired ? 'medium' : 'high',
-          releaseFloor: findings ? 'major' : 'none',
-          reviewRequired: options?.reviewRequired ?? false,
+          compatibility_impact: findings ? 'breaking' : 'compatible',
+          completeness: options?.review_required ? 'partial' : 'complete',
+          confidence: options?.review_required ? 'medium' : 'high',
+          release_floor: findings ? 'major' : 'none',
+          review_required: options?.review_required ?? false,
         },
         findings: findings
           ? [
               {
                 bump: 'major',
-                comparisons: ['pullRequest', 'release'],
+                comparisons: ['pull_request', 'release'],
                 confidence: 'medium',
                 id: 'cargo/public-api/removed/function/core::old',
                 impact: 'breaking',
+                rule_id: 'cargo/public-api/public_api/removed/function/core::old',
                 location: 'src/lib.rs',
                 summary: 'removed public function `core::old`',
               },
             ]
           : [],
-        packageId: 'core',
+        package_id: 'core',
         recommendation: findings ? 'major' : 'none',
         summary: findings ? 'one breaking finding proposes a major changeset' : 'no change',
       },
     ],
     recommendation: findings ? 'major' : 'none',
-    schemaVersion: 1,
+    schema_version: '0.1',
     warnings: [],
   };
 }
@@ -108,9 +109,9 @@ function setInputs(values: Record<string, string>): void {
 
 describe('change-classification report', () => {
   it('reads and renders every finding impact with warnings and escaped table cells', () => {
-    const raw = rawReport({ reviewRequired: true });
+    const raw = rawReport({ review_required: true });
     const item = (raw.packages as Record<string, unknown>[])[0]!;
-    item.packageId = 'core|runtime\npackage';
+    item.package_id = 'core|runtime\npackage';
     item.findings = [
       ...(item.findings as Record<string, unknown>[]),
       {
@@ -118,6 +119,7 @@ describe('change-classification report', () => {
         comparisons: [],
         confidence: 'medium',
         id: 'added',
+rule_id: 'test/added',
         impact: 'additive',
         summary: 'added API',
       },
@@ -126,6 +128,7 @@ describe('change-classification report', () => {
         comparisons: ['pullRequest'],
         confidence: 'high',
         id: 'compatible',
+rule_id: 'test/compatible',
         impact: 'compatible',
         summary: 'compatible change',
       },
@@ -134,6 +137,7 @@ describe('change-classification report', () => {
         comparisons: ['workingTree'],
         confidence: 'low',
         id: 'unknown',
+rule_id: 'test/unknown',
         impact: 'unknown',
         summary: 'unmodeled change',
       },
@@ -165,14 +169,14 @@ describe('change-classification report', () => {
     packages.push({
       action: 'keep',
       decision: {
-        compatibilityImpact: 'compatible',
+        compatibility_impact: 'compatible',
         completeness: 'complete',
         confidence: 'high',
-        releaseFloor: 'none',
-        reviewRequired: false,
+        release_floor: 'none',
+        review_required: false,
       },
       findings: [],
-      packageId: 'unchanged',
+      package_id: 'unchanged',
       recommendation: 'none',
       summary: 'no package change requires a changeset',
     });
@@ -197,6 +201,7 @@ describe('change-classification report', () => {
         comparisons: [],
         confidence: 'high',
         id: 'major-compatible',
+rule_id: 'test/major-compatible',
         impact: 'compatible',
         summary: 'compatible change with a major bump',
       },
@@ -205,6 +210,7 @@ describe('change-classification report', () => {
         comparisons: [],
         confidence: 'low',
         id: 'information-only',
+rule_id: 'test/information-only',
         impact: 'compatible',
         summary: 'no release required',
       },
@@ -225,6 +231,7 @@ describe('change-classification report', () => {
         comparisons: [],
         confidence: 'low',
         id: 'information-only',
+rule_id: 'test/information-only',
         impact: 'compatible',
         summary: 'no release required',
       },
@@ -262,10 +269,10 @@ describe('change-classification report', () => {
   });
 
   it('accepts schema version 1 and newer reports from updated monochange versions', () => {
-    for (const schemaVersion of [1, 2, 3]) {
-      const report = readChangeClassificationReport({ ...rawReport(), schemaVersion });
+    for (const schema_version of ['0.1', '0.2', '1.0']) {
+      const report = readChangeClassificationReport({ ...rawReport(), schema_version });
 
-      expect(report.schemaVersion).toBe(schemaVersion);
+      expect(report.schema_version).toBe(schema_version);
     }
   });
 
@@ -273,10 +280,10 @@ describe('change-classification report', () => {
     undefined,
     null,
     {},
-    { packages: [], schemaVersion: '1' },
-    { packages: [], schemaVersion: 0 },
-    { packages: [], schemaVersion: 1.5 },
-    { packages: null, schemaVersion: 1 },
+    { packages: [], schema_version: '1' },
+    { packages: [], schema_version: 0.1 },
+    { packages: [], schema_version: '1.0.0' },
+    { packages: null, schema_version: 1 },
   ])('rejects unsupported top-level report %#', (value) => {
     expect(() => readChangeClassificationReport(value)).toThrow(
       'supported change-classification report',
@@ -291,7 +298,7 @@ describe('change-classification report', () => {
     { ...rawReport(), packages: [{ decision: null, findings: [] }] },
     {
       ...rawReport(),
-      packages: [{ action: 'keep', decision: {}, findings: [], packageId: 'core' }],
+      packages: [{ action: 'keep', decision: {}, findings: [], package_id: 'core' }],
     },
     {
       ...rawReport(),
@@ -299,13 +306,13 @@ describe('change-classification report', () => {
         {
           action: 'keep',
           decision: {
-            compatibilityImpact: 'compatible',
+            compatibility_impact: 'compatible',
             completeness: 'complete',
             confidence: 'high',
-            releaseFloor: 'feature',
+            release_floor: 'feature',
           },
           findings: [],
-          packageId: 'core',
+          package_id: 'core',
           recommendation: 'none',
           summary: 'none',
         },
@@ -317,13 +324,13 @@ describe('change-classification report', () => {
         {
           action: 'keep',
           decision: {
-            compatibilityImpact: 'compatible',
+            compatibility_impact: 'compatible',
             completeness: 'complete',
             confidence: 'high',
-            releaseFloor: 'none',
+            release_floor: 'none',
           },
           findings: [null],
-          packageId: 'core',
+          package_id: 'core',
           recommendation: 'none',
           summary: 'none',
         },
@@ -335,10 +342,10 @@ describe('change-classification report', () => {
         {
           action: 'keep',
           decision: {
-            compatibilityImpact: 'compatible',
+            compatibility_impact: 'compatible',
             completeness: 'complete',
             confidence: 'high',
-            releaseFloor: 'none',
+            release_floor: 'none',
           },
           findings: [
             {
@@ -346,11 +353,12 @@ describe('change-classification report', () => {
               comparisons: [],
               confidence: 'low',
               id: 'bad',
+rule_id: 'test/bad',
               impact: 'unknown',
               summary: 'bad',
             },
           ],
-          packageId: 'core',
+          package_id: 'core',
           recommendation: 'none',
           summary: 'none',
         },
@@ -373,7 +381,7 @@ describe('runChangeClassification', () => {
       source: 'existing-monochange',
       version: '1.0.0',
     });
-    mockExec.mockResolvedValue('{"schemaVersion":1}');
+    mockExec.mockResolvedValue('{"schema_version":1}');
     mockParse.mockReturnValue(rawReport());
     mockOctokit();
   });
@@ -425,7 +433,7 @@ describe('runChangeClassification', () => {
       'setup-monochange': 'custom-monochange',
       'working-directory': 'workspace',
     });
-    mockParse.mockReturnValue(rawReport({ reviewRequired: true }));
+    mockParse.mockReturnValue(rawReport({ review_required: true }));
     const octokit = mockOctokit([{ body: null, id: 7 }]);
 
     await runChangeClassification();
