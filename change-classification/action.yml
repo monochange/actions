@@ -54,6 +54,9 @@ inputs:
     description: 'Create or update one pull request comment with the classification report.'
     required: false
     default: 'true'
+  labels:
+    description: 'Comma-separated pull request labels. Defaults to the labels of the current pull_request event. Labels matching [changesets.classification].skip_labels skip the run.'
+    required: false
 outputs:
   result:
     description: 'success when classification completed.'
