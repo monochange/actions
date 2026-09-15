@@ -417,6 +417,212 @@ describe('runChangeClassification', () => {
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 
+  it('reads no labels when the event has no pull request or an empty label list', async () => {
+    await runChangeClassification();
+    expect(mockExec.mock.calls[0]![1]).not.toContain('--label');
+
+    githubMock.context.payload = { pull_request: { labels: [], number: 42 } };
+
+    await runChangeClassification();
+
+    const allArgs = mockExec.mock.calls.map((call) => call[1]);
+    expect(allArgs.every((args) => !args.includes('--label'))).toBe(true);
+  });
+
+  it('forwards pull request labels from the event payload to the classifier', async () => {
+    githubMock.context.payload = {
+      pull_request: {
+        labels: [{ name: 'release' }, { name: 'automated' }, { nope: true }],
+        number: 42,
+      },
+    };
+
+    await runChangeClassification();
+
+    const args = mockExec.mock.calls[0]![1];
+    expect(args).toContain('--label');
+    expect(args.filter((arg) => arg === 'release' || arg === 'automated')).toEqual([
+      'release',
+      'automated',
+    ]);
+  });
+
+  it('prefers the labels input over the event payload', async () => {
+    githubMock.context.payload = {
+      pull_request: { labels: [{ name: 'from-event' }], number: 42 },
+    };
+    setInputs({ labels: 'from-input' });
+
+    await runChangeClassification();
+
+    const args = mockExec.mock.calls[0]![1];
+    expect(args).toContain('--label');
+    expect(args.filter((arg) => arg === 'from-input' || arg === 'from-event')).toEqual([
+      'from-input',
+    ]);
+  });
+
+  it('reports a skipped run, deletes the stale comment, and posts no new comment', async () => {
+    setInputs({
+      'github-token': 'token',
+      'post-comment': 'true',
+      'pull-request': '42',
+    });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+      summary:
+        'change classification skipped because the pull request has an allowed label: release',
+    });
+    const octokit = mockOctokit([
+      { body: '<!-- monochange:change-classification -->', id: 7 },
+      { body: '<!-- monochange:change-classification -->', id: 9 },
+    ]);
+
+    await runChangeClassification();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('review-required', 'false');
+    expect(mockCore.setOutput).toHaveBeenCalledWith(
+      'summary',
+      'change classification skipped because the pull request has an allowed label: release',
+    );
+    expect(summaryMock.addRaw).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.deleteComment).toHaveBeenCalledTimes(2);
+    expect(octokit.rest.issues.deleteComment).toHaveBeenCalledWith(
+      expect.objectContaining({ comment_id: 7, owner: 'mono', repo: 'change' }),
+    );
+  });
+
+  it('keeps the existing comment when a skipped run has nothing to delete', async () => {
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', 'pull-request': '42' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([]);
+
+    await runChangeClassification();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+  });
+
+  it('warns instead of throwing when deleting the stale comment fails', async () => {
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', 'pull-request': '42' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+    octokit.rest.issues.deleteComment.mockRejectedValue(new Error('boom'));
+
+    await runChangeClassification();
+
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to remove change-classification comment: boom',
+    );
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
+  });
+
+  it('skips the stale-comment cleanup without a pull request number but with a token', async () => {
+    setInputs({ 'github-token': 'token', 'post-comment': 'true' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.listComments).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+  });
+
+  it('supports non-Error rejections when cleaning the stale comment', async () => {
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', 'pull-request': '42' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+    octokit.rest.issues.listComments.mockRejectedValue('plain failure');
+
+    await runChangeClassification();
+
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to remove change-classification comment: plain failure',
+    );
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
+  });
+
+  it('does not delete comments without a github token', async () => {
+    setInputs({ 'post-comment': 'true', 'pull-request': '42' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+  });
+
+  it('does not delete comments without a pull request number', async () => {
+    setInputs({ 'post-comment': 'true' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+  });
+
+  it('does not delete comments when posting is disabled or context is missing', async () => {
+    setInputs({ 'post-comment': 'false' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+
+    setInputs({ 'post-comment': 'true' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+  });
+
   it('passes every optional classifier input and creates a PR comment', async () => {
     setInputs({
       base: 'origin/trunk',
