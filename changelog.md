@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.9.4](https://github.com/monochange/actions/releases/tag/v0.9.4) (2026-09-15)
+
+### 🚀 Feature
+
+#### Skip classification on release pull requests and pass labels
+
+The change-classification action reads the pull request's labels (or the new `labels` input) and passes them to `monochange change classify` via `--label`. Configure `[changesets.classification].skip_labels` in `monochange.toml` (default `["release"]`) so the release pull request monochange opens is reported as skipped instead of classified: the command analyzes no packages, the action sets `result: skipped`, deletes any stale classification comment, and the job summary records the skip.
+
+The parser also accepts the classification report's new contract: snake_case keys with `schema_version` as a `major.minor` string emitted by `monochange_classification`.
+
+```yaml
+- uses: monochange/actions/change-classification@v0
+  with:
+    labels: release, automated
+```
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #68](https://github.com/monochange/actions/pull/68)
+
 ## [0.9.3](https://github.com/monochange/actions/releases/tag/v0.9.3) (2026-09-14)
 
 ### 🚀 Feature
