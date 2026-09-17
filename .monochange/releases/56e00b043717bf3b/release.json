@@ -1,0 +1,286 @@
+{
+  "schema_version": "0.6",
+  "kind": "monochange.releaseRecord",
+  "created_at": "2026-09-17T23:56:34Z",
+  "command": "release",
+  "version": "0.9.4",
+  "versions": {
+    "actions": "0.9.4"
+  },
+  "release_targets": [
+    {
+      "id": "actions",
+      "kind": "package",
+      "version": "0.9.4",
+      "version_format": "primary",
+      "tag": true,
+      "release": true,
+      "tag_name": "v0.9.4",
+      "members": [
+        "actions"
+      ],
+      "floating_tags": [
+        "v{{ major }}.{{ minor }}",
+        "v{{ major }}"
+      ]
+    }
+  ],
+  "released_packages": [
+    "actions"
+  ],
+  "changed_files": [
+    "changelog.md",
+    "package.json"
+  ],
+  "package_publications": [],
+  "updated_changelogs": [
+    "changelog.md"
+  ],
+  "deleted_changesets": [
+    ".changeset/change-classification-release-impact.md",
+    ".changeset/classification-skip-labels.md"
+  ],
+  "changesets": [
+    {
+      "path": ".changeset/change-classification-release-impact.md",
+      "summary": "Show whether a breaking change applies to main or the latest release",
+      "details": "The change-classification action reads the new `release_impact` decision field and shows it next to the default-branch impact. A package that breaks only against `main` (its latest release never shipped the changed API) renders as `breaking → additive (release)` in the comment table, gets an informational callout naming the package, and appears in the job summary line. The new `release-breaking` output is `true` only when a package breaks against its latest release, so workflow routing can block those pulls without blocking refinements of unreleased APIs.\n\nReports from monochange versions without `release_impact` render exactly as before.\n\n```yaml\n- id: classify\n  uses: monochange/actions/change-classification@v0\n\n- run: |\n    if [[ \"${{ steps.classify.outputs.release-breaking }}\" == \"true\" ]]; then\n      echo \"A released API broke; a major changeset is required.\"\n    fi\n```",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "minor",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "minor"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "ae3eabf16c4474ebe2e0cf7db71369f89c12bbc4",
+            "short_sha": "ae3eabf",
+            "url": "https://github.com/monochange/actions/commit/ae3eabf16c4474ebe2e0cf7db71369f89c12bbc4",
+            "authored_at": "2026-09-18T00:46:03+01:00",
+            "committed_at": "2026-09-18T00:46:03+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#70",
+            "title": "feat(change-classification): show whether a break applies to main or the latest release",
+            "url": "https://github.com/monochange/actions/pull/70",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "ae3eabf16c4474ebe2e0cf7db71369f89c12bbc4",
+            "short_sha": "ae3eabf",
+            "url": "https://github.com/monochange/actions/commit/ae3eabf16c4474ebe2e0cf7db71369f89c12bbc4",
+            "authored_at": "2026-09-18T00:46:03+01:00",
+            "committed_at": "2026-09-18T00:46:03+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#70",
+            "title": "feat(change-classification): show whether a break applies to main or the latest release",
+            "url": "https://github.com/monochange/actions/pull/70",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    },
+    {
+      "path": ".changeset/classification-skip-labels.md",
+      "summary": "Skip classification on release pull requests and pass labels",
+      "details": "The change-classification action reads the pull request's labels (or the new `labels` input) and passes them to `monochange change classify` via `--label`. Configure `[changesets.classification].skip_labels` in `monochange.toml` (default `[\"release\"]`) so the release pull request monochange opens is reported as skipped instead of classified: the command analyzes no packages, the action sets `result: skipped`, deletes any stale classification comment, and the job summary records the skip.\n\nThe parser also accepts the classification report's new contract: snake_case keys with `schema_version` as a `major.minor` string emitted by `monochange_classification`.\n\n```yaml\n- uses: monochange/actions/change-classification@v0\n  with:\n    labels: release, automated\n```",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "minor",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "minor"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "6b357cab80445f2a77ef42862cfe75296294e447",
+            "short_sha": "6b357ca",
+            "url": "https://github.com/monochange/actions/commit/6b357cab80445f2a77ef42862cfe75296294e447",
+            "authored_at": "2026-09-15T21:11:04+01:00",
+            "committed_at": "2026-09-15T21:11:04+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#68",
+            "title": "feat(change-classification): pass pull request labels and skip labeled runs",
+            "url": "https://github.com/monochange/actions/pull/68",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "6b357cab80445f2a77ef42862cfe75296294e447",
+            "short_sha": "6b357ca",
+            "url": "https://github.com/monochange/actions/commit/6b357cab80445f2a77ef42862cfe75296294e447",
+            "authored_at": "2026-09-15T21:11:04+01:00",
+            "committed_at": "2026-09-15T21:11:04+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#68",
+            "title": "feat(change-classification): pass pull request labels and skip labeled runs",
+            "url": "https://github.com/monochange/actions/pull/68",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    }
+  ],
+  "changelogs": [
+    {
+      "owner_id": "actions",
+      "owner_kind": "package",
+      "output": "default",
+      "stream": "default",
+      "path": "changelog.md",
+      "format": "monochange",
+      "notes": {
+        "title": "[0.9.4](https://github.com/monochange/actions/releases/tag/v0.9.4) (2026-09-17)",
+        "summary": [],
+        "sections": [
+          {
+            "title": "🚀 Feature",
+            "collapsed": false,
+            "entries": [
+              "#### Show whether a breaking change applies to main or the latest release\n\nThe change-classification action reads the new `release_impact` decision field and shows it next to the default-branch impact. A package that breaks only against `main` (its latest release never shipped the changed API) renders as `breaking → additive (release)` in the comment table, gets an informational callout naming the package, and appears in the job summary line. The new `release-breaking` output is `true` only when a package breaks against its latest release, so workflow routing can block those pulls without blocking refinements of unreleased APIs.\n\nReports from monochange versions without `release_impact` render exactly as before.\n\n```yaml\n- id: classify\n  uses: monochange/actions/change-classification@v0\n\n- run: |\n    if [[ \"${{ steps.classify.outputs.release-breaking }}\" == \"true\" ]]; then\n      echo \"A released API broke; a major changeset is required.\"\n    fi\n```\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #70](https://github.com/monochange/actions/pull/70)",
+              "#### Skip classification on release pull requests and pass labels\n\nThe change-classification action reads the pull request's labels (or the new `labels` input) and passes them to `monochange change classify` via `--label`. Configure `[changesets.classification].skip_labels` in `monochange.toml` (default `[\"release\"]`) so the release pull request monochange opens is reported as skipped instead of classified: the command analyzes no packages, the action sets `result: skipped`, deletes any stale classification comment, and the job summary records the skip.\n\nThe parser also accepts the classification report's new contract: snake_case keys with `schema_version` as a `major.minor` string emitted by `monochange_classification`.\n\n```yaml\n- uses: monochange/actions/change-classification@v0\n  with:\n    labels: release, automated\n```\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #68](https://github.com/monochange/actions/pull/68)"
+            ]
+          }
+        ]
+      },
+      "rendered": "## [0.9.4](https://github.com/monochange/actions/releases/tag/v0.9.4) (2026-09-17)\n\n### 🚀 Feature\n\n#### Show whether a breaking change applies to main or the latest release\n\nThe change-classification action reads the new `release_impact` decision field and shows it next to the default-branch impact. A package that breaks only against `main` (its latest release never shipped the changed API) renders as `breaking → additive (release)` in the comment table, gets an informational callout naming the package, and appears in the job summary line. The new `release-breaking` output is `true` only when a package breaks against its latest release, so workflow routing can block those pulls without blocking refinements of unreleased APIs.\n\nReports from monochange versions without `release_impact` render exactly as before.\n\n```yaml\n- id: classify\n  uses: monochange/actions/change-classification@v0\n\n- run: |\n    if [[ \"${{ steps.classify.outputs.release-breaking }}\" == \"true\" ]]; then\n      echo \"A released API broke; a major changeset is required.\"\n    fi\n```\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #70](https://github.com/monochange/actions/pull/70)\n\n#### Skip classification on release pull requests and pass labels\n\nThe change-classification action reads the pull request's labels (or the new `labels` input) and passes them to `monochange change classify` via `--label`. Configure `[changesets.classification].skip_labels` in `monochange.toml` (default `[\"release\"]`) so the release pull request monochange opens is reported as skipped instead of classified: the command analyzes no packages, the action sets `result: skipped`, deletes any stale classification comment, and the job summary records the skip.\n\nThe parser also accepts the classification report's new contract: snake_case keys with `schema_version` as a `major.minor` string emitted by `monochange_classification`.\n\n```yaml\n- uses: monochange/actions/change-classification@v0\n  with:\n    labels: release, automated\n```\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #68](https://github.com/monochange/actions/pull/68)"
+    }
+  ],
+  "provider": {
+    "kind": "github",
+    "owner": "monochange",
+    "repo": "actions",
+    "host": null
+  }
+}
