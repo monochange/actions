@@ -20856,6 +20856,7 @@ function readPackage(value) {
 		findings: value.findings.map(readFinding),
 		package_id: requiredString(value, "package_id"),
 		release_floor: requiredSeverity(value.decision, "release_floor"),
+		...typeof value.decision.release_impact === "string" ? { release_impact: value.decision.release_impact } : {},
 		recommendation: requiredSeverity(value, "recommendation"),
 		review_required: value.decision.review_required === true,
 		summary: requiredString(value, "summary")
@@ -20904,6 +20905,18 @@ function findingIcon(impact) {
 	if (impact === "compatible") return "⚪";
 	return "🟡";
 }
+/**
+* Packages whose default-branch break disappears against their latest release:
+* the release never shipped the changed API, so the proposed bump follows the
+* release-relative verdict instead of the pull-request verdict.
+*/
+function mainOnlyBreakingPackages(report) {
+	return report.packages.filter((item) => item.compatibility_impact === "breaking" && item.release_impact !== void 0 && item.release_impact !== "breaking");
+}
+function impactCell(item) {
+	if (item.release_impact === void 0 || item.release_impact === item.compatibility_impact) return tableCell(item.compatibility_impact);
+	return `${tableCell(item.compatibility_impact)} → ${tableCell(item.release_impact)} (release)`;
+}
 function findingLine(finding) {
 	const location = finding.location ? ` in \`${finding.location}\`` : "";
 	const comparisons = finding.comparisons.length > 0 ? `; seen in ${finding.comparisons.join(", ")}` : "";
@@ -20918,22 +20931,19 @@ function truncateMarkdown(markdown) {
 }
 function renderChangeClassificationMarkdown(report) {
 	const review_required = report.packages.some((item) => item.review_required);
+	const mainOnlyBreaking = mainOnlyBreakingPackages(report);
 	const lines = [
 		"# monochange change classification",
 		"",
 		`**Proposed changeset bump: \`${report.recommendation}\`**`,
 		"",
-		`Candidate \`${report.candidate}\` was compared with default branch \`${report.default_branch}\`. The release floor shows compatible changes accumulated since each package release.`,
+		`Candidate \`${report.candidate}\` was compared with default branch \`${report.default_branch}\`. The Impact column shows the default-branch verdict; \`main → release (release)\` marks a break that vanishes against the package's latest release. The release floor accumulates every unreleased change since the package release.`,
 		"",
 		review_required ? "> ⚠️ At least one package has partial or unsupported analysis. Treat this report as evidence for review, not proof that unreported breaks are absent." : "> ✅ Every reported package has complete analysis for the selected detection level.",
-		"",
-		"| Package | Findings | Impact | Proposed bump | Release floor | Confidence | Completeness | Changeset |",
-		"| --- | --- | --- | --- | --- | --- | --- | --- |",
-		...report.packages.map((item) => `| \`${tableCell(item.package_id)}\` | ${severitySummary(severityCounts(item.findings), "—")} | ${tableCell(item.compatibility_impact)} | **${item.recommendation}** | ${item.release_floor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`),
-		"",
-		"## Evidence",
 		""
 	];
+	if (mainOnlyBreaking.length > 0) lines.push(`> ℹ️ ${mainOnlyBreaking.length} package(s) break only against \`${report.default_branch}\`: their latest release never shipped the changed API, so the proposed bump stays at the release-relative verdict (${mainOnlyBreaking.map((item) => `\`${item.package_id}\``).join(", ")}).`, "");
+	lines.push("| Package | Findings | Impact | Proposed bump | Release floor | Confidence | Completeness | Changeset |", "| --- | --- | --- | --- | --- | --- | --- | --- |", ...report.packages.map((item) => `| \`${tableCell(item.package_id)}\` | ${severitySummary(severityCounts(item.findings), "—")} | ${impactCell(item)} | **${item.recommendation}** | ${item.release_floor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`), "", "## Evidence", "");
 	const packagesWithFindings = report.packages.filter((item) => item.findings.length > 0);
 	if (packagesWithFindings.length === 0) lines.push("No modeled compatibility findings were reported.", "");
 	else for (const item of packagesWithFindings) lines.push("<details>", `<summary><code>${htmlFragment(item.package_id)}</code> — ${severitySummary(severityCounts(item.findings), "no release-severity findings")}</summary>`, "", item.summary, "", ...item.findings.map(findingLine), "", "</details>", "");
@@ -21060,10 +21070,13 @@ async function runChangeClassification() {
 	}
 	const markdown = renderChangeClassificationMarkdown(report);
 	const review_required = report.packages.some((item) => item.review_required);
-	const summary$1 = `monochange proposes a ${report.recommendation} changeset across ${report.packages.length} package(s)${review_required ? "; review is required" : ""}.`;
+	const release_breaking = report.packages.some((item) => item.release_impact === "breaking");
+	const mainOnlyBreaking = mainOnlyBreakingPackages(report);
+	const summary$1 = `monochange proposes a ${report.recommendation} changeset across ${report.packages.length} package(s)${release_breaking ? "; breaking against the latest release" : ""}${mainOnlyBreaking.length > 0 ? `; ${mainOnlyBreaking.length} package(s) break only against ${report.default_branch}` : ""}${review_required ? "; review is required" : ""}.`;
 	setOutput("json", JSON.stringify(parsed));
 	setOutput("markdown", markdown);
 	setOutput("recommendation", report.recommendation);
+	setOutput("release-breaking", String(release_breaking));
 	setOutput("review-required", String(review_required));
 	setOutput("summary", summary$1);
 	await summary.addRaw(markdown).write();

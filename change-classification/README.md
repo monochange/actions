@@ -2,7 +2,7 @@
 
 Run `monochange change classify` once and publish the same evidence as action outputs, a job summary, and one updatable pull request comment.
 
-The report keeps the proposed bump for the current pull request separate from the release floor accumulated since the latest package release. It shows the finding, source location, analyzer confidence, completeness, comparison membership, and pending changeset action behind every package recommendation.
+The report keeps the proposed bump for the current pull request separate from the release floor accumulated since the latest package release. Each package decision reports the default-branch impact next to the release-relative impact (`release_impact`), so a pull request that only changes an API the latest release never shipped reads as breaking against `main` while its proposed bump follows the release verdict. The comment marks those packages with a `main → release (release)` impact cell and an informational callout, and the `release-breaking` output is `true` only when a package is breaking against its latest release. It shows the finding, source location, analyzer confidence, completeness, comparison membership, and pending changeset action behind every package recommendation.
 
 The job summary and pull request comment open with a package table that counts breaking, minor, and patch findings per package. Counts reuse the finding markers (🔴 breaking, 🟢 minor, ⚪ patch) and only list severities the package actually has, so a package without breaking findings never shows a zero count. The individual findings and any analysis warnings stay available in collapsed `<details>` sections, so the comment stays short until a reviewer expands the package that needs attention.
 
@@ -57,13 +57,14 @@ Comments are advisory. Creating or updating the pull request comment needs the `
 
 ## Outputs
 
-| Output            | Description                                                  |
-| ----------------- | ------------------------------------------------------------ |
-| `result`          | `success` after classification                               |
-| `json`            | Versioned JSON contract from monochange                      |
-| `markdown`        | Rendered report used for the summary and comment             |
-| `recommendation`  | Overall `major`, `minor`, `patch`, or `none` proposal        |
-| `review-required` | `true` when at least one package needs human or agent review |
-| `summary`         | One-line result                                              |
+| Output             | Description                                                                   |
+| ------------------ | ----------------------------------------------------------------------------- |
+| `result`           | `success` after classification                                                |
+| `json`             | Versioned JSON contract from monochange                                       |
+| `markdown`         | Rendered report used for the summary and comment                              |
+| `recommendation`   | Overall `major`, `minor`, `patch`, or `none` proposal                         |
+| `release-breaking` | `true` when a package is breaking against its latest release, not only `main` |
+| `review-required`  | `true` when at least one package needs human or agent review                  |
+| `summary`          | One-line result                                                               |
 
 The action accepts every change-classification report with `schemaVersion` 1 or newer, so newer monochange CLI releases can add findings and coverage detail without breaking the action. The evidence fields the action reads (packages, decisions, findings) are stable across those schema versions.

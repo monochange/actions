@@ -245,6 +245,50 @@ describe('change-classification report', () => {
     expect(markdown).toContain('| `core` | — | breaking |');
   });
 
+  it('separates a break against main from the release verdict', () => {
+    const raw = rawReport();
+    const packages = raw.packages as Record<string, unknown>[];
+    (packages[0]!.decision as Record<string, unknown>).release_impact = 'additive';
+    packages.push({
+      action: 'update',
+      decision: {
+        compatibility_impact: 'breaking',
+        completeness: 'complete',
+        confidence: 'high',
+        release_floor: 'major',
+        release_impact: 'breaking',
+        review_required: false,
+      },
+      findings: [],
+      package_id: 'released-break',
+      recommendation: 'major',
+      summary: 'breaking against the release',
+    });
+    packages.push({
+      action: 'create',
+      decision: {
+        compatibility_impact: 'additive',
+        completeness: 'complete',
+        confidence: 'high',
+        release_floor: 'minor',
+        review_required: false,
+      },
+      findings: [],
+      package_id: 'no-release-impact',
+      recommendation: 'minor',
+      summary: 'additive change',
+    });
+
+    const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
+
+    expect(markdown).toContain('| `core` | 🔴 1 breaking | breaking → additive (release) |');
+    expect(markdown).toContain('| `released-break` | — | breaking | **major** |');
+    expect(markdown).toContain('| `no-release-impact` | — | additive | **minor** |');
+    expect(markdown).toContain(
+      '> ℹ️ 1 package(s) break only against `origin/main`: their latest release never shipped the changed API, so the proposed bump stays at the release-relative verdict (`core`).',
+    );
+  });
+
   it('renders complete empty evidence without warnings', () => {
     const raw = rawReport({ findings: false });
     raw.warnings = null;
@@ -415,6 +459,32 @@ describe('runChangeClassification', () => {
     expect(summaryMock.addRaw).toHaveBeenCalled();
     expect(summaryMock.write).toHaveBeenCalled();
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
+  });
+
+  it('reports release-relative breaking and main-only breaks in outputs', async () => {
+    const raw = rawReport();
+    const item = (raw.packages as Record<string, unknown>[])[0]!;
+    (item.decision as Record<string, unknown>).release_impact = 'additive';
+    mockParse.mockReturnValue(raw as never);
+
+    await runChangeClassification();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('release-breaking', 'false');
+    expect(mockCore.setOutput).toHaveBeenCalledWith(
+      'summary',
+      'monochange proposes a major changeset across 1 package(s); 1 package(s) break only against origin/main.',
+    );
+
+    mockCore.setOutput.mockClear();
+    (item.decision as Record<string, unknown>).release_impact = 'breaking';
+
+    await runChangeClassification();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('release-breaking', 'true');
+    expect(mockCore.setOutput).toHaveBeenCalledWith(
+      'summary',
+      'monochange proposes a major changeset across 1 package(s); breaking against the latest release.',
+    );
   });
 
   it('reads no labels when the event has no pull request or an empty label list', async () => {

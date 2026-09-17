@@ -66,6 +66,8 @@ outputs:
     description: 'Markdown report written to the job summary and optional pull request comment.'
   recommendation:
     description: 'Overall proposed changeset bump: major, minor, patch, or none.'
+  release-breaking:
+    description: 'true when any package is breaking against its latest release, not only against the default branch.'
   review-required:
     description: 'Whether any package has partial, unsupported, or otherwise reviewable evidence.'
   summary:
