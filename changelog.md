@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.10.0](https://github.com/monochange/actions/releases/tag/v0.10.0) (2026-09-29)
+
+### 💥 Breaking Change
+
+#### Track the monochange CLI 0.15.0 release
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #73](https://github.com/monochange/actions/pull/73) · _Related issues:_ [#71](https://github.com/monochange/actions/issues/71)
+
+Bump the pinned `@monochange/cli` devDependency from 0.14.0 to 0.15.0. The action bundle is versioned independently of the CLI, so consumers that pin an action SHA can be running against a CLI whose interface moved underneath them; this release moves the action's major version in step with the CLI's.
+
+monochange 0.15.0 is a breaking CLI release. `monochange skill` no longer forwards arguments to `npx`, `pnpm dlx`, or `bunx`, and `MONOCHANGE_SKILL_SOURCE` and `MONOCHANGE_SKILL_RUNNER` are removed in favor of `monochange skill read <topic>` and `monochange skill install --dir <dir>`. The change-classification report contract also advanced to `schema_version` `0.3`, adding `decision.pull_request_changes`.
+
+From this release on, a breaking change in monochange produces a breaking change in `monochange/actions`, so downstream pins move major versions together.
+
+Verified locally: the pinned CLI reports 0.15.0, `monochange next` and `step validate` run against this repository's configuration, and the full `pnpm all` suite passes. The committed `dist/` bundle is unchanged because the CLI is a development dependency.
+
+### 🐛 Fixed
+
+- **Track the latest monochange CLI release.** Bump the pinned `@monochange/cli` devDependency from 0.13.0 to 0.14.0. The repository's release automation runs `pnpm exec monochange`, so the pin decides which CLI refreshes the release pull request and validates changesets; this keeps it on the current published release. The committed `dist/` bundle is unchanged because the CLI is a development dependency.
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #71](https://github.com/monochange/actions/pull/71)
+
 ## [0.9.4](https://github.com/monochange/actions/releases/tag/v0.9.4) (2026-09-17)
 
 ### 🚀 Feature
