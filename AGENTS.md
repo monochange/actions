@@ -53,6 +53,21 @@ pnpm exec monochange run change --package actions --bump patch --reason "describ
 - Run `pnpm exec monochange step validate` and
   `pnpm exec monochange step prepare-release --dry-run --format json` to preview the next version.
 
+### Breaking changes track the CLI
+
+The action variants are versioned independently of the CLI, but a consumer pins an action SHA and
+gets whatever CLI that release was built and validated against. When a monochange release is
+breaking, this repository's tracking release is breaking too, so the major version moves in step
+with the CLI instead of hiding a compatibility break behind a patch bump.
+
+- Author the CLI-tracking changeset with `--bump major` whenever the monochange release it tracks
+  contains a breaking change. The package is pre-1.0, so monochange shifts the severity when it
+  applies it: `major` on `0.9.x` releases `0.10.0`.
+- Keep the breaking changeset on the change that introduces the incompatibility, and name the
+  consumer-visible break in the entry so the release note says what moved.
+- Announce the new pin in the pull request that lands the bump; downstream repositories re-pin the
+  action SHA afterwards.
+
 ## Naming
 
 - Always write `monochange` in lowercase.
