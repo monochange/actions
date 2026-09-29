@@ -1,0 +1,301 @@
+{
+  "schema_version": "0.8",
+  "kind": "monochange.releaseRecord",
+  "created_at": "2026-09-29T03:42:23Z",
+  "command": "release",
+  "version": "0.10.0",
+  "versions": {
+    "actions": "0.10.0"
+  },
+  "release_targets": [
+    {
+      "id": "actions",
+      "kind": "package",
+      "version": "0.10.0",
+      "version_format": "primary",
+      "tag": true,
+      "release": true,
+      "tag_name": "v0.10.0",
+      "members": [
+        "actions"
+      ],
+      "floating_tags": [
+        "v{{ major }}.{{ minor }}",
+        "v{{ major }}"
+      ]
+    }
+  ],
+  "released_packages": [
+    "actions"
+  ],
+  "changed_files": [
+    "changelog.md",
+    "package.json"
+  ],
+  "package_publications": [],
+  "updated_changelogs": [
+    "changelog.md"
+  ],
+  "deleted_changesets": [
+    ".changeset/1790613655-actions.md",
+    ".changeset/track-monochange-cli-0-15-0.md"
+  ],
+  "changesets": [
+    {
+      "path": ".changeset/1790613655-actions.md",
+      "summary": "Track the latest monochange CLI release",
+      "details": "Bump the pinned `@monochange/cli` devDependency from 0.13.0 to 0.14.0. The repository's release automation runs `pnpm exec monochange`, so the pin decides which CLI refreshes the release pull request and validates changesets; this keeps it on the current published release. The committed `dist/` bundle is unchanged because the CLI is a development dependency.",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "patch",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "patch"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "ec8e2c4984a4c61c202d5e7f1a763064b220ffac",
+            "short_sha": "ec8e2c4",
+            "url": "https://github.com/monochange/actions/commit/ec8e2c4984a4c61c202d5e7f1a763064b220ffac",
+            "authored_at": "2026-09-28T17:41:50+01:00",
+            "committed_at": "2026-09-28T17:41:50+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#71",
+            "title": "chore(deps): bump @monochange/cli devDependency from 0.13.0 to 0.14.0",
+            "url": "https://github.com/monochange/actions/pull/71",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "ec8e2c4984a4c61c202d5e7f1a763064b220ffac",
+            "short_sha": "ec8e2c4",
+            "url": "https://github.com/monochange/actions/commit/ec8e2c4984a4c61c202d5e7f1a763064b220ffac",
+            "authored_at": "2026-09-28T17:41:50+01:00",
+            "committed_at": "2026-09-28T17:41:50+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#71",
+            "title": "chore(deps): bump @monochange/cli devDependency from 0.13.0 to 0.14.0",
+            "url": "https://github.com/monochange/actions/pull/71",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    },
+    {
+      "path": ".changeset/track-monochange-cli-0-15-0.md",
+      "summary": "Track the monochange CLI 0.15.0 release",
+      "details": "Bump the pinned `@monochange/cli` devDependency from 0.14.0 to 0.15.0. The action bundle is versioned independently of the CLI, so consumers that pin an action SHA can be running against a CLI whose interface moved underneath them; this release moves the action's major version in step with the CLI's.\n\nmonochange 0.15.0 is a breaking CLI release. `monochange skill` no longer forwards arguments to `npx`, `pnpm dlx`, or `bunx`, and `MONOCHANGE_SKILL_SOURCE` and `MONOCHANGE_SKILL_RUNNER` are removed in favor of `monochange skill read <topic>` and `monochange skill install --dir <dir>`. The change-classification report contract also advanced to `schema_version` `0.3`, adding `decision.pull_request_changes`.\n\nFrom this release on, a breaking change in monochange produces a breaking change in `monochange/actions`, so downstream pins move major versions together.\n\nVerified locally: the pinned CLI reports 0.15.0, `monochange next` and `step validate` run against this repository's configuration, and the full `pnpm all` suite passes. The committed `dist/` bundle is unchanged because the CLI is a development dependency.",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "major",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "major"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "a5a687dfe64c781bb5460f827bb5d349ed191585",
+            "short_sha": "a5a687d",
+            "url": "https://github.com/monochange/actions/commit/a5a687dfe64c781bb5460f827bb5d349ed191585",
+            "authored_at": "2026-09-28T21:18:21+01:00",
+            "committed_at": "2026-09-28T21:18:21+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#73",
+            "title": "chore(deps): bump @monochange/cli devDependency from 0.14.0 to 0.15.0",
+            "url": "https://github.com/monochange/actions/pull/73",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "28b1b174ad0a30346c76a63e5b6f4ab4b3ee8c86",
+            "short_sha": "28b1b17",
+            "url": "https://github.com/monochange/actions/commit/28b1b174ad0a30346c76a63e5b6f4ab4b3ee8c86",
+            "authored_at": "2026-09-29T04:40:35+01:00",
+            "committed_at": "2026-09-29T04:40:35+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#74",
+            "title": "chore(release): mark the monochange CLI tracking release as breaking",
+            "url": "https://github.com/monochange/actions/pull/74",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": [
+          {
+            "provider": "github",
+            "host": "github.com",
+            "id": "#71",
+            "title": null,
+            "url": "https://github.com/monochange/actions/issues/71",
+            "relationship": "referenced_by_review_request"
+          }
+        ]
+      }
+    }
+  ],
+  "changelogs": [
+    {
+      "owner_id": "actions",
+      "owner_kind": "package",
+      "output": "default",
+      "stream": "default",
+      "path": "changelog.md",
+      "format": "monochange",
+      "notes": {
+        "title": "[0.10.0](https://github.com/monochange/actions/releases/tag/v0.10.0) (2026-09-29)",
+        "summary": [],
+        "sections": [
+          {
+            "title": "💥 Breaking Change",
+            "collapsed": false,
+            "entries": [
+              "#### Track the monochange CLI 0.15.0 release\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #73](https://github.com/monochange/actions/pull/73) · _Related issues:_ [#71](https://github.com/monochange/actions/issues/71)\n\nBump the pinned `@monochange/cli` devDependency from 0.14.0 to 0.15.0. The action bundle is versioned independently of the CLI, so consumers that pin an action SHA can be running against a CLI whose interface moved underneath them; this release moves the action's major version in step with the CLI's.\n\nmonochange 0.15.0 is a breaking CLI release. `monochange skill` no longer forwards arguments to `npx`, `pnpm dlx`, or `bunx`, and `MONOCHANGE_SKILL_SOURCE` and `MONOCHANGE_SKILL_RUNNER` are removed in favor of `monochange skill read <topic>` and `monochange skill install --dir <dir>`. The change-classification report contract also advanced to `schema_version` `0.3`, adding `decision.pull_request_changes`.\n\nFrom this release on, a breaking change in monochange produces a breaking change in `monochange/actions`, so downstream pins move major versions together.\n\nVerified locally: the pinned CLI reports 0.15.0, `monochange next` and `step validate` run against this repository's configuration, and the full `pnpm all` suite passes. The committed `dist/` bundle is unchanged because the CLI is a development dependency."
+            ]
+          },
+          {
+            "title": "🐛 Fixed",
+            "collapsed": false,
+            "entries": [
+              "- **Track the latest monochange CLI release.** Bump the pinned `@monochange/cli` devDependency from 0.13.0 to 0.14.0. The repository's release automation runs `pnpm exec monochange`, so the pin decides which CLI refreshes the release pull request and validates changesets; this keeps it on the current published release. The committed `dist/` bundle is unchanged because the CLI is a development dependency.\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #71](https://github.com/monochange/actions/pull/71)"
+            ]
+          }
+        ]
+      },
+      "rendered": "## [0.10.0](https://github.com/monochange/actions/releases/tag/v0.10.0) (2026-09-29)\n\n### 💥 Breaking Change\n\n#### Track the monochange CLI 0.15.0 release\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #73](https://github.com/monochange/actions/pull/73) · _Related issues:_ [#71](https://github.com/monochange/actions/issues/71)\n\nBump the pinned `@monochange/cli` devDependency from 0.14.0 to 0.15.0. The action bundle is versioned independently of the CLI, so consumers that pin an action SHA can be running against a CLI whose interface moved underneath them; this release moves the action's major version in step with the CLI's.\n\nmonochange 0.15.0 is a breaking CLI release. `monochange skill` no longer forwards arguments to `npx`, `pnpm dlx`, or `bunx`, and `MONOCHANGE_SKILL_SOURCE` and `MONOCHANGE_SKILL_RUNNER` are removed in favor of `monochange skill read <topic>` and `monochange skill install --dir <dir>`. The change-classification report contract also advanced to `schema_version` `0.3`, adding `decision.pull_request_changes`.\n\nFrom this release on, a breaking change in monochange produces a breaking change in `monochange/actions`, so downstream pins move major versions together.\n\nVerified locally: the pinned CLI reports 0.15.0, `monochange next` and `step validate` run against this repository's configuration, and the full `pnpm all` suite passes. The committed `dist/` bundle is unchanged because the CLI is a development dependency.\n\n### 🐛 Fixed\n\n- **Track the latest monochange CLI release.** Bump the pinned `@monochange/cli` devDependency from 0.13.0 to 0.14.0. The repository's release automation runs `pnpm exec monochange`, so the pin decides which CLI refreshes the release pull request and validates changesets; this keeps it on the current published release. The committed `dist/` bundle is unchanged because the CLI is a development dependency.\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #71](https://github.com/monochange/actions/pull/71)"
+    }
+  ],
+  "provider": {
+    "kind": "github",
+    "owner": "monochange",
+    "repo": "actions",
+    "host": null
+  }
+}
