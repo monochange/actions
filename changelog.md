@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.10.1](https://github.com/monochange/actions/releases/tag/v0.10.1) (2026-09-30)
+
+### 📝 Changed
+
+#### Keep change-classification comments specific to the pull request
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #75](https://github.com/monochange/actions/pull/75)
+
+The `change-classification` action now compares a pull request with the branch it targets and classifies the pull request head commit, so a stacked pull request no longer reports the changes of the branch below it.
+
+- `base` defaults to `origin/<base branch>` from the `pull_request` event, and `head` defaults to the event's head commit. Each is used only when the checkout contains it; otherwise the action warns and keeps the previous behavior. Explicit inputs still win.
+- The comment names the classified head commit and base commit.
+- Findings seen only between the latest release and the base branch move to an "Unreleased changes already on `<base>` (not part of this pull request)" list and no longer count toward the package's findings.
+
+Add the `edited` event, guarded by `github.event.changes.base`, so a retargeted pull request is classified again:
+
+```yaml
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+jobs:
+  classify:
+    if: ${{ github.event.action != 'edited' || github.event.changes.base }}
+```
+
 ## [0.10.0](https://github.com/monochange/actions/releases/tag/v0.10.0) (2026-09-29)
 
 ### 💥 Breaking Change
