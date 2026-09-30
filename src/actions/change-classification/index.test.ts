@@ -29,16 +29,17 @@ vi.mock('@actions/core', () => ({
   warning: vi.fn(),
 }));
 vi.mock('@actions/github', () => githubMock);
-vi.mock('../../shared/exec', () => ({ execRequired: vi.fn() }));
+vi.mock('../../shared/exec', () => ({ exec: vi.fn(), execRequired: vi.fn() }));
 vi.mock('../../shared/json', () => ({ parseMixedOutput: vi.fn() }));
 vi.mock('../../shared/monochange-cli', () => ({ resolveMonochange: vi.fn() }));
 
-import { execRequired } from '../../shared/exec';
+import { exec, execRequired } from '../../shared/exec';
 import { parseMixedOutput } from '../../shared/json';
 import { resolveMonochange } from '../../shared/monochange-cli';
 
 const mockCore = vi.mocked(core);
 const mockExec = vi.mocked(execRequired);
+const mockGit = vi.mocked(exec);
 const mockParse = vi.mocked(parseMixedOutput);
 const mockResolve = vi.mocked(resolveMonochange);
 
@@ -289,6 +290,101 @@ describe('change-classification report', () => {
     );
   });
 
+  it('names the classified commits and lists inherited findings apart from the pull request', () => {
+    const raw = rawReport();
+    raw.base_commit = '0123456789abcdef0123456789abcdef01234567';
+    raw.head_commit = 'fedcba9876543210fedcba9876543210fedcba98';
+    raw.default_branch = 'origin/feature/parent';
+    const packages = raw.packages as Record<string, unknown>[];
+    (packages[0]!.findings as Record<string, unknown>[]).push({
+      bump: 'major',
+      comparisons: ['release', 'release_to_default'],
+      confidence: 'medium',
+      id: 'inherited-break',
+      impact: 'breaking',
+      location: 'src/migration.rs',
+      rule_id: 'test/inherited',
+      summary: 'removed an API on the base branch',
+    });
+    packages.push({
+      action: 'no_changeset',
+      decision: {
+        compatibility_impact: 'compatible',
+        completeness: 'complete',
+        confidence: 'high',
+        release_floor: 'major',
+        review_required: false,
+      },
+      findings: [
+        {
+          bump: 'major',
+          comparisons: ['release'],
+          confidence: 'medium',
+          id: 'only-inherited',
+          impact: 'breaking',
+          rule_id: 'test/only-inherited',
+          summary: 'removed on the base branch',
+        },
+      ],
+      package_id: 'untouched',
+      recommendation: 'none',
+      summary: 'no package change requires a changeset',
+    });
+
+    const report = readChangeClassificationReport(raw);
+    const markdown = renderChangeClassificationMarkdown(report);
+
+    expect(report.base_commit).toBe(raw.base_commit);
+    expect(report.head_commit).toBe(raw.head_commit);
+    expect(markdown).toContain(
+      'Head commit `fedcba987654` was compared with base branch `origin/feature/parent` at `0123456789ab`.',
+    );
+    expect(markdown).toContain('| `core` | 🔴 1 breaking | breaking |');
+    expect(markdown).toContain('| `untouched` | — | compatible | **none** | major |');
+    expect(markdown).toContain('<summary><code>core</code> — 🔴 1 breaking</summary>');
+    expect(markdown).toContain(
+      '<summary><code>untouched</code> — no findings in this pull request</summary>',
+    );
+    const inheritedHeading =
+      '**Unreleased changes already on `origin/feature/parent` (not part of this pull request):**';
+    expect(markdown.split(inheritedHeading)).toHaveLength(3);
+    expect(markdown.indexOf('core::old')).toBeLessThan(markdown.indexOf(inheritedHeading));
+    expect(markdown.indexOf(inheritedHeading)).toBeLessThan(markdown.indexOf('inherited-break'));
+  });
+
+  it('treats camelCase pull request comparisons as pull request evidence', () => {
+    const raw = rawReport();
+    const item = (raw.packages as Record<string, unknown>[])[0]!;
+    item.findings = [
+      {
+        bump: 'minor',
+        comparisons: ['sourceDelta'],
+        confidence: 'high',
+        id: 'branch',
+        impact: 'additive',
+        rule_id: 'test/branch',
+        summary: 'added on the branch',
+      },
+      {
+        bump: 'patch',
+        comparisons: ['working_tree'],
+        confidence: 'low',
+        id: 'local',
+        impact: 'unmodeled',
+        rule_id: 'test/local',
+        summary: 'local edit',
+      },
+    ];
+
+    const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
+
+    expect(markdown).toContain('<summary><code>core</code> — 🟢 1 minor, ⚪ 1 patch</summary>');
+    expect(markdown).not.toContain('not part of this pull request');
+    expect(markdown).toContain(
+      'Candidate `merge-tree:abc123` was compared with base branch `origin/main`.',
+    );
+  });
+
   it('renders complete empty evidence without warnings', () => {
     const raw = rawReport({ findings: false });
     raw.warnings = null;
@@ -426,6 +522,7 @@ describe('runChangeClassification', () => {
       version: '1.0.0',
     });
     mockExec.mockResolvedValue('{"schema_version":1}');
+    mockGit.mockResolvedValue({ exitCode: 0, stderr: '', stdout: '' });
     mockParse.mockReturnValue(rawReport());
     mockOctokit();
   });
@@ -459,6 +556,82 @@ describe('runChangeClassification', () => {
     expect(summaryMock.addRaw).toHaveBeenCalled();
     expect(summaryMock.write).toHaveBeenCalled();
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
+  });
+
+  it('compares with the pull request base and head from the event payload', async () => {
+    githubMock.context.payload = {
+      pull_request: {
+        base: { ref: 'feature/parent' },
+        head: { sha: 'abc1234' },
+        labels: [],
+        number: 42,
+      },
+    };
+
+    await runChangeClassification();
+
+    expect(mockGit).toHaveBeenCalledWith(
+      'git',
+      ['rev-parse', '--verify', '--quiet', 'origin/feature/parent^{commit}'],
+      { cwd: '.' },
+    );
+    expect(mockGit).toHaveBeenCalledWith(
+      'git',
+      ['rev-parse', '--verify', '--quiet', 'abc1234^{commit}'],
+      { cwd: '.' },
+    );
+    const args = mockExec.mock.calls[0]![1];
+    expect(args.slice(args.indexOf('--head'), args.indexOf('--head') + 2)).toEqual([
+      '--head',
+      'abc1234',
+    ]);
+    expect(args.slice(args.indexOf('--base'), args.indexOf('--base') + 2)).toEqual([
+      '--base',
+      'origin/feature/parent',
+    ]);
+  });
+
+  it('falls back with a warning when the checkout lacks the event refs', async () => {
+    githubMock.context.payload = {
+      pull_request: { base: { ref: 'main' }, head: { sha: 'abc1234' }, number: 42 },
+    };
+    mockGit.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '' });
+
+    await runChangeClassification();
+
+    const args = mockExec.mock.calls[0]![1];
+    expect(args).not.toContain('--base');
+    expect(args.slice(args.indexOf('--head'), args.indexOf('--head') + 2)).toEqual([
+      '--head',
+      'HEAD',
+    ]);
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      expect.stringContaining('Pull request base `origin/main` is not in the checkout'),
+    );
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      expect.stringContaining('Pull request head `abc1234` is not in the checkout'),
+    );
+  });
+
+  it('ignores malformed event refs and prefers explicit inputs', async () => {
+    githubMock.context.payload = {
+      pull_request: { base: { ref: '' }, head: 'not-an-object', number: 42 },
+    };
+
+    await runChangeClassification();
+
+    expect(mockGit).not.toHaveBeenCalled();
+    expect(mockExec.mock.calls[0]![1]).not.toContain('--base');
+
+    githubMock.context.payload = {
+      pull_request: { base: { ref: 'main' }, head: { sha: 'abc1234' }, number: 42 },
+    };
+    setInputs({ base: 'origin/trunk', head: 'feature', 'post-comment': 'false' });
+    mockGit.mockClear();
+
+    await runChangeClassification();
+
+    expect(mockGit).not.toHaveBeenCalled();
   });
 
   it('reports release-relative breaking and main-only breaks in outputs', async () => {
@@ -857,6 +1030,66 @@ describe('runChangeClassification', () => {
     expect(mockCore.warning).toHaveBeenCalledWith(
       'Unable to post change-classification comment: API unavailable',
     );
+  });
+
+  it('replaces the previous comment when classification fails', async () => {
+    githubMock.context.payload = { pull_request: { head: { sha: 'abc1234' }, number: 17 } };
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', repository: 'mono/change' });
+    mockExec.mockRejectedValue(new Error('classification crashed'));
+    const octokit = mockOctokit([
+      { body: 'someone else', id: 3 },
+      { body: 'old report\n\n<!-- monochange:change-classification -->', id: 1 },
+    ]);
+
+    await expect(runChangeClassification()).rejects.toThrow('classification crashed');
+
+    expect(octokit.rest.issues.updateComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('Classification failed for `abc1234`'),
+        comment_id: 1,
+      }),
+    );
+    expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+  });
+
+  it('posts nothing when classification fails without an earlier comment', async () => {
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', 'pull-request': '17' });
+    mockParse.mockReturnValue({ schema_version: 'bad' });
+    const octokit = mockOctokit([{ body: 'someone else', id: 3 }]);
+
+    await expect(runChangeClassification()).rejects.toThrow(
+      'supported change-classification report',
+    );
+
+    expect(octokit.rest.issues.updateComment).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+  });
+
+  it('skips the stale notice without comment context and warns when the API fails', async () => {
+    mockExec.mockRejectedValue(new Error('boom'));
+    setInputs({ 'post-comment': 'false' });
+    await expect(runChangeClassification()).rejects.toThrow('boom');
+
+    setInputs({ 'post-comment': 'true' });
+    await expect(runChangeClassification()).rejects.toThrow('boom');
+
+    setInputs({ 'github-token': 'token', 'post-comment': 'true' });
+    await expect(runChangeClassification()).rejects.toThrow('boom');
+
+    const octokit = mockOctokit();
+    octokit.rest.issues.listComments.mockRejectedValue(new Error('API down'));
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', 'pull-request': '17' });
+    await expect(runChangeClassification()).rejects.toThrow('boom');
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to mark the change-classification comment stale: API down',
+    );
+
+    octokit.rest.issues.listComments.mockRejectedValue('plain');
+    await expect(runChangeClassification()).rejects.toThrow('boom');
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to mark the change-classification comment stale: plain',
+    );
+    expect(octokit.rest.issues.updateComment).not.toHaveBeenCalled();
   });
 
   it('warns for Error API failures without failing classification', async () => {

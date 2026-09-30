@@ -26,12 +26,11 @@ inputs:
     required: false
     default: '.'
   base:
-    description: 'Default-branch git ref. By default monochange resolves origin/HEAD, main, or master.'
+    description: 'Base git ref to compare with. Defaults to origin/<base branch> of the pull_request event, so stacked pull requests compare with their own base; outside a pull request monochange resolves origin/HEAD, main, or master.'
     required: false
   head:
-    description: 'Candidate git ref.'
+    description: 'Candidate git ref. Defaults to the head commit of the pull_request event when the checkout contains it, otherwise HEAD.'
     required: false
-    default: HEAD
   release:
     description: 'Release git ref override. By default each release owner uses its latest reachable tag.'
     required: false

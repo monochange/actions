@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
-import { execRequired } from '../../shared/exec';
+import { exec, execRequired } from '../../shared/exec';
 import { getBooleanInput, getOptionalInput, parseRepository } from '../../shared/inputs';
 import { parseMixedOutput } from '../../shared/json';
 import { resolveMonochange } from '../../shared/monochange-cli';
@@ -37,8 +37,10 @@ interface PackageClassification {
 }
 
 export interface ChangeClassificationReport {
+  base_commit?: string | undefined;
   candidate: string;
   default_branch: string;
+  head_commit?: string | undefined;
   packages: PackageClassification[];
   recommendation: Severity;
   schema_version: string;
@@ -52,7 +54,7 @@ interface ChangeClassificationInputs {
   dependencyPropagation: string;
   detectionLevel: string;
   githubToken: string;
-  head: string;
+  head: string | undefined;
   includeUnchanged: boolean;
   labels: string | undefined;
   packages: string | undefined;
@@ -74,7 +76,7 @@ function readInputs(): ChangeClassificationInputs {
     dependencyPropagation: input('dependency-propagation', 'public'),
     detectionLevel: input('detection-level', 'signature'),
     githubToken: core.getInput('github-token').trim(),
-    head: input('head', 'HEAD'),
+    head: getOptionalInput('head'),
     includeUnchanged: getBooleanInput('include-unchanged'),
     labels: getOptionalInput('labels') ?? eventLabels(),
     packages: getOptionalInput('packages'),
@@ -112,6 +114,54 @@ function eventLabels(): string | undefined {
     .filter((name: string | undefined): name is string => typeof name === 'string');
 
   return names.length > 0 ? names.join(',') : undefined;
+}
+
+/**
+ * Compare a pull request with the branch it targets. A stacked pull request
+ * would otherwise be compared with the default branch and inherit every change
+ * from the branch below it.
+ */
+function eventBaseRef(): string | undefined {
+  const base: unknown = github.context.payload.pull_request?.base;
+
+  return isRecord(base) && typeof base.ref === 'string' && base.ref
+    ? `origin/${base.ref}`
+    : undefined;
+}
+
+/**
+ * Classify the exact pull request head commit, so the report names the commit
+ * a reviewer sees even when the checkout is GitHub's synthetic merge ref.
+ */
+function eventHeadSha(): string | undefined {
+  const head: unknown = github.context.payload.pull_request?.head;
+
+  return isRecord(head) && typeof head.sha === 'string' && head.sha ? head.sha : undefined;
+}
+
+/**
+ * Use an event ref only when the checkout contains it. A shallow checkout
+ * lacks the base branch and may lack the head commit, and classifying against
+ * a missing ref would fail the job instead of falling back to auto-detection.
+ */
+async function checkedOutRef(
+  ref: string | undefined,
+  cwd: string,
+  endpoint: 'base' | 'head',
+): Promise<string | undefined> {
+  if (!ref) return undefined;
+
+  const result = await exec('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], {
+    cwd,
+  });
+
+  if (result.exitCode === 0) return ref;
+
+  core.warning(
+    `Pull request ${endpoint} \`${ref}\` is not in the checkout, so change classification falls back to the default ${endpoint}. Check out with fetch-depth: 0 to classify against the pull request ${endpoint}.`,
+  );
+
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -202,8 +252,10 @@ export function readChangeClassificationReport(value: unknown): ChangeClassifica
   }
 
   return {
+    ...(typeof value.base_commit === 'string' ? { base_commit: value.base_commit } : {}),
     candidate: requiredString(value, 'candidate'),
     default_branch: requiredString(value, 'default_branch'),
+    ...(typeof value.head_commit === 'string' ? { head_commit: value.head_commit } : {}),
     packages: value.packages.map(readPackage),
     recommendation: requiredSeverity(value, 'recommendation'),
     schema_version: value.schema_version,
@@ -299,6 +351,53 @@ function findingLine(finding: Finding): string {
   return `- ${findingIcon(finding.impact)} **${finding.impact} / ${finding.bump}** — ${finding.summary}${location} (${finding.confidence} confidence${comparisons}; \`${finding.id}\`)`;
 }
 
+// Comparison kinds that describe this contribution. monochange emits
+// snake_case keys; camelCase is accepted for reports rendered by older tooling.
+const PULL_REQUEST_COMPARISONS = new Set([
+  'pull_request',
+  'pullRequest',
+  'source_delta',
+  'sourceDelta',
+  'working_tree',
+  'workingTree',
+]);
+
+/**
+ * A finding seen only in the `release` and `release_to_default` comparisons
+ * describes work the base branch already carries since the latest release. It
+ * stays in the JSON for the release floor, but the comment must not present it
+ * as a change this pull request made.
+ */
+function isPullRequestFinding(finding: Finding): boolean {
+  return (
+    finding.comparisons.length === 0 ||
+    finding.comparisons.some((comparison) => PULL_REQUEST_COMPARISONS.has(comparison))
+  );
+}
+
+function pullRequestFindings(item: PackageClassification): Finding[] {
+  return item.findings.filter(isPullRequestFinding);
+}
+
+function inheritedFindings(item: PackageClassification): Finding[] {
+  return item.findings.filter((finding) => !isPullRequestFinding(finding));
+}
+
+function shortCommit(commit: string): string {
+  return commit.slice(0, 12);
+}
+
+function comparedEndpoints(report: ChangeClassificationReport): string {
+  const head = report.head_commit
+    ? `Head commit \`${shortCommit(report.head_commit)}\``
+    : `Candidate \`${report.candidate}\``;
+  const base = report.base_commit
+    ? `base branch \`${report.default_branch}\` at \`${shortCommit(report.base_commit)}\``
+    : `base branch \`${report.default_branch}\``;
+
+  return `${head} was compared with ${base}.`;
+}
+
 function truncateMarkdown(markdown: string): string {
   if (markdown.length <= MAX_MARKDOWN_LENGTH) {
     return markdown;
@@ -320,7 +419,7 @@ export function renderChangeClassificationMarkdown(report: ChangeClassificationR
     '',
     `**Proposed changeset bump: \`${report.recommendation}\`**`,
     '',
-    `Candidate \`${report.candidate}\` was compared with default branch \`${report.default_branch}\`. The Impact column shows the default-branch verdict; \`main → release (release)\` marks a break that vanishes against the package's latest release. The release floor accumulates every unreleased change since the package release.`,
+    `${comparedEndpoints(report)} Findings count only changes this pull request makes; unreleased changes already on the base branch are listed separately and only raise the release floor. The Impact column shows the base-branch verdict; \`main → release (release)\` marks a break that vanishes against the package's latest release.`,
     '',
     review_required
       ? '> ⚠️ At least one package has partial or unsupported analysis. Treat this report as evidence for review, not proof that unreported breaks are absent.'
@@ -342,7 +441,7 @@ export function renderChangeClassificationMarkdown(report: ChangeClassificationR
     '| --- | --- | --- | --- | --- | --- | --- | --- |',
     ...report.packages.map(
       (item) =>
-        `| \`${tableCell(item.package_id)}\` | ${severitySummary(severityCounts(item.findings), '—')} | ${impactCell(item)} | **${item.recommendation}** | ${item.release_floor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`,
+        `| \`${tableCell(item.package_id)}\` | ${severitySummary(severityCounts(pullRequestFindings(item)), '—')} | ${impactCell(item)} | **${item.recommendation}** | ${item.release_floor} | ${tableCell(item.confidence)} | ${tableCell(item.completeness)} | ${tableCell(item.action)} |`,
     ),
     '',
     '## Evidence',
@@ -355,17 +454,30 @@ export function renderChangeClassificationMarkdown(report: ChangeClassificationR
     lines.push('No modeled compatibility findings were reported.', '');
   } else {
     for (const item of packagesWithFindings) {
+      const current = pullRequestFindings(item);
+      const inherited = inheritedFindings(item);
+      const empty =
+        current.length === 0 ? 'no findings in this pull request' : 'no release-severity findings';
+
       lines.push(
         '<details>',
-        `<summary><code>${htmlFragment(item.package_id)}</code> — ${severitySummary(severityCounts(item.findings), 'no release-severity findings')}</summary>`,
+        `<summary><code>${htmlFragment(item.package_id)}</code> — ${severitySummary(severityCounts(current), empty)}</summary>`,
         '',
         item.summary,
         '',
-        ...item.findings.map(findingLine),
-        '',
-        '</details>',
-        '',
+        ...current.map(findingLine),
       );
+
+      if (inherited.length > 0) {
+        lines.push(
+          ...(current.length > 0 ? [''] : []),
+          `**Unreleased changes already on \`${report.default_branch}\` (not part of this pull request):**`,
+          '',
+          ...inherited.map(findingLine),
+        );
+      }
+
+      lines.push('', '</details>', '');
     }
   }
 
@@ -508,23 +620,71 @@ async function deleteClassificationComment(inputs: ChangeClassificationInputs): 
   }
 }
 
+/**
+ * Replace an existing classification comment when this run could not produce
+ * a report, so reviewers never read a previous commit's findings as current.
+ * Only an existing comment is rewritten; a failed first run posts nothing.
+ */
+async function markCommentStale(inputs: ChangeClassificationInputs, head: string): Promise<void> {
+  if (!inputs.postComment || !inputs.githubToken) return;
+
+  try {
+    const issueNumber = pullRequestNumber(inputs.pullRequest);
+
+    if (!issueNumber) return;
+
+    const { owner, repo } = parseRepository(inputs.repository);
+    const octokit = github.getOctokit(inputs.githubToken);
+    const { data } = await octokit.rest.issues.listComments({
+      issue_number: issueNumber,
+      owner,
+      per_page: 100,
+      repo,
+    });
+    const current = data.find(
+      (comment: { body?: string | null; id: number }) =>
+        typeof comment.body === 'string' && comment.body.includes(COMMENT_MARKER),
+    );
+
+    if (!current) return;
+
+    const body = [
+      '# monochange change classification',
+      '',
+      `> ⚠️ Classification failed for \`${head}\`. The previous report described an earlier commit and was removed. Check the workflow logs, then re-run the job.`,
+      '',
+      COMMENT_MARKER,
+    ].join('\n');
+
+    await octokit.rest.issues.updateComment({ body, comment_id: current.id, owner, repo });
+  } catch (error) {
+    core.warning(
+      `Unable to mark the change-classification comment stale: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 export async function runChangeClassification(): Promise<void> {
   const inputs = readInputs();
   const monochange = await resolveMonochange(inputs.setupMonochange);
+  const base =
+    inputs.base ?? (await checkedOutRef(eventBaseRef(), inputs.workingDirectory, 'base'));
+  const head =
+    inputs.head ?? (await checkedOutRef(eventHeadSha(), inputs.workingDirectory, 'head')) ?? 'HEAD';
   const args = [
     'change',
     'classify',
     '--format',
     'json',
     '--head',
-    inputs.head,
+    head,
     '--detection-level',
     inputs.detectionLevel,
     '--dependency-propagation',
     inputs.dependencyPropagation,
   ];
 
-  if (inputs.base) args.push('--base', inputs.base);
+  if (base) args.push('--base', base);
   if (inputs.release) args.push('--release', inputs.release);
   if (inputs.includeUnchanged) args.push('--include-unchanged');
   if (inputs.labels) {
@@ -539,9 +699,19 @@ export async function runChangeClassification(): Promise<void> {
   }
 
   core.info(`Using monochange ${monochange.version} from ${monochange.source}`);
-  const stdout = await execRequired(monochange.command, args, { cwd: inputs.workingDirectory });
-  const parsed = parseMixedOutput(stdout);
-  const report = readChangeClassificationReport(parsed);
+  let parsed: unknown;
+  let report: ChangeClassificationReport;
+
+  try {
+    const stdout = await execRequired(monochange.command, args, { cwd: inputs.workingDirectory });
+    parsed = parseMixedOutput(stdout);
+    report = readChangeClassificationReport(parsed);
+  } catch (error) {
+    // A comment left from an earlier push would otherwise keep describing a
+    // commit the pull request no longer has.
+    await markCommentStale(inputs, head);
+    throw error;
+  }
 
   if (report.skipped) {
     const summary =
