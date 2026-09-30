@@ -4,6 +4,8 @@ Run `monochange change classify` once and publish the same evidence as action ou
 
 The report keeps the proposed bump for the current pull request separate from the release floor accumulated since the latest package release. Each package decision reports the default-branch impact next to the release-relative impact (`release_impact`), so a pull request that only changes an API the latest release never shipped reads as breaking against `main` while its proposed bump follows the release verdict. The comment marks those packages with a `main → release (release)` impact cell and an informational callout, and the `release-breaking` output is `true` only when a package is breaking against its latest release. It shows the finding, source location, analyzer confidence, completeness, comparison membership, and pending changeset action behind every package recommendation.
 
+The comment is specific to the pull request it is attached to. The action compares the pull request with the branch it targets (`origin/<base branch>`) and classifies the pull request head commit, so a stacked pull request does not inherit the changes of the branch below it. The comment opens with the classified head commit and base commit, so a reader can tell whether it matches the latest push. Findings that monochange saw only between the latest release and the base branch are listed under "Unreleased changes already on `<base>` (not part of this pull request)" and are not counted in the package table; they only explain the release floor.
+
 The job summary and pull request comment open with a package table that counts breaking, minor, and patch findings per package. Counts reuse the finding markers (🔴 breaking, 🟢 minor, ⚪ patch) and only list severities the package actually has, so a package without breaking findings never shows a zero count. The individual findings and any analysis warnings stay available in collapsed `<details>` sections, so the comment stays short until a reviewer expands the package that needs attention.
 
 ```yaml
@@ -11,6 +13,9 @@ name: change classification
 
 on:
   pull_request:
+    # `edited` re-classifies a pull request whose base branch changed, such as
+    # a stacked pull request retargeted after its parent merged.
+    types: [opened, synchronize, reopened, edited]
 
 permissions:
   contents: read
@@ -18,6 +23,7 @@ permissions:
 
 jobs:
   classify:
+    if: ${{ github.event.action != 'edited' || github.event.changes.base }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -46,8 +52,8 @@ Comments are advisory. Creating or updating the pull request comment needs the `
 | `repository`             | no       | `${{ github.repository }}` | Repository in `owner/repo` format                                               |
 | `pull-request`           | no       | event PR                   | Explicit pull request number                                                    |
 | `working-directory`      | no       | `.`                        | Directory containing `monochange.toml`                                          |
-| `base`                   | no       | auto                       | Default-branch ref                                                              |
-| `head`                   | no       | `HEAD`                     | Candidate ref                                                                   |
+| `base`                   | no       | PR base branch             | Base ref; defaults to `origin/<base branch>` of the pull request, else auto     |
+| `head`                   | no       | PR head commit             | Candidate ref; defaults to the pull request head commit, else `HEAD`            |
 | `release`                | no       | auto                       | Release ref override                                                            |
 | `packages`               | no       | affected packages          | Comma- or newline-separated package ids or names                                |
 | `detection-level`        | no       | `signature`                | `basic`, `signature`, or `semantic`                                             |
