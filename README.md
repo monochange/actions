@@ -19,6 +19,7 @@ Currently implemented:
 - `merge` - merge a monochange release pull request onto its base branch with fast-forward or cherry-pick
 - `fail-when` - intentionally fail a workflow step with a configurable reason
 - `setup-monochange` - resolve the monochange CLI
+- `change-classification` - propose changeset bumps from default-branch and latest-release evidence
 - `changeset-policy` - validate changeset policy for affected packages
 - `check` - run `monochange check`
 - `release-preview` - preview `monochange step prepare-release --dry-run`
@@ -32,7 +33,8 @@ Currently implemented:
 
 Public entrypoints:
 
-- `monochange/actions@v0.4.0` with `name: <variant>`
+- `monochange/actions@v0.9` with `name: <variant>`
+- `monochange/actions/change-classification@v0`
 - `monochange/actions/merge@v0.4.0`
 - `monochange/actions/check@v0.4.0`
 - `monochange/actions/release-preview@v0.4.0`
@@ -108,7 +110,7 @@ That is intentional.
 Use this when you want a single repository-level action entrypoint.
 
 ```yaml
-uses: monochange/actions@v0.4.0
+uses: monochange/actions@v0.9
 with:
   name: merge
 ```
@@ -140,7 +142,7 @@ For most consumers, the path-based form is the clearest choice.
 
 ```yaml
 - name: fast-forward release PR
-  uses: monochange/actions@v0.4.0
+  uses: monochange/actions@v0.9
   with:
     name: merge
     github-token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
@@ -658,7 +660,7 @@ When releasing:
 Examples:
 
 ```yaml
-uses: monochange/actions@v0.4.0
+uses: monochange/actions@v0.9
 ```
 
 ```yaml
@@ -711,13 +713,35 @@ Validate that all affected packages have appropriate changesets.
   with:
     separator: ','
 
-- uses: monochange/actions/changeset-policy@v0.4.0
+- uses: monochange/actions/changeset-policy@v0
   with:
     changed-paths: ${{ steps.changed.outputs.all_changed_files }}
     comment-on-failure: true
 ```
 
-Failure comments use the `comment` field from `monochange step affected-packages` and are deleted after the PR passes or is skipped.
+Failure comments use the `comment` field from `monochange step affected-packages`. When the failure message changes, the previous failure moves into a collapsed section, and once the PR passes or is skipped the comment is rewritten with a ✅ checkmark while the history is preserved.
+
+Set `from` to a base git ref (for example `origin/main`, with a `fetch-depth: 0` checkout) to compare against git history instead of an explicit path list and to enable the API classification bump alignment gate: changesets that understate the classified change type fail the policy, while higher bumps only warn. See the full [`changeset-policy` documentation](changeset-policy/README.md).
+
+---
+
+## `change-classification`
+
+Propose the changeset bump for each package by comparing the pull request with both the default branch and its latest release. The action publishes versioned JSON, writes a per-package severity summary with collapsible evidence to the job summary, and creates or updates one pull request comment.
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    fetch-depth: 0
+    ref: ${{ github.event.pull_request.head.sha }}
+
+- id: classify
+  uses: monochange/actions/change-classification@v0
+  with:
+    dependency-propagation: public
+```
+
+Use the `recommendation` output for the overall `major`, `minor`, `patch`, or `none` proposal. Inspect `review-required`, package completeness, confidence, and finding comparisons before writing a changeset. See the full [`change-classification` documentation](change-classification/README.md).
 
 ---
 
@@ -773,5 +797,5 @@ To add one later:
 
 That preserves both consumption styles:
 
-- `monochange/actions@v0.4.0` with `name: <variant>`
+- `monochange/actions@v0.9` with `name: <variant>`
 - `monochange/actions/<variant>@v0.4.0`

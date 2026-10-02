@@ -1,0 +1,119 @@
+name: release-publish
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to release. Defaults to HEAD.
+        required: false
+        type: string
+      dry_run:
+        description: Preview tags and the release without creating them.
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-publish-${{ github.ref }}
+  # Tagging is not idempotent-safe to interrupt: let a run finish so tags and
+  # the GitHub release stay consistent.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: tag and publish the release
+    if: github.repository_owner == 'monochange'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Full history and tags: the release commit is found by matching the
+          # HEAD commit against the committed release record.
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6.0.5
+        with:
+          version: 10.33.2
+          run_install: false
+
+      - name: setup node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: detect current release commit
+        id: release_record
+        run: |
+          set -euo pipefail
+
+          ref="${{ inputs.ref || 'HEAD' }}"
+
+          if is_release_commit="$(pnpm exec monochange step release-record --from "$ref" --format json --jq '.resolved_commit == .record_commit')"; then
+            echo "is_release_commit=${is_release_commit}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          subject="$(git log -1 --pretty=%s "$ref")"
+          if [[ "$subject" == chore\(release\):* ]]; then
+            echo "::error::Release-looking commit could not be read as a release record; failing instead of silently skipping release automation."
+            exit 1
+          fi
+
+          echo "is_release_commit=false" >> "$GITHUB_OUTPUT"
+
+      - name: tag the release
+        if: steps.release_record.outputs.is_release_commit == 'true'
+        env:
+          # The tag push has to authenticate as a token with write access so
+          # the floating aliases (v0.9, v0) move too.
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
+        run: |
+          set -euo pipefail
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+          auth_header="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w 0)"
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${auth_header}"
+          pnpm exec monochange step tag-release \
+            --from HEAD \
+            --push=${{ inputs.dry_run != true }} \
+            --format json | tee /tmp/tag-report.json
+
+      - name: create the provider release
+        if: steps.release_record.outputs.is_release_commit == 'true' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm exec monochange step publish-release --from-ref=HEAD --format json | tee /tmp/publish-release.json
+
+      - name: summarize the release
+        if: steps.release_record.outputs.is_release_commit == 'true'
+        run: |
+          set -euo pipefail
+          {
+            echo "## Release published"
+            echo
+            echo "| Target | Tag |"
+            echo "| --- | --- |"
+            jq -r '.tags | to_entries[] | "| `\(.key)` | `\(.value)` |"' /tmp/tag-report.json 2>/dev/null || true
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo
+              echo "_Dry run: no tags or releases were created._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

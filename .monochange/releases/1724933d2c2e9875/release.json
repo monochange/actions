@@ -1,0 +1,179 @@
+{
+  "schema_version": "0.6",
+  "kind": "monochange.releaseRecord",
+  "created_at": "2026-09-14T05:01:20Z",
+  "command": "release",
+  "version": "0.9.3",
+  "versions": {
+    "actions": "0.9.3"
+  },
+  "release_targets": [
+    {
+      "id": "actions",
+      "kind": "package",
+      "version": "0.9.3",
+      "version_format": "primary",
+      "tag": true,
+      "release": true,
+      "tag_name": "v0.9.3",
+      "members": [
+        "actions"
+      ],
+      "floating_tags": [
+        "v{{ major }}.{{ minor }}",
+        "v{{ major }}"
+      ]
+    }
+  ],
+  "released_packages": [
+    "actions"
+  ],
+  "changed_files": [
+    "changelog.md",
+    "package.json"
+  ],
+  "package_publications": [],
+  "updated_changelogs": [
+    "changelog.md"
+  ],
+  "deleted_changesets": [
+    ".changeset/monochange-release-flow.md"
+  ],
+  "changesets": [
+    {
+      "path": ".changeset/monochange-release-flow.md",
+      "summary": "Release the action bundle with monochange",
+      "details": "The repository now manages its own releases with monochange instead of hand-cut tags and releases. Every push to `main` refreshes a release pull request that bumps the tag-versioned package, and merging it creates the version tag, moves the `v0.9` and `v0` floating aliases, and publishes the GitHub release with generated notes.\n\nConsumers keep pinning the same moving aliases:\n\n```yaml\n- uses: monochange/actions@v0.9\n```\n\nA new `changeset-policy` check requires a `.changeset/*.md` entry when a pull request changes action behavior (TypeScript under `src/` or any `action.yml`). Documentation, tests, and generated output are exempt, and the `release` and `no-changeset-required` labels skip the check.\n\n**Before:** releases were cut by hand, so changes under `src/` shipped with no required release note.\n\n**After:**\n\n```bash\n# author a changeset with the CLI instead of writing frontmatter by hand\npnpm exec monochange run change --package actions --bump patch --reason \"describe the fix\"\n```\n\nThe release pull request lists the planned version and consumes the pending changesets when it merges.",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "minor",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "feat"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "89311dcf5a104209d63d2fec800c79e4e7fbd1bc",
+            "short_sha": "89311dc",
+            "url": "https://github.com/monochange/actions/commit/89311dcf5a104209d63d2fec800c79e4e7fbd1bc",
+            "authored_at": "2026-09-14T04:54:32+01:00",
+            "committed_at": "2026-09-14T04:54:32+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#63",
+            "title": "feat: manage releases with monochange",
+            "url": "https://github.com/monochange/actions/pull/63",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "89311dcf5a104209d63d2fec800c79e4e7fbd1bc",
+            "short_sha": "89311dc",
+            "url": "https://github.com/monochange/actions/commit/89311dcf5a104209d63d2fec800c79e4e7fbd1bc",
+            "authored_at": "2026-09-14T04:54:32+01:00",
+            "committed_at": "2026-09-14T04:54:32+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#63",
+            "title": "feat: manage releases with monochange",
+            "url": "https://github.com/monochange/actions/pull/63",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    }
+  ],
+  "changelogs": [
+    {
+      "owner_id": "actions",
+      "owner_kind": "package",
+      "output": "default",
+      "stream": "default",
+      "path": "changelog.md",
+      "format": "monochange",
+      "notes": {
+        "title": "[0.9.3](https://github.com/monochange/actions/releases/tag/v0.9.3) (2026-09-14)",
+        "summary": [],
+        "sections": [
+          {
+            "title": "🚀 Feature",
+            "collapsed": false,
+            "entries": [
+              "#### Release the action bundle with monochange\n\nThe repository now manages its own releases with monochange instead of hand-cut tags and releases. Every push to `main` refreshes a release pull request that bumps the tag-versioned package, and merging it creates the version tag, moves the `v0.9` and `v0` floating aliases, and publishes the GitHub release with generated notes.\n\nConsumers keep pinning the same moving aliases:\n\n```yaml\n- uses: monochange/actions@v0.9\n```\n\nA new `changeset-policy` check requires a `.changeset/*.md` entry when a pull request changes action behavior (TypeScript under `src/` or any `action.yml`). Documentation, tests, and generated output are exempt, and the `release` and `no-changeset-required` labels skip the check.\n\n**Before:** releases were cut by hand, so changes under `src/` shipped with no required release note.\n\n**After:**\n\n```bash\n# author a changeset with the CLI instead of writing frontmatter by hand\npnpm exec monochange run change --package actions --bump patch --reason \"describe the fix\"\n```\n\nThe release pull request lists the planned version and consumes the pending changesets when it merges.\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #63](https://github.com/monochange/actions/pull/63)"
+            ]
+          }
+        ]
+      },
+      "rendered": "## [0.9.3](https://github.com/monochange/actions/releases/tag/v0.9.3) (2026-09-14)\n\n### 🚀 Feature\n\n#### Release the action bundle with monochange\n\nThe repository now manages its own releases with monochange instead of hand-cut tags and releases. Every push to `main` refreshes a release pull request that bumps the tag-versioned package, and merging it creates the version tag, moves the `v0.9` and `v0` floating aliases, and publishes the GitHub release with generated notes.\n\nConsumers keep pinning the same moving aliases:\n\n```yaml\n- uses: monochange/actions@v0.9\n```\n\nA new `changeset-policy` check requires a `.changeset/*.md` entry when a pull request changes action behavior (TypeScript under `src/` or any `action.yml`). Documentation, tests, and generated output are exempt, and the `release` and `no-changeset-required` labels skip the check.\n\n**Before:** releases were cut by hand, so changes under `src/` shipped with no required release note.\n\n**After:**\n\n```bash\n# author a changeset with the CLI instead of writing frontmatter by hand\npnpm exec monochange run change --package actions --bump patch --reason \"describe the fix\"\n```\n\nThe release pull request lists the planned version and consumes the pending changesets when it merges.\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #63](https://github.com/monochange/actions/pull/63)"
+    }
+  ],
+  "provider": {
+    "kind": "github",
+    "owner": "monochange",
+    "repo": "actions",
+    "host": null
+  }
+}

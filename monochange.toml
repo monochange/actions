@@ -1,0 +1,173 @@
+#:schema https://monochange.github.io/monochange/schemas/monochange.schema.json
+
+# =============================================================================
+# monochange.toml — repository configuration for monochange
+# =============================================================================
+#
+# This repository ships reusable GitHub Actions, not registry packages. Every
+# release is a git tag plus a GitHub release, so the package uses the
+# `github_actions` type: it reads its version baseline from release tags,
+# moves the `v0.9` and `v0` floating aliases, and never publishes to a
+# registry.
+#
+# Run `monochange step validate` to check this file against the workspace.
+
+# =============================================================================
+# [changelog.*] — release note sections used by the GitHub release body
+# =============================================================================
+
+[changelog.sections]
+breaking = { heading = "💥 Breaking Change", description = "Breaking changes that require consumer updates or migration", priority = 10 }
+feat = { heading = "🚀 Feature", description = "New action variants, inputs, or outputs", priority = 20 }
+change = { heading = "📝 Changed", description = "Changes to existing action behavior", priority = 25 }
+fix = { heading = "🐛 Fixed", description = "Bug fixes and error corrections", priority = 30 }
+docs = { heading = "📖 Documentation", description = "Documentation updates and improvements", priority = 40 }
+refactor = { heading = "🔨 Refactor", description = "Internal refactors with no behavior change", priority = 40 }
+other = { heading = "📦 Other", description = "Miscellaneous changes not categorized elsewhere", priority = 50 }
+
+[changelog.section_thresholds]
+collapse = 40
+ignored = 45
+
+[changelog.types]
+breaking = { bump = "major", section = "breaking", description = "Breaking changes that require workflow updates" }
+major = { bump = "major", section = "breaking", description = "Major version bump including breaking changes" }
+feat = { bump = "minor", section = "feat", description = "New action variants, inputs, or outputs" }
+minor = { bump = "minor", section = "feat", description = "Minor version bump including new features" }
+change = { bump = "minor", section = "change", description = "Changes to existing action behavior" }
+fix = { bump = "patch", section = "fix", description = "Bug fixes and error corrections" }
+patch = { bump = "patch", section = "fix", description = "Patch version bump for bug fixes" }
+refactor = { bump = "patch", section = "refactor", description = "Internal refactors with no behavior change" }
+docs = { bump = "none", section = "docs", description = "Documentation updates and clarifications only" }
+none = { bump = "none", section = "other", description = "Changes with no version impact such as tooling or formatting" }
+
+# =============================================================================
+# [package.actions] — the published action bundle
+# =============================================================================
+
+[package.actions]
+path = "."
+type = "github_actions"
+# The action is consumed as `monochange/actions@v0.9.2`, so tags stay
+# unprefixed (`v0.9.2`) instead of the namespaced `actions/v0.9.2`.
+version_format = "primary"
+# Keep the moving aliases consumers pin: `v0.9` and `v0`.
+floating_tags = ["v{{ major }}.{{ minor }}", "v{{ major }}"]
+# Release notes land in the GitHub release body and this changelog file.
+changelog = "changelog.md"
+# The committed `dist/` bundle and the generated docs mirror `src/`. The
+# source edit is what requires a changeset, so the generated copies stay out
+# of the policy to avoid double-reporting the same change.
+ignored_paths = ["coverage/**", "docs/**"]
+
+[source]
+provider = "github"
+owner = "monochange"
+repo = "actions"
+
+[source.releases]
+enabled = true
+source = "monochange"
+
+[source.pull_requests]
+enabled = true
+branch_prefix = "monochange/release"
+base = "main"
+title = "chore(release): prepare release"
+labels = ["release", "automated"]
+
+# =============================================================================
+# [changesets.affected] — require a changeset for action behavior changes
+# =============================================================================
+#
+# The `changeset-policy` workflow runs `monochange step affected-packages
+# --verify` on every pull request. TypeScript under `src/`, the variant
+# `action.yml` files, and the root `action.yml` all belong to the root
+# package, so a change there needs a matching `.changeset/*.md` entry.
+#
+# Changesets are deliberately *not* required for:
+#   - documentation and generated output (`docs/`, `coverage/`, `dist/`, and
+#     markdown), which follow `src/` rather than defining action behavior
+#   - test files, which prove behavior instead of changing it
+#   - the release plumbing in `.github/` and `monochange.toml`, which the
+#     `release` and `no-changeset-required` labels or the maintainer cover
+#
+# The package-level `ignored_paths` in [package.actions] and the policy-level
+# list below are both applied, so keep the shared patterns in one place.
+
+[changesets.affected]
+enabled = true
+required = true
+skip_labels = ["release", "no-changeset-required"]
+comment_on_failure = true
+ignored_paths = [
+  "**/*.md",
+  "**/*.snap",
+  "**/tests/**",
+  "**/__tests__/**",
+  "**/*.test.ts",
+  "coverage/**",
+  "docs/**",
+  "dist/**",
+  ".changeset/**",
+  ".github/**",
+  "monochange.toml",
+  "pnpm-lock.yaml",
+  "package.json",
+  "codecov.yml",
+  "SECURITY.md",
+]
+
+# =============================================================================
+# [cli.*] — repository workflows invoked with `monochange run <name>`
+# =============================================================================
+#
+# `release` is the command the release workflow runs on every push to `main`.
+# It plans the release from pending changesets, commits the version bump and
+# release record with `--commit`, then opens or updates the release pull
+# request with `--create-pr`.
+
+[cli.release]
+help_text = "Prepare a pull request release from discovered change files. It should only be run in a ci workflow."
+inputs = [
+  { name = "format", type = "choice", choices = [
+    "text",
+    "json",
+    "json-min",
+    "markdown",
+  ], default = "text" },
+  { name = "no_verify", type = "boolean", default = true },
+  { name = "commit", help_text = "Whether to commit the changes", type = "boolean", default = false },
+  { name = "create_pr", help_text = "Whether to create the PR after the commit", type = "boolean", default = false },
+  { name = "write_empty_release_record", help_text = "Whether to write release records when no packages are released", type = "boolean", default = false },
+]
+steps = [
+  { type = "PrepareRelease", name = "plan release", allow_empty_changesets = true, inputs = { format = "{{ inputs.format }}", write_empty_release_record = "{{ inputs.write_empty_release_record }}" } },
+  { type = "Command", name = "verify dist is current", when = "{{ number_of_changesets > 0 }}", command = "pnpm build" },
+  { type = "CommitRelease", name = "create release commit", when = "{{ number_of_changesets > 0 && inputs.commit }}", inputs = { no_verify = "{{ inputs.no_verify }}", stage_all = true } },
+  { type = "OpenReleaseRequest", name = "create the pr", when = "{{ number_of_changesets > 0 && inputs.commit && inputs.create_pr }}", inputs = { no_verify = "{{ inputs.no_verify }}", stage_all = true } },
+]
+
+[cli.change]
+help_text = "Create a change file for one or more packages"
+inputs = [
+  { name = "package", type = "string_list", required = true },
+  { name = "bump", type = "choice", choices = [
+    "none",
+    "patch",
+    "minor",
+    "major",
+  ], default = "patch" },
+  { name = "reason", type = "string", required = true },
+  { name = "details", type = "string" },
+  { name = "output", type = "path" },
+]
+steps = [
+  { name = "create change file", type = "CreateChangeFile", inputs = [
+    "package",
+    "bump",
+    "reason",
+    "details",
+    "output",
+  ] },
+]

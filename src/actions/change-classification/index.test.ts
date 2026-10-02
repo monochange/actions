@@ -1,0 +1,1112 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import * as core from '@actions/core';
+
+import {
+  readChangeClassificationReport,
+  renderChangeClassificationMarkdown,
+  runChangeClassification,
+} from './index';
+
+const githubMock = vi.hoisted(() => ({
+  context: {
+    payload: {} as Record<string, unknown>,
+    repo: { owner: 'mono', repo: 'change' },
+  },
+  getOctokit: vi.fn(),
+}));
+
+const summaryMock = vi.hoisted(() => ({
+  addRaw: vi.fn(),
+  write: vi.fn(),
+}));
+
+vi.mock('@actions/core', () => ({
+  getInput: vi.fn(),
+  info: vi.fn(),
+  setOutput: vi.fn(),
+  summary: summaryMock,
+  warning: vi.fn(),
+}));
+vi.mock('@actions/github', () => githubMock);
+vi.mock('../../shared/exec', () => ({ exec: vi.fn(), execRequired: vi.fn() }));
+vi.mock('../../shared/json', () => ({ parseMixedOutput: vi.fn() }));
+vi.mock('../../shared/monochange-cli', () => ({ resolveMonochange: vi.fn() }));
+
+import { exec, execRequired } from '../../shared/exec';
+import { parseMixedOutput } from '../../shared/json';
+import { resolveMonochange } from '../../shared/monochange-cli';
+
+const mockCore = vi.mocked(core);
+const mockExec = vi.mocked(execRequired);
+const mockGit = vi.mocked(exec);
+const mockParse = vi.mocked(parseMixedOutput);
+const mockResolve = vi.mocked(resolveMonochange);
+
+function rawReport(options?: {
+  findings?: boolean;
+  review_required?: boolean;
+}): Record<string, unknown> {
+  const findings = options?.findings ?? true;
+
+  return {
+    candidate: 'merge-tree:abc123',
+    default_branch: 'origin/main',
+    packages: [
+      {
+        action: 'update',
+        decision: {
+          compatibility_impact: findings ? 'breaking' : 'compatible',
+          completeness: options?.review_required ? 'partial' : 'complete',
+          confidence: options?.review_required ? 'medium' : 'high',
+          release_floor: findings ? 'major' : 'none',
+          review_required: options?.review_required ?? false,
+        },
+        findings: findings
+          ? [
+              {
+                bump: 'major',
+                comparisons: ['pull_request', 'release'],
+                confidence: 'medium',
+                id: 'cargo/public-api/removed/function/core::old',
+                impact: 'breaking',
+                rule_id: 'cargo/public-api/public_api/removed/function/core::old',
+                location: 'src/lib.rs',
+                summary: 'removed public function `core::old`',
+              },
+            ]
+          : [],
+        package_id: 'core',
+        recommendation: findings ? 'major' : 'none',
+        summary: findings ? 'one breaking finding proposes a major changeset' : 'no change',
+      },
+    ],
+    recommendation: findings ? 'major' : 'none',
+    schema_version: '0.1',
+    warnings: [],
+  };
+}
+
+function mockOctokit(comments: { body?: string | null; id: number }[] = []) {
+  const octokit = {
+    rest: {
+      issues: {
+        createComment: vi.fn().mockResolvedValue({}),
+        deleteComment: vi.fn().mockResolvedValue({}),
+        listComments: vi.fn().mockResolvedValue({ data: comments }),
+        updateComment: vi.fn().mockResolvedValue({}),
+      },
+    },
+  };
+
+  githubMock.getOctokit.mockReturnValue(octokit);
+
+  return octokit;
+}
+
+function setInputs(values: Record<string, string>): void {
+  mockCore.getInput.mockImplementation((name) => values[name] ?? '');
+}
+
+describe('change-classification report', () => {
+  it('reads and renders every finding impact with warnings and escaped table cells', () => {
+    const raw = rawReport({ review_required: true });
+    const item = (raw.packages as Record<string, unknown>[])[0]!;
+    item.package_id = 'core|runtime\npackage';
+    item.findings = [
+      ...(item.findings as Record<string, unknown>[]),
+      {
+        bump: 'minor',
+        comparisons: [],
+        confidence: 'medium',
+        id: 'added',
+        rule_id: 'test/added',
+        impact: 'additive',
+        summary: 'added API',
+      },
+      {
+        bump: 'patch',
+        comparisons: ['pullRequest'],
+        confidence: 'high',
+        id: 'compatible',
+        rule_id: 'test/compatible',
+        impact: 'compatible',
+        summary: 'compatible change',
+      },
+      {
+        bump: 'patch',
+        comparisons: ['workingTree'],
+        confidence: 'low',
+        id: 'unknown',
+        rule_id: 'test/unknown',
+        impact: 'unknown',
+        summary: 'unmodeled change',
+      },
+    ];
+    raw.warnings = ['check generated bindings', 42];
+
+    const report = readChangeClassificationReport(raw);
+    const markdown = renderChangeClassificationMarkdown(report);
+
+    expect(report.warnings).toEqual(['check generated bindings']);
+    expect(markdown).toContain(String.raw`core\|runtime package`);
+    expect(markdown).toContain(
+      '| `core\\|runtime package` | 🔴 1 breaking, 🟢 1 minor, ⚪ 2 patch |',
+    );
+    expect(markdown).toContain(
+      '<summary><code>core|runtime package</code> — 🔴 1 breaking, 🟢 1 minor, ⚪ 2 patch</summary>',
+    );
+    expect(markdown).toContain('🔴 **breaking / major**');
+    expect(markdown).toContain('🟢 **additive / minor**');
+    expect(markdown).toContain('⚪ **compatible / patch**');
+    expect(markdown).toContain('🟡 **unknown / patch**');
+    expect(markdown).toContain('Analysis warnings');
+    expect(markdown).toContain('At least one package has partial or unsupported analysis');
+  });
+
+  it('collapses package evidence into one details block per package with findings', () => {
+    const raw = rawReport();
+    const packages = raw.packages as Record<string, unknown>[];
+    packages.push({
+      action: 'keep',
+      decision: {
+        compatibility_impact: 'compatible',
+        completeness: 'complete',
+        confidence: 'high',
+        release_floor: 'none',
+        review_required: false,
+      },
+      findings: [],
+      package_id: 'unchanged',
+      recommendation: 'none',
+      summary: 'no package change requires a changeset',
+    });
+
+    const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
+
+    expect(markdown.match(/<details>/gu)).toHaveLength(1);
+    expect(markdown.match(/<\/details>/gu)).toHaveLength(1);
+    expect(markdown).toContain('<summary><code>core</code> — 🔴 1 breaking</summary>');
+    expect(markdown).toContain(
+      '| `unchanged` | — | compatible | **none** | none | high | complete | keep |',
+    );
+    expect(markdown).not.toContain('<summary><code>unchanged</code>');
+  });
+
+  it('counts each finding once by proposed bump and skips informational findings', () => {
+    const raw = rawReport();
+    const item = (raw.packages as Record<string, unknown>[])[0]!;
+    item.findings = [
+      {
+        bump: 'major',
+        comparisons: [],
+        confidence: 'high',
+        id: 'major-compatible',
+        rule_id: 'test/major-compatible',
+        impact: 'compatible',
+        summary: 'compatible change with a major bump',
+      },
+      {
+        bump: 'none',
+        comparisons: [],
+        confidence: 'low',
+        id: 'information-only',
+        rule_id: 'test/information-only',
+        impact: 'compatible',
+        summary: 'no release required',
+      },
+    ];
+
+    const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
+
+    expect(markdown).toContain('<summary><code>core</code> — 🔴 1 breaking</summary>');
+    expect(markdown).toContain('information-only');
+  });
+
+  it('renders informational-only packages without severity counts', () => {
+    const raw = rawReport();
+    const item = (raw.packages as Record<string, unknown>[])[0]!;
+    item.findings = [
+      {
+        bump: 'none',
+        comparisons: [],
+        confidence: 'low',
+        id: 'information-only',
+        rule_id: 'test/information-only',
+        impact: 'compatible',
+        summary: 'no release required',
+      },
+    ];
+
+    const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
+
+    expect(markdown).toContain(
+      '<summary><code>core</code> — no release-severity findings</summary>',
+    );
+    expect(markdown).toContain('| `core` | — | breaking |');
+  });
+
+  it('separates a break against main from the release verdict', () => {
+    const raw = rawReport();
+    const packages = raw.packages as Record<string, unknown>[];
+    (packages[0]!.decision as Record<string, unknown>).release_impact = 'additive';
+    packages.push({
+      action: 'update',
+      decision: {
+        compatibility_impact: 'breaking',
+        completeness: 'complete',
+        confidence: 'high',
+        release_floor: 'major',
+        release_impact: 'breaking',
+        review_required: false,
+      },
+      findings: [],
+      package_id: 'released-break',
+      recommendation: 'major',
+      summary: 'breaking against the release',
+    });
+    packages.push({
+      action: 'create',
+      decision: {
+        compatibility_impact: 'additive',
+        completeness: 'complete',
+        confidence: 'high',
+        release_floor: 'minor',
+        review_required: false,
+      },
+      findings: [],
+      package_id: 'no-release-impact',
+      recommendation: 'minor',
+      summary: 'additive change',
+    });
+
+    const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
+
+    expect(markdown).toContain('| `core` | 🔴 1 breaking | breaking → additive (release) |');
+    expect(markdown).toContain('| `released-break` | — | breaking | **major** |');
+    expect(markdown).toContain('| `no-release-impact` | — | additive | **minor** |');
+    expect(markdown).toContain(
+      '> ℹ️ 1 package(s) break only against `origin/main`: their latest release never shipped the changed API, so the proposed bump stays at the release-relative verdict (`core`).',
+    );
+  });
+
+  it('names the classified commits and lists inherited findings apart from the pull request', () => {
+    const raw = rawReport();
+    raw.base_commit = '0123456789abcdef0123456789abcdef01234567';
+    raw.head_commit = 'fedcba9876543210fedcba9876543210fedcba98';
+    raw.default_branch = 'origin/feature/parent';
+    const packages = raw.packages as Record<string, unknown>[];
+    (packages[0]!.findings as Record<string, unknown>[]).push({
+      bump: 'major',
+      comparisons: ['release', 'release_to_default'],
+      confidence: 'medium',
+      id: 'inherited-break',
+      impact: 'breaking',
+      location: 'src/migration.rs',
+      rule_id: 'test/inherited',
+      summary: 'removed an API on the base branch',
+    });
+    packages.push({
+      action: 'no_changeset',
+      decision: {
+        compatibility_impact: 'compatible',
+        completeness: 'complete',
+        confidence: 'high',
+        release_floor: 'major',
+        review_required: false,
+      },
+      findings: [
+        {
+          bump: 'major',
+          comparisons: ['release'],
+          confidence: 'medium',
+          id: 'only-inherited',
+          impact: 'breaking',
+          rule_id: 'test/only-inherited',
+          summary: 'removed on the base branch',
+        },
+      ],
+      package_id: 'untouched',
+      recommendation: 'none',
+      summary: 'no package change requires a changeset',
+    });
+
+    const report = readChangeClassificationReport(raw);
+    const markdown = renderChangeClassificationMarkdown(report);
+
+    expect(report.base_commit).toBe(raw.base_commit);
+    expect(report.head_commit).toBe(raw.head_commit);
+    expect(markdown).toContain(
+      'Head commit `fedcba987654` was compared with base branch `origin/feature/parent` at `0123456789ab`.',
+    );
+    expect(markdown).toContain('| `core` | 🔴 1 breaking | breaking |');
+    expect(markdown).toContain('| `untouched` | — | compatible | **none** | major |');
+    expect(markdown).toContain('<summary><code>core</code> — 🔴 1 breaking</summary>');
+    expect(markdown).toContain(
+      '<summary><code>untouched</code> — no findings in this pull request</summary>',
+    );
+    const inheritedHeading =
+      '**Unreleased changes already on `origin/feature/parent` (not part of this pull request):**';
+    expect(markdown.split(inheritedHeading)).toHaveLength(3);
+    expect(markdown.indexOf('core::old')).toBeLessThan(markdown.indexOf(inheritedHeading));
+    expect(markdown.indexOf(inheritedHeading)).toBeLessThan(markdown.indexOf('inherited-break'));
+  });
+
+  it('treats camelCase pull request comparisons as pull request evidence', () => {
+    const raw = rawReport();
+    const item = (raw.packages as Record<string, unknown>[])[0]!;
+    item.findings = [
+      {
+        bump: 'minor',
+        comparisons: ['sourceDelta'],
+        confidence: 'high',
+        id: 'branch',
+        impact: 'additive',
+        rule_id: 'test/branch',
+        summary: 'added on the branch',
+      },
+      {
+        bump: 'patch',
+        comparisons: ['working_tree'],
+        confidence: 'low',
+        id: 'local',
+        impact: 'unmodeled',
+        rule_id: 'test/local',
+        summary: 'local edit',
+      },
+    ];
+
+    const markdown = renderChangeClassificationMarkdown(readChangeClassificationReport(raw));
+
+    expect(markdown).toContain('<summary><code>core</code> — 🟢 1 minor, ⚪ 1 patch</summary>');
+    expect(markdown).not.toContain('not part of this pull request');
+    expect(markdown).toContain(
+      'Candidate `merge-tree:abc123` was compared with base branch `origin/main`.',
+    );
+  });
+
+  it('renders complete empty evidence without warnings', () => {
+    const raw = rawReport({ findings: false });
+    raw.warnings = null;
+    const report = readChangeClassificationReport(raw);
+    const markdown = renderChangeClassificationMarkdown(report);
+
+    expect(markdown).toContain('Every reported package has complete analysis');
+    expect(markdown).toContain('No modeled compatibility findings were reported.');
+    expect(markdown).not.toContain('Analysis warnings');
+  });
+
+  it('truncates oversized reports before the GitHub comment limit', () => {
+    const report = readChangeClassificationReport(rawReport());
+    report.warnings = ['x'.repeat(61_000)];
+
+    const markdown = renderChangeClassificationMarkdown(report);
+
+    expect(markdown.length).toBeLessThan(61_000);
+    expect(markdown).toContain('Report truncated');
+    expect(markdown.match(/<details>/gu)).toHaveLength(2);
+    expect(markdown.match(/<\/details>/gu)).toHaveLength(2);
+  });
+
+  it('accepts schema version 1 and newer reports from updated monochange versions', () => {
+    for (const schema_version of ['0.1', '0.2', '1.0']) {
+      const report = readChangeClassificationReport({ ...rawReport(), schema_version });
+
+      expect(report.schema_version).toBe(schema_version);
+    }
+  });
+
+  it.each([
+    undefined,
+    null,
+    {},
+    { packages: [], schema_version: '1' },
+    { packages: [], schema_version: 0.1 },
+    { packages: [], schema_version: '1.0.0' },
+    { packages: null, schema_version: 1 },
+  ])('rejects unsupported top-level report %#', (value) => {
+    expect(() => readChangeClassificationReport(value)).toThrow(
+      'supported change-classification report',
+    );
+  });
+
+  it.each([
+    { ...rawReport(), candidate: 1 },
+    { ...rawReport(), recommendation: 'feature' },
+    { ...rawReport(), packages: [null] },
+    { ...rawReport(), packages: [{ decision: {}, findings: null }] },
+    { ...rawReport(), packages: [{ decision: null, findings: [] }] },
+    {
+      ...rawReport(),
+      packages: [{ action: 'keep', decision: {}, findings: [], package_id: 'core' }],
+    },
+    {
+      ...rawReport(),
+      packages: [
+        {
+          action: 'keep',
+          decision: {
+            compatibility_impact: 'compatible',
+            completeness: 'complete',
+            confidence: 'high',
+            release_floor: 'feature',
+          },
+          findings: [],
+          package_id: 'core',
+          recommendation: 'none',
+          summary: 'none',
+        },
+      ],
+    },
+    {
+      ...rawReport(),
+      packages: [
+        {
+          action: 'keep',
+          decision: {
+            compatibility_impact: 'compatible',
+            completeness: 'complete',
+            confidence: 'high',
+            release_floor: 'none',
+          },
+          findings: [null],
+          package_id: 'core',
+          recommendation: 'none',
+          summary: 'none',
+        },
+      ],
+    },
+    {
+      ...rawReport(),
+      packages: [
+        {
+          action: 'keep',
+          decision: {
+            compatibility_impact: 'compatible',
+            completeness: 'complete',
+            confidence: 'high',
+            release_floor: 'none',
+          },
+          findings: [
+            {
+              bump: 'feature',
+              comparisons: [],
+              confidence: 'low',
+              id: 'bad',
+              rule_id: 'test/bad',
+              impact: 'unknown',
+              summary: 'bad',
+            },
+          ],
+          package_id: 'core',
+          recommendation: 'none',
+          summary: 'none',
+        },
+      ],
+    },
+  ])('rejects malformed report fields %#', (value) => {
+    expect(() => readChangeClassificationReport(value)).toThrow('monochange classification');
+  });
+});
+
+describe('runChangeClassification', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    githubMock.context.payload = {};
+    summaryMock.addRaw.mockReturnValue(summaryMock);
+    summaryMock.write.mockResolvedValue(summaryMock);
+    setInputs({ 'post-comment': 'false' });
+    mockResolve.mockResolvedValue({
+      command: 'monochange',
+      source: 'existing-monochange',
+      version: '1.0.0',
+    });
+    mockExec.mockResolvedValue('{"schema_version":1}');
+    mockGit.mockResolvedValue({ exitCode: 0, stderr: '', stdout: '' });
+    mockParse.mockReturnValue(rawReport());
+    mockOctokit();
+  });
+
+  it('runs the classifier with agent-oriented defaults and writes outputs and summary', async () => {
+    await runChangeClassification();
+
+    expect(mockResolve).toHaveBeenCalledWith('true');
+    expect(mockExec).toHaveBeenCalledWith(
+      'monochange',
+      [
+        'change',
+        'classify',
+        '--format',
+        'json',
+        '--head',
+        'HEAD',
+        '--detection-level',
+        'signature',
+        '--dependency-propagation',
+        'public',
+      ],
+      { cwd: '.' },
+    );
+    expect(mockCore.setOutput).toHaveBeenCalledWith('recommendation', 'major');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('review-required', 'false');
+    expect(mockCore.setOutput).toHaveBeenCalledWith(
+      'summary',
+      'monochange proposes a major changeset across 1 package(s).',
+    );
+    expect(summaryMock.addRaw).toHaveBeenCalled();
+    expect(summaryMock.write).toHaveBeenCalled();
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
+  });
+
+  it('compares with the pull request base and head from the event payload', async () => {
+    githubMock.context.payload = {
+      pull_request: {
+        base: { ref: 'feature/parent' },
+        head: { sha: 'abc1234' },
+        labels: [],
+        number: 42,
+      },
+    };
+
+    await runChangeClassification();
+
+    expect(mockGit).toHaveBeenCalledWith(
+      'git',
+      ['rev-parse', '--verify', '--quiet', 'origin/feature/parent^{commit}'],
+      { cwd: '.' },
+    );
+    expect(mockGit).toHaveBeenCalledWith(
+      'git',
+      ['rev-parse', '--verify', '--quiet', 'abc1234^{commit}'],
+      { cwd: '.' },
+    );
+    const args = mockExec.mock.calls[0]![1];
+    expect(args.slice(args.indexOf('--head'), args.indexOf('--head') + 2)).toEqual([
+      '--head',
+      'abc1234',
+    ]);
+    expect(args.slice(args.indexOf('--base'), args.indexOf('--base') + 2)).toEqual([
+      '--base',
+      'origin/feature/parent',
+    ]);
+  });
+
+  it('falls back with a warning when the checkout lacks the event refs', async () => {
+    githubMock.context.payload = {
+      pull_request: { base: { ref: 'main' }, head: { sha: 'abc1234' }, number: 42 },
+    };
+    mockGit.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '' });
+
+    await runChangeClassification();
+
+    const args = mockExec.mock.calls[0]![1];
+    expect(args).not.toContain('--base');
+    expect(args.slice(args.indexOf('--head'), args.indexOf('--head') + 2)).toEqual([
+      '--head',
+      'HEAD',
+    ]);
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      expect.stringContaining('Pull request base `origin/main` is not in the checkout'),
+    );
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      expect.stringContaining('Pull request head `abc1234` is not in the checkout'),
+    );
+  });
+
+  it('ignores malformed event refs and prefers explicit inputs', async () => {
+    githubMock.context.payload = {
+      pull_request: { base: { ref: '' }, head: 'not-an-object', number: 42 },
+    };
+
+    await runChangeClassification();
+
+    expect(mockGit).not.toHaveBeenCalled();
+    expect(mockExec.mock.calls[0]![1]).not.toContain('--base');
+
+    githubMock.context.payload = {
+      pull_request: { base: { ref: 'main' }, head: { sha: 'abc1234' }, number: 42 },
+    };
+    setInputs({ base: 'origin/trunk', head: 'feature', 'post-comment': 'false' });
+    mockGit.mockClear();
+
+    await runChangeClassification();
+
+    expect(mockGit).not.toHaveBeenCalled();
+  });
+
+  it('reports release-relative breaking and main-only breaks in outputs', async () => {
+    const raw = rawReport();
+    const item = (raw.packages as Record<string, unknown>[])[0]!;
+    (item.decision as Record<string, unknown>).release_impact = 'additive';
+    mockParse.mockReturnValue(raw as never);
+
+    await runChangeClassification();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('release-breaking', 'false');
+    expect(mockCore.setOutput).toHaveBeenCalledWith(
+      'summary',
+      'monochange proposes a major changeset across 1 package(s); 1 package(s) break only against origin/main.',
+    );
+
+    mockCore.setOutput.mockClear();
+    (item.decision as Record<string, unknown>).release_impact = 'breaking';
+
+    await runChangeClassification();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('release-breaking', 'true');
+    expect(mockCore.setOutput).toHaveBeenCalledWith(
+      'summary',
+      'monochange proposes a major changeset across 1 package(s); breaking against the latest release.',
+    );
+  });
+
+  it('reads no labels when the event has no pull request or an empty label list', async () => {
+    await runChangeClassification();
+    expect(mockExec.mock.calls[0]![1]).not.toContain('--label');
+
+    githubMock.context.payload = { pull_request: { labels: [], number: 42 } };
+
+    await runChangeClassification();
+
+    const allArgs = mockExec.mock.calls.map((call) => call[1]);
+    expect(allArgs.every((args) => !args.includes('--label'))).toBe(true);
+  });
+
+  it('forwards pull request labels from the event payload to the classifier', async () => {
+    githubMock.context.payload = {
+      pull_request: {
+        labels: [{ name: 'release' }, { name: 'automated' }, { nope: true }],
+        number: 42,
+      },
+    };
+
+    await runChangeClassification();
+
+    const args = mockExec.mock.calls[0]![1];
+    expect(args).toContain('--label');
+    expect(args.filter((arg) => arg === 'release' || arg === 'automated')).toEqual([
+      'release',
+      'automated',
+    ]);
+  });
+
+  it('prefers the labels input over the event payload', async () => {
+    githubMock.context.payload = {
+      pull_request: { labels: [{ name: 'from-event' }], number: 42 },
+    };
+    setInputs({ labels: 'from-input' });
+
+    await runChangeClassification();
+
+    const args = mockExec.mock.calls[0]![1];
+    expect(args).toContain('--label');
+    expect(args.filter((arg) => arg === 'from-input' || arg === 'from-event')).toEqual([
+      'from-input',
+    ]);
+  });
+
+  it('reports a skipped run, deletes the stale comment, and posts no new comment', async () => {
+    setInputs({
+      'github-token': 'token',
+      'post-comment': 'true',
+      'pull-request': '42',
+    });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+      summary:
+        'change classification skipped because the pull request has an allowed label: release',
+    });
+    const octokit = mockOctokit([
+      { body: '<!-- monochange:change-classification -->', id: 7 },
+      { body: '<!-- monochange:change-classification -->', id: 9 },
+    ]);
+
+    await runChangeClassification();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('review-required', 'false');
+    expect(mockCore.setOutput).toHaveBeenCalledWith(
+      'summary',
+      'change classification skipped because the pull request has an allowed label: release',
+    );
+    expect(summaryMock.addRaw).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.deleteComment).toHaveBeenCalledTimes(2);
+    expect(octokit.rest.issues.deleteComment).toHaveBeenCalledWith(
+      expect.objectContaining({ comment_id: 7, owner: 'mono', repo: 'change' }),
+    );
+  });
+
+  it('keeps the existing comment when a skipped run has nothing to delete', async () => {
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', 'pull-request': '42' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([]);
+
+    await runChangeClassification();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+  });
+
+  it('warns instead of throwing when deleting the stale comment fails', async () => {
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', 'pull-request': '42' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+    octokit.rest.issues.deleteComment.mockRejectedValue(new Error('boom'));
+
+    await runChangeClassification();
+
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to remove change-classification comment: boom',
+    );
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
+  });
+
+  it('skips the stale-comment cleanup without a pull request number but with a token', async () => {
+    setInputs({ 'github-token': 'token', 'post-comment': 'true' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.listComments).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+  });
+
+  it('supports non-Error rejections when cleaning the stale comment', async () => {
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', 'pull-request': '42' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+    octokit.rest.issues.listComments.mockRejectedValue('plain failure');
+
+    await runChangeClassification();
+
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to remove change-classification comment: plain failure',
+    );
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
+  });
+
+  it('does not delete comments without a github token', async () => {
+    setInputs({ 'post-comment': 'true', 'pull-request': '42' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+  });
+
+  it('does not delete comments without a pull request number', async () => {
+    setInputs({ 'post-comment': 'true' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+  });
+
+  it('does not delete comments when posting is disabled or context is missing', async () => {
+    setInputs({ 'post-comment': 'false' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+    const octokit = mockOctokit([{ body: '<!-- monochange:change-classification -->', id: 7 }]);
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+
+    setInputs({ 'post-comment': 'true' });
+    mockParse.mockReturnValue({
+      ...rawReport(),
+      packages: [],
+      recommendation: 'none',
+      skipped: true,
+    });
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.deleteComment).not.toHaveBeenCalled();
+  });
+
+  it('passes every optional classifier input and creates a PR comment', async () => {
+    setInputs({
+      base: 'origin/trunk',
+      'dependency-propagation': 'none',
+      'detection-level': 'semantic',
+      'github-token': 'token',
+      head: 'feature',
+      'include-unchanged': 'true',
+      packages: 'core, web\nmobile',
+      'post-comment': 'true',
+      'pull-request': '42',
+      release: 'v1.0.0',
+      repository: 'mono/change',
+      'setup-monochange': 'custom-monochange',
+      'working-directory': 'workspace',
+    });
+    mockParse.mockReturnValue(rawReport({ review_required: true }));
+    const octokit = mockOctokit([{ body: null, id: 7 }]);
+
+    await runChangeClassification();
+
+    expect(mockExec).toHaveBeenCalledWith(
+      'monochange',
+      [
+        'change',
+        'classify',
+        '--format',
+        'json',
+        '--head',
+        'feature',
+        '--detection-level',
+        'semantic',
+        '--dependency-propagation',
+        'none',
+        '--base',
+        'origin/trunk',
+        '--release',
+        'v1.0.0',
+        '--include-unchanged',
+        '--package',
+        'core',
+        '--package',
+        'web',
+        '--package',
+        'mobile',
+      ],
+      { cwd: 'workspace' },
+    );
+    expect(octokit.rest.issues.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({ issue_number: 42, owner: 'mono', repo: 'change' }),
+    );
+    expect(mockCore.setOutput).toHaveBeenCalledWith('review-required', 'true');
+    expect(mockCore.setOutput).toHaveBeenCalledWith(
+      'summary',
+      'monochange proposes a major changeset across 1 package(s); review is required.',
+    );
+  });
+
+  it('updates one event PR comment and deletes stale duplicates', async () => {
+    githubMock.context.payload = { pull_request: { number: 17 } };
+    setInputs({
+      'github-token': 'token',
+      'post-comment': 'true',
+      repository: 'mono/change',
+    });
+    const octokit = mockOctokit([
+      { body: 'old\n\n<!-- monochange:change-classification -->', id: 1 },
+      { body: 'stale\n\n<!-- monochange:change-classification -->', id: 2 },
+      { body: 'someone else', id: 3 },
+    ]);
+
+    await runChangeClassification();
+
+    expect(octokit.rest.issues.updateComment).toHaveBeenCalledWith(
+      expect.objectContaining({ comment_id: 1, owner: 'mono', repo: 'change' }),
+    );
+    expect(octokit.rest.issues.deleteComment).toHaveBeenCalledWith({
+      comment_id: 2,
+      owner: 'mono',
+      repo: 'change',
+    });
+    expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+  });
+
+  it('does not update an unchanged comment', async () => {
+    githubMock.context.payload = { pull_request: { number: 17 } };
+    setInputs({
+      'github-token': 'token',
+      'post-comment': 'true',
+      repository: 'mono/change',
+    });
+    const report = readChangeClassificationReport(rawReport());
+    const markdown = renderChangeClassificationMarkdown(report);
+    const octokit = mockOctokit([
+      { body: `${markdown}\n\n<!-- monochange:change-classification -->`, id: 1 },
+    ]);
+
+    await runChangeClassification();
+
+    expect(mockCore.info).toHaveBeenCalledWith('Change-classification comment is unchanged.');
+    expect(octokit.rest.issues.updateComment).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+  });
+
+  it('warns and succeeds when comment context is unavailable', async () => {
+    setInputs({ 'post-comment': 'true' });
+
+    await runChangeClassification();
+
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to post change-classification comment: github-token is empty.',
+    );
+
+    setInputs({ 'github-token': 'token', 'post-comment': 'true' });
+    await runChangeClassification();
+
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to post change-classification comment: no pull request number is available.',
+    );
+  });
+
+  it.each(['invalid', '0'])('warns for invalid explicit PR number %s', async (pullRequest) => {
+    setInputs({
+      'github-token': 'token',
+      'post-comment': 'true',
+      'pull-request': pullRequest,
+    });
+
+    await runChangeClassification();
+
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      expect.stringContaining('must be a positive integer'),
+    );
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
+  });
+
+  it('warns for invalid repositories and non-Error API failures', async () => {
+    setInputs({
+      'github-token': 'token',
+      'post-comment': 'true',
+      'pull-request': '4',
+      repository: 'invalid',
+    });
+
+    await runChangeClassification();
+
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      expect.stringContaining('must be in owner/repo format'),
+    );
+
+    setInputs({
+      'github-token': 'token',
+      'post-comment': 'true',
+      'pull-request': '4',
+      repository: 'mono/change',
+    });
+    const octokit = mockOctokit();
+    octokit.rest.issues.listComments.mockRejectedValue('API unavailable');
+
+    await runChangeClassification();
+
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to post change-classification comment: API unavailable',
+    );
+  });
+
+  it('replaces the previous comment when classification fails', async () => {
+    githubMock.context.payload = { pull_request: { head: { sha: 'abc1234' }, number: 17 } };
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', repository: 'mono/change' });
+    mockExec.mockRejectedValue(new Error('classification crashed'));
+    const octokit = mockOctokit([
+      { body: 'someone else', id: 3 },
+      { body: 'old report\n\n<!-- monochange:change-classification -->', id: 1 },
+    ]);
+
+    await expect(runChangeClassification()).rejects.toThrow('classification crashed');
+
+    expect(octokit.rest.issues.updateComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('Classification failed for `abc1234`'),
+        comment_id: 1,
+      }),
+    );
+    expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+  });
+
+  it('posts nothing when classification fails without an earlier comment', async () => {
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', 'pull-request': '17' });
+    mockParse.mockReturnValue({ schema_version: 'bad' });
+    const octokit = mockOctokit([{ body: 'someone else', id: 3 }]);
+
+    await expect(runChangeClassification()).rejects.toThrow(
+      'supported change-classification report',
+    );
+
+    expect(octokit.rest.issues.updateComment).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+  });
+
+  it('skips the stale notice without comment context and warns when the API fails', async () => {
+    mockExec.mockRejectedValue(new Error('boom'));
+    setInputs({ 'post-comment': 'false' });
+    await expect(runChangeClassification()).rejects.toThrow('boom');
+
+    setInputs({ 'post-comment': 'true' });
+    await expect(runChangeClassification()).rejects.toThrow('boom');
+
+    setInputs({ 'github-token': 'token', 'post-comment': 'true' });
+    await expect(runChangeClassification()).rejects.toThrow('boom');
+
+    const octokit = mockOctokit();
+    octokit.rest.issues.listComments.mockRejectedValue(new Error('API down'));
+    setInputs({ 'github-token': 'token', 'post-comment': 'true', 'pull-request': '17' });
+    await expect(runChangeClassification()).rejects.toThrow('boom');
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to mark the change-classification comment stale: API down',
+    );
+
+    octokit.rest.issues.listComments.mockRejectedValue('plain');
+    await expect(runChangeClassification()).rejects.toThrow('boom');
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to mark the change-classification comment stale: plain',
+    );
+    expect(octokit.rest.issues.updateComment).not.toHaveBeenCalled();
+  });
+
+  it('warns for Error API failures without failing classification', async () => {
+    setInputs({
+      'github-token': 'token',
+      'post-comment': 'true',
+      'pull-request': '4',
+      repository: 'mono/change',
+    });
+    const octokit = mockOctokit();
+    octokit.rest.issues.listComments.mockRejectedValue(new Error('API unavailable'));
+
+    await runChangeClassification();
+
+    expect(mockCore.warning).toHaveBeenCalledWith(
+      'Unable to post change-classification comment: API unavailable',
+    );
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
+  });
+});
