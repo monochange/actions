@@ -25,6 +25,7 @@ Currently implemented:
 - `release-preview` - preview `monochange step prepare-release --dry-run`
 - `release-record` - inspect the release record at a ref
 - `open-release-request` / `release-pr` - open a release pull request
+- `hosted-release` - create a verified release commit and pull request through monochange.dev and the monochange GitHub App
 - `tag-release` - create or report release tags from a release record
 - `publish-readiness` - generate publish readiness data from a release record
 - `publish-packages` - publish packages from readiness data
@@ -40,6 +41,7 @@ Public entrypoints:
 - `monochange/actions/release-preview@v0.4.0`
 - `monochange/actions/release-record@v0.4.0`
 - `monochange/actions/open-release-request@v0.4.0`
+- `monochange/actions/hosted-release@v0`
 - `monochange/actions/tag-release@v0.4.0`
 - `monochange/actions/publish-readiness@v0.4.0`
 - `monochange/actions/publish-packages@v0.4.0`
@@ -754,6 +756,32 @@ Open a release pull request with the current changeset state.
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+---
+
+## `hosted-release`
+
+Prepare the release in the workflow, then let monochange.dev create the release commit and release pull request through the monochange GitHub App. The commit is verified by GitHub, the pull request triggers the repository's normal workflows, and the job needs no write token.
+
+Requires the monochange GitHub App on the repository, `permissions: id-token: write`, and monochange 0.17.0 or newer.
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: read
+  id-token: write
+
+steps:
+  - uses: actions/checkout@v6
+    with:
+      fetch-depth: 0
+      fetch-tags: true
+
+  - id: release
+    uses: monochange/actions/hosted-release@v0
+```
+
+Outputs include `commit-sha`, `verified`, `head-branch`, `base-branch`, `pull-request-number`, and `pull-request-url`. See the full [`hosted-release` documentation](hosted-release/README.md) for inputs, error messages, and troubleshooting.
 
 ---
 

@@ -20782,7 +20782,7 @@ const MAX_MARKDOWN_LENGTH = 6e4;
 function input$7(name, fallback) {
 	return getInput(name).trim() || fallback;
 }
-function readInputs$5() {
+function readInputs$6() {
 	return {
 		base: getOptionalInput$1("base"),
 		dependencyPropagation: input$7("dependency-propagation", "public"),
@@ -20809,8 +20809,8 @@ function splitList$1(value) {
 */
 function eventLabels() {
 	const pullRequest = context.payload.pull_request;
-	if (!isRecord$3(pullRequest) || !Array.isArray(pullRequest.labels)) return;
-	const names = pullRequest.labels.map((label) => isRecord$3(label) && typeof label.name === "string" ? label.name : void 0).filter((name) => typeof name === "string");
+	if (!isRecord$4(pullRequest) || !Array.isArray(pullRequest.labels)) return;
+	const names = pullRequest.labels.map((label) => isRecord$4(label) && typeof label.name === "string" ? label.name : void 0).filter((name) => typeof name === "string");
 	return names.length > 0 ? names.join(",") : void 0;
 }
 /**
@@ -20820,7 +20820,7 @@ function eventLabels() {
 */
 function eventBaseRef() {
 	const base = context.payload.pull_request?.base;
-	return isRecord$3(base) && typeof base.ref === "string" && base.ref ? `origin/${base.ref}` : void 0;
+	return isRecord$4(base) && typeof base.ref === "string" && base.ref ? `origin/${base.ref}` : void 0;
 }
 /**
 * Classify the exact pull request head commit, so the report names the commit
@@ -20828,7 +20828,7 @@ function eventBaseRef() {
 */
 function eventHeadSha() {
 	const head = context.payload.pull_request?.head;
-	return isRecord$3(head) && typeof head.sha === "string" && head.sha ? head.sha : void 0;
+	return isRecord$4(head) && typeof head.sha === "string" && head.sha ? head.sha : void 0;
 }
 /**
 * Use an event ref only when the checkout contains it. A shallow checkout
@@ -20845,13 +20845,13 @@ async function checkedOutRef(ref, cwd, endpoint) {
 	], { cwd })).exitCode === 0) return ref;
 	warning(`Pull request ${endpoint} \`${ref}\` is not in the checkout, so change classification falls back to the default ${endpoint}. Check out with fetch-depth: 0 to classify against the pull request ${endpoint}.`);
 }
-function isRecord$3(value) {
+function isRecord$4(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSeverity(value) {
 	return value === "none" || value === "patch" || value === "minor" || value === "major";
 }
-function requiredString(record, key) {
+function requiredString$1(record, key) {
 	const value = record[key];
 	if (typeof value !== "string") throw new Error(`monochange classification field \`${key}\` must be a string.`);
 	return value;
@@ -20866,40 +20866,40 @@ function stringArray(value) {
 	return value.filter((item) => typeof item === "string");
 }
 function readFinding(value) {
-	if (!isRecord$3(value)) throw new Error("monochange classification findings must be objects.");
+	if (!isRecord$4(value)) throw new Error("monochange classification findings must be objects.");
 	return {
 		bump: requiredSeverity(value, "bump"),
 		comparisons: stringArray(value.comparisons),
-		confidence: requiredString(value, "confidence"),
-		id: requiredString(value, "id"),
-		impact: requiredString(value, "impact"),
-		rule_id: requiredString(value, "rule_id"),
+		confidence: requiredString$1(value, "confidence"),
+		id: requiredString$1(value, "id"),
+		impact: requiredString$1(value, "impact"),
+		rule_id: requiredString$1(value, "rule_id"),
 		...typeof value.location === "string" ? { location: value.location } : {},
-		summary: requiredString(value, "summary")
+		summary: requiredString$1(value, "summary")
 	};
 }
 function readPackage(value) {
-	if (!isRecord$3(value) || !isRecord$3(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
+	if (!isRecord$4(value) || !isRecord$4(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
 	return {
-		action: requiredString(value, "action"),
-		compatibility_impact: requiredString(value.decision, "compatibility_impact"),
-		completeness: requiredString(value.decision, "completeness"),
-		confidence: requiredString(value.decision, "confidence"),
+		action: requiredString$1(value, "action"),
+		compatibility_impact: requiredString$1(value.decision, "compatibility_impact"),
+		completeness: requiredString$1(value.decision, "completeness"),
+		confidence: requiredString$1(value.decision, "confidence"),
 		findings: value.findings.map(readFinding),
-		package_id: requiredString(value, "package_id"),
+		package_id: requiredString$1(value, "package_id"),
 		release_floor: requiredSeverity(value.decision, "release_floor"),
 		...typeof value.decision.release_impact === "string" ? { release_impact: value.decision.release_impact } : {},
 		recommendation: requiredSeverity(value, "recommendation"),
 		review_required: value.decision.review_required === true,
-		summary: requiredString(value, "summary")
+		summary: requiredString$1(value, "summary")
 	};
 }
 function readChangeClassificationReport(value) {
-	if (!isRecord$3(value) || typeof value.schema_version !== "string" || !/^\d+\.\d+$/u.test(value.schema_version) || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.");
+	if (!isRecord$4(value) || typeof value.schema_version !== "string" || !/^\d+\.\d+$/u.test(value.schema_version) || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.");
 	return {
 		...typeof value.base_commit === "string" ? { base_commit: value.base_commit } : {},
-		candidate: requiredString(value, "candidate"),
-		default_branch: requiredString(value, "default_branch"),
+		candidate: requiredString$1(value, "candidate"),
+		default_branch: requiredString$1(value, "default_branch"),
 		...typeof value.head_commit === "string" ? { head_commit: value.head_commit } : {},
 		packages: value.packages.map(readPackage),
 		recommendation: requiredSeverity(value, "recommendation"),
@@ -21027,7 +21027,7 @@ function pullRequestNumber(explicit) {
 		return Number(explicit);
 	}
 	const pullRequest = context.payload.pull_request;
-	return isRecord$3(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
+	return isRecord$4(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
 }
 async function upsertComment(inputs, markdown) {
 	if (!inputs.postComment) return;
@@ -21141,7 +21141,7 @@ async function markCommentStale(inputs, head) {
 	}
 }
 async function runChangeClassification() {
-	const inputs = readInputs$5();
+	const inputs = readInputs$6();
 	const monochange = await resolveMonochange(inputs.setupMonochange);
 	const base = inputs.base ?? await checkedOutRef(eventBaseRef(), inputs.workingDirectory, "base");
 	const head = inputs.head ?? await checkedOutRef(eventHeadSha(), inputs.workingDirectory, "head") ?? "HEAD";
@@ -21203,7 +21203,7 @@ async function runChangeClassification() {
 //#endregion
 //#region src/actions/changeset-policy/index.ts
 const COMMENT_MARKER = "<!-- monochange:changeset-policy -->";
-function readInputs$4() {
+function readInputs$5() {
 	return {
 		changedPaths: getOptionalInput("changed-paths"),
 		commentOnFailure: getBoolean$2("comment-on-failure"),
@@ -21236,7 +21236,7 @@ function getBoolean$2(name) {
 	].includes(value);
 }
 async function runChangesetPolicy() {
-	const inputs = readInputs$4();
+	const inputs = readInputs$5();
 	if (inputs.debug) info(`changeset-policy inputs: ${JSON.stringify({
 		...inputs,
 		githubToken: "[redacted]"
@@ -21282,25 +21282,25 @@ async function runChangesetPolicy() {
 	info(skipped ? "changeset-policy skipped" : "changeset-policy completed successfully");
 }
 function changesetStatus(parsed) {
-	if (!isRecord$2(parsed)) return;
+	if (!isRecord$3(parsed)) return;
 	const status = parsed.status;
 	return typeof status === "string" ? status : void 0;
 }
 function changesetSkipped(parsed) {
-	if (!isRecord$2(parsed)) return false;
+	if (!isRecord$3(parsed)) return false;
 	return parsed.skip === true || parsed.skipped === true || parsed.status === "skipped";
 }
 function changesetSummary(parsed) {
-	if (!isRecord$2(parsed)) return;
+	if (!isRecord$3(parsed)) return;
 	const summary = parsed.summary;
 	return typeof summary === "string" ? summary : void 0;
 }
 function changesetComment(parsed) {
-	if (!isRecord$2(parsed)) return;
+	if (!isRecord$3(parsed)) return;
 	const comment = parsed.comment;
 	return typeof comment === "string" && comment.trim() ? comment : void 0;
 }
-function isRecord$2(value) {
+function isRecord$3(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function extractContentWithoutMarker(body) {
@@ -21568,6 +21568,199 @@ async function safeWriteSummary(body) {
 }
 function formatError(error) {
 	return error instanceof Error ? error.message : String(error);
+}
+
+//#endregion
+//#region src/actions/hosted-release/index.ts
+/** The first monochange release whose release steps can delegate writes to the hosted app. */
+const MINIMUM_CLI_VERSION = "0.17.0";
+const DEFAULT_HOSTED_URL = "https://monochange.dev";
+const OIDC_PERMISSION_HINT = "Add `permissions: id-token: write` to the job so GitHub Actions can mint an OIDC token for monochange.dev.";
+/** Actionable guidance for the HTTP statuses the hosted release endpoints return. */
+const HOSTED_STATUS_HINTS = {
+	400: "The hosted app rejected the release payload. Check the error above; release files must be repository-relative and must not touch `.git` or `.github/workflows`.",
+	401: "The hosted app rejected the OIDC token. The token audience is the `hosted-url` host, so make sure `hosted-url` points at the monochange deployment that should verify it.",
+	403: "The OIDC token was minted for a different repository than the release request targets. Run the action in the repository configured in `[source]`.",
+	404: "Install the monochange GitHub App on this repository (or check that `hosted-url` points at a monochange deployment), then rerun the workflow.",
+	409: "The release branch already points at a different commit than this run prepared from. Merge or close the open release pull request and delete its branch, then rerun.",
+	503: "The monochange deployment is not configured for hosted releases. Check `hosted-url`."
+};
+function readInputs$4() {
+	return {
+		dryRun: getBooleanInput("dry-run"),
+		githubToken: getOptionalInput$1("github-token") ?? "",
+		hostedUrl: parseHostedUrl(getOptionalInput$1("hosted-url") ?? DEFAULT_HOSTED_URL),
+		setupMonochange: getOptionalInput$1("setup-monochange") ?? "true",
+		workingDirectory: getOptionalInput$1("working-directory") ?? "."
+	};
+}
+function parseHostedUrl(value) {
+	let url;
+	try {
+		url = new URL(value);
+	} catch {
+		throw new Error(`Input \`hosted-url\` must be an absolute URL, received \`${value}\`.`);
+	}
+	if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error(`Input \`hosted-url\` must use http or https, received \`${value}\`.`);
+	return value.replace(/\/+$/, "");
+}
+/** Fail before any work when the job cannot mint a GitHub Actions OIDC token. */
+function assertOidcAvailable() {
+	if (process.env.ACTIONS_ID_TOKEN_REQUEST_URL && process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN) return;
+	throw new Error(`hosted-release authenticates to monochange.dev with a GitHub Actions OIDC token, but this job cannot request one. ${OIDC_PERMISSION_HINT}`);
+}
+/** Reject CLI versions that predate the hosted release backend. */
+function assertHostedReleaseSupport(versionText) {
+	const match = versionText.match(/\d+\.\d+\.\d+/);
+	if (!match) throw new Error(`Could not read a monochange version from \`${versionText}\`; hosted-release requires monochange ${MINIMUM_CLI_VERSION} or newer.`);
+	if (match[0].localeCompare(MINIMUM_CLI_VERSION, void 0, { numeric: true }) < 0) throw new Error(`hosted-release requires monochange ${MINIMUM_CLI_VERSION} or newer, but found \`${versionText}\`. Upgrade the monochange CLI on PATH or set \`setup-monochange\` to a newer command.`);
+}
+/** Append the actionable hint for a failed hosted step to the CLI error. */
+function explainHostedFailure(message) {
+	if (message.includes("OIDC token request failed")) return `${message}\n\n${OIDC_PERMISSION_HINT}`;
+	const hint = HOSTED_STATUS_HINTS[Number(message.match(/HTTP (\d{3})/)?.[1])];
+	return hint ? `${message}\n\n${hint}` : message;
+}
+function isRecord$2(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function requiredString(record, key) {
+	const value = record[key];
+	if (typeof value !== "string" || value === "") throw new Error(`monochange did not report \`release_request.${key}\` for the release request.`);
+	return value;
+}
+/** Read the release request target from `step open-release-request --format json` output. */
+function parseReleaseRequestTarget(stdout) {
+	const parsed = parseMixedOutput(stdout);
+	const request = isRecord$2(parsed) ? parsed.release_request : void 0;
+	if (!isRecord$2(request)) throw new Error("monochange did not report a release request. Configure `[source]` with `provider = \"github\"` in monochange.toml.");
+	return {
+		baseBranch: requiredString(request, "base_branch"),
+		headBranch: requiredString(request, "head_branch"),
+		owner: requiredString(request, "owner"),
+		repo: requiredString(request, "repo")
+	};
+}
+/** The process environment for the CLI, with string values only. */
+function cliEnvironment(overrides) {
+	const inherited = Object.entries(process.env).filter((entry) => entry[1] !== void 0);
+	return {
+		...Object.fromEntries(inherited),
+		...overrides
+	};
+}
+async function runHostedStep(command, args, options) {
+	info(`Running: ${command} ${args.join(" ")}`);
+	try {
+		return await execRequired(command, args, options);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		throw new Error(explainHostedFailure(message));
+	}
+}
+/** Read GitHub's view of the release branch head and its open pull request. */
+async function inspectRelease(octokit, target) {
+	const { owner, repo, headBranch, baseBranch } = target;
+	const sha = (await octokit.rest.git.getRef({
+		owner,
+		ref: `heads/${headBranch}`,
+		repo
+	})).data.object.sha;
+	const { verified, reason } = (await octokit.rest.git.getCommit({
+		commit_sha: sha,
+		owner,
+		repo
+	})).data.verification;
+	setOutput("commit-sha", sha);
+	setOutput("verified", String(verified));
+	const pull = (await octokit.rest.pulls.list({
+		base: baseBranch,
+		head: `${owner}:${headBranch}`,
+		owner,
+		per_page: 1,
+		repo,
+		state: "open"
+	})).data[0];
+	if (pull) {
+		setOutput("pull-request-number", String(pull.number));
+		setOutput("pull-request-url", pull.html_url);
+		info(`Release pull request: ${pull.html_url}`);
+	} else {
+		setOutput("pull-request-number", "");
+		setOutput("pull-request-url", "");
+		warning(`monochange.dev accepted the release request, but GitHub lists no open pull request from \`${headBranch}\` into \`${baseBranch}\` yet.`);
+	}
+	if (!verified) throw new Error(`Release commit ${sha} on \`${headBranch}\` is not verified by GitHub (reason: ${reason}). Commits created through the monochange GitHub App should be verified; check whether another workflow rewrote the release branch.`);
+	info(`Release commit ${sha} on ${headBranch} is verified by GitHub.`);
+}
+/**
+* Prepare the release locally, then let monochange.dev create the release
+* commit and pull request through the monochange GitHub App.
+*
+* The monochange CLI owns the hosted protocol (payload, OIDC token, and
+* endpoint calls); this action only drives its release steps and reads the
+* result back from GitHub, because the CLI does not report the pull request
+* or the commit verification in machine-readable form.
+*/
+async function runHostedRelease() {
+	const inputs = readInputs$4();
+	if (!inputs.dryRun) {
+		assertOidcAvailable();
+		if (!inputs.githubToken) throw new Error("Input `github-token` is required to read the release commit and pull request back from GitHub.");
+	}
+	const monochange = await resolveMonochange(inputs.setupMonochange);
+	info(`Using monochange ${monochange.version} from ${monochange.source}`);
+	assertHostedReleaseSupport(monochange.version);
+	const options = {
+		cwd: inputs.workingDirectory,
+		env: cliEnvironment({ MONOCHANGE_HOSTED_URL: inputs.hostedUrl })
+	};
+	await runHostedStep(monochange.command, [
+		"step",
+		"prepare-release",
+		"--format",
+		"json"
+	], options);
+	const target = parseReleaseRequestTarget(await runHostedStep(monochange.command, [
+		"step",
+		"open-release-request",
+		"--backend",
+		"hosted",
+		"--dry-run",
+		"--format",
+		"json"
+	], options));
+	setOutput("head-branch", target.headBranch);
+	setOutput("base-branch", target.baseBranch);
+	if (inputs.dryRun) {
+		info(`Dry-run: would commit the prepared release to \`${target.headBranch}\` and open a pull request into \`${target.baseBranch}\` through ${inputs.hostedUrl}.`);
+		setOutput("result", "dry-run");
+		return;
+	}
+	await runHostedStep(monochange.command, [
+		"step",
+		"commit-release",
+		"--commit-backend",
+		"hosted",
+		"--hosted-auth",
+		"oidc"
+	], {
+		...options,
+		env: {
+			...options.env,
+			GITHUB_HEAD_REF: target.headBranch
+		}
+	});
+	await runHostedStep(monochange.command, [
+		"step",
+		"open-release-request",
+		"--backend",
+		"hosted",
+		"--format",
+		"json"
+	], options);
+	await inspectRelease(getOctokit(inputs.githubToken), target);
+	setOutput("result", "success");
 }
 
 //#endregion
@@ -22900,6 +23093,9 @@ async function run() {
 		case "release-pr":
 			await runReleasePr();
 			return;
+		case "hosted-release":
+			await runHostedRelease();
+			return;
 		case "tag-release":
 			await runTagRelease();
 			return;
@@ -22915,7 +23111,7 @@ async function run() {
 		case "fail-when":
 			await runFailWhen();
 			return;
-		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: change-classification, merge, setup-monochange, changeset-policy, check, release-preview, release-record, open-release-request, release-pr, tag-release, publish-readiness, publish-packages, post-merge-release, fail-when.`);
+		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: change-classification, merge, setup-monochange, changeset-policy, check, release-preview, release-record, open-release-request, release-pr, hosted-release, tag-release, publish-readiness, publish-packages, post-merge-release, fail-when.`);
 	}
 }
 run().catch((error) => {

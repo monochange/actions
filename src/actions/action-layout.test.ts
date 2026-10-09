@@ -9,6 +9,7 @@ const variants = [
   'release-preview',
   'release-record',
   'open-release-request',
+  'hosted-release',
   'tag-release',
   'publish-readiness',
   'publish-packages',
