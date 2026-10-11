@@ -1,0 +1,42 @@
+name: hosted-release
+description: 'Create the release commit and release pull request through monochange.dev and the monochange GitHub App.'
+author: monochange
+inputs:
+  setup-monochange:
+    description: 'How to resolve monochange (0.17.0 or newer). true = auto-resolve (default), false = require existing monochange on PATH, any other string = custom command.'
+    required: false
+    default: 'true'
+  working-directory:
+    description: 'Working directory to run monochange in.'
+    required: false
+    default: '.'
+  hosted-url:
+    description: "Base URL of the monochange app. The GitHub Actions OIDC token audience is this URL's host."
+    required: false
+    default: 'https://monochange.dev'
+  github-token:
+    description: 'Token used to read the release commit and pull request back from GitHub. Needs contents: read and pull-requests: read.'
+    required: false
+    default: ${{ github.token }}
+  dry-run:
+    description: 'Prepare the release and report the target branches without contacting the hosted app.'
+    required: false
+    default: 'false'
+outputs:
+  result:
+    description: 'success, dry-run, or failed.'
+  head-branch:
+    description: 'Release pull request head branch.'
+  base-branch:
+    description: 'Release pull request base branch.'
+  commit-sha:
+    description: 'Release commit SHA on the head branch.'
+  verified:
+    description: 'Whether GitHub verified the release commit signature.'
+  pull-request-number:
+    description: 'Open release pull request number.'
+  pull-request-url:
+    description: 'Open release pull request URL.'
+runs:
+  using: node24
+  main: ../dist/index.mjs
