@@ -41,7 +41,7 @@
     "tsdown": "^0.21.10",
     "typescript": "^6.0.3",
     "vite": "8.2.2",
-    "vite-plus": "^0.3.1",
+    "vite-plus": "^1.1.0",
     "vitest": "^4.1.11"
   },
   "engines": {
