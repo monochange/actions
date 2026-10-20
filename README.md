@@ -761,13 +761,13 @@ Open a release pull request with the current changeset state.
 
 ## `hosted-release`
 
-Prepare the release in the workflow, then let monochange.dev create the release commit and release pull request through the monochange GitHub App. The commit is verified by GitHub, the pull request triggers the repository's normal workflows, and the job needs no write token.
+Prepare the release in the workflow, then let monochange.dev create the release commit and release pull request through the monochange GitHub App. The commit is verified by GitHub, the pull request triggers the repository's normal workflows, and the job needs no personal access token.
 
-Requires the monochange GitHub App on the repository, `permissions: id-token: write`, and monochange 0.17.0 or newer.
+Requires the monochange GitHub App on the repository, `permissions: id-token: write`, and monochange 0.17.0 or newer (0.20.0 or newer with `release-command`). `release-command` runs your own `monochange.toml` release command with every release step on the hosted backend.
 
 ```yaml
 permissions:
-  contents: read
+  contents: write
   pull-requests: read
   id-token: write
 
@@ -779,6 +779,8 @@ steps:
 
   - id: release
     uses: monochange/actions/hosted-release@v0
+    with:
+      release-command: release
 ```
 
 Outputs include `commit-sha`, `verified`, `head-branch`, `base-branch`, `pull-request-number`, and `pull-request-url`. See the full [`hosted-release` documentation](hosted-release/README.md) for inputs, error messages, and troubleshooting.

@@ -6,14 +6,14 @@ The commit and pull request belong to the monochange bot instead of a personal a
 
 - GitHub verifies the release commit, which satisfies "require signed commits" branch protection;
 - the release pull request triggers the repository's normal `pull_request` workflows;
-- the workflow needs no write token, deploy key, or git identity.
+- the workflow needs no personal access token, deploy key, or git identity.
 
 ## Requirements
 
 - The [monochange GitHub App](https://monochange.dev/install) is installed on the repository.
 - The job grants `id-token: write` so it can mint a GitHub Actions OIDC token for monochange.dev.
 - `monochange.toml` configures `[source]` with `provider = "github"` and `[source.pull_requests]`.
-- monochange `0.17.0` or newer. The action resolves the CLI like `setup-monochange` and fails early on an older one.
+- monochange `0.17.0` or newer, or `0.20.0` or newer with `release-command`. The action resolves the CLI like `setup-monochange` and fails early on an older one.
 
 ## Quick start
 
@@ -31,7 +31,7 @@ jobs:
   release-pr:
     runs-on: ubuntu-latest
     permissions:
-      contents: read # read the release commit back
+      contents: write # upload the release files as a git tree
       pull-requests: read # read the release pull request back
       id-token: write # authenticate to monochange.dev
     steps:
@@ -42,6 +42,8 @@ jobs:
 
       - id: release
         uses: monochange/actions/hosted-release@v0
+        with:
+          release-command: release
 
       - run: echo "Release pull request ${{ steps.release.outputs.pull-request-url }}"
 ```
@@ -56,25 +58,29 @@ The root entrypoint runs the same implementation:
 
 ## How it works
 
-1. `monochange step prepare-release` computes versions, changelogs, and the release record in the checkout.
-2. `monochange step open-release-request --backend hosted --dry-run` reports the release branch and base branch.
-3. `monochange step commit-release --commit-backend hosted` sends the prepared files to `POST /api/release-commits`. The app commits them on the release branch, with the checked-out commit as the parent.
-4. `monochange step open-release-request --backend hosted` sends the rendered pull request to `POST /api/release-requests`. The app opens or updates the pull request.
-5. The action reads the release branch head and the open pull request back from GitHub with `github-token`, then fails if GitHub did not verify the commit.
+With `release-command`, the action runs your own release command from `monochange.toml`, so its `Command` steps (lockfile refreshes, generated files) and `stage_all` behave exactly as they do locally:
 
-The monochange CLI builds the request payloads and requests the OIDC token itself. The token audience is the `hosted-url` host, so the default is `monochange.dev`.
+1. `monochange run <release-command>` runs with `MONOCHANGE_RELEASE_BACKEND=hosted`, which moves every `CommitRelease` and `OpenReleaseRequest` step to monochange.dev without any hosted settings in `monochange.toml`.
+2. `monochange step open-release-request --backend hosted --dry-run` reports the release branch and base branch from the prepared release.
 
-The release branch is `<branch_prefix>/step-open-release-request`, because monochange names release branches after the command that opens them.
+Without `release-command`, the action runs the built-in steps instead: `step prepare-release`, the same dry-run report, `step commit-release --commit-backend hosted`, and `step open-release-request --backend hosted`.
+
+Either way, the action then reads the release branch head and the open pull request back from GitHub with `github-token`, and fails if GitHub did not verify the commit.
+
+The monochange CLI builds the requests and asks for the OIDC token itself. The token audience is the `hosted-url` host, so the default is `monochange.dev`. From monochange 0.20.0, the CLI uploads the release files as git blobs and a tree with `github-token` (passed as `GITHUB_TOKEN`) and sends monochange.dev only the tree id; the app commits that tree on the release branch with the checked-out commit as the parent. Uploading blobs and trees pushes no branch and starts no workflow. Without `contents: write`, the CLI warns and sends the file contents instead, which only works for UTF-8 text up to 8 MiB.
+
+The release branch is `<branch_prefix>/release` from monochange 0.19.0. Older versions name it after the command that opens it, such as `<branch_prefix>/step-open-release-request`.
 
 ## Inputs
 
-| Input               | Required | Default                  | Description                                                                                                                     |
-| ------------------- | -------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| `setup-monochange`  | No       | `true`                   | How to resolve monochange: `true` auto-resolves, `false` requires `monochange` on `PATH`, any other string is a custom command. |
-| `working-directory` | No       | `.`                      | Directory to run monochange in.                                                                                                 |
-| `hosted-url`        | No       | `https://monochange.dev` | Base URL of the monochange app. The OIDC token audience is this URL's host.                                                     |
-| `github-token`      | No       | `${{ github.token }}`    | Token used only to read the release commit and pull request back. Needs `contents: read` and `pull-requests: read`.             |
-| `dry-run`           | No       | `false`                  | Prepare the release and report the branches without contacting the hosted app. Does not need `id-token: write`.                 |
+| Input               | Required | Default                  | Description                                                                                                                                              |
+| ------------------- | -------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setup-monochange`  | No       | `true`                   | How to resolve monochange: `true` auto-resolves, `false` requires `monochange` on `PATH`, any other string is a custom command.                          |
+| `working-directory` | No       | `.`                      | Directory to run monochange in.                                                                                                                          |
+| `release-command`   | No       | empty                    | `monochange.toml` command to run on the hosted backend, such as `release`. Requires monochange 0.20.0. Empty runs the built-in steps.                    |
+| `hosted-url`        | No       | `https://monochange.dev` | Base URL of the monochange app. The OIDC token audience is this URL's host.                                                                              |
+| `github-token`      | No       | `${{ github.token }}`    | Passed to monochange as `GITHUB_TOKEN` to upload the release tree, and used to read the release back. Needs `contents: write` and `pull-requests: read`. |
+| `dry-run`           | No       | `false`                  | Prepare the release and report the branches without contacting the hosted app. Does not need `id-token: write`.                                          |
 
 ## Outputs
 
@@ -105,6 +111,14 @@ The hosted app did not accept the token audience. Point `hosted-url` at the depl
 ### HTTP 409: the release branch moved
 
 The release branch already points at a different commit than the one this run prepared from. Merge or close the open release pull request and delete its branch, then rerun. Enabling "Automatically delete head branches" removes merged release branches for you.
+
+### HTTP 422: "must not modify GitHub workflows"
+
+The prepared release changes a file under `.github/workflows`, which the bot never commits. Move the workflow change into a normal pull request.
+
+### "release tree could not be built"
+
+The CLI could not upload the release files with `github-token`, usually because the job lacks `contents: write`, so it sent the file contents to monochange.dev instead. Grant `contents: write` to keep requests small and to support binary files.
 
 ### "is not verified by GitHub"
 

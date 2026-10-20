@@ -14,8 +14,12 @@ inputs:
     description: "Base URL of the monochange app. The GitHub Actions OIDC token audience is this URL's host."
     required: false
     default: 'https://monochange.dev'
+  release-command:
+    description: 'Name of the monochange.toml command to run with MONOCHANGE_RELEASE_BACKEND=hosted, for example release. Runs its Command steps and stage_all like a local run. Requires monochange 0.20.0 or newer. Leave empty to run the built-in prepare, commit, and open release steps.'
+    required: false
+    default: ''
   github-token:
-    description: 'Token used to read the release commit and pull request back from GitHub. Needs contents: read and pull-requests: read.'
+    description: 'Token passed to monochange as GITHUB_TOKEN and used to read the release commit and pull request back. With contents: write, monochange 0.20.0 or newer uploads the release files as a git tree so monochange.dev never receives their contents. Also needs pull-requests: read.'
     required: false
     default: ${{ github.token }}
   dry-run:
