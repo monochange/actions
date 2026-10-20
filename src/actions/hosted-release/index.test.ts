@@ -99,6 +99,8 @@ describe('runHostedRelease', () => {
       expect(options?.cwd).toBe('.');
       expect(options?.env?.MONOCHANGE_HOSTED_URL).toBe('https://monochange.dev');
       expect(options?.env?.ACTIONS_ID_TOKEN_REQUEST_TOKEN).toBe('request-token');
+      expect(options?.env?.GITHUB_TOKEN).toBe('gh-token');
+      expect(options?.env?.MONOCHANGE_RELEASE_BACKEND).toBeUndefined();
     }
 
     expect(mockExec.mock.calls[2]?.[2]?.env?.GITHUB_HEAD_REF).toBe(
@@ -165,6 +167,62 @@ describe('runHostedRelease', () => {
       'head-branch': 'monochange/release/step-open-release-request',
       result: 'dry-run',
     });
+  });
+
+  it('runs the repository release command with every release step on the hosted backend', async () => {
+    mockResolve.mockResolvedValue({
+      command: 'monochange',
+      source: 'existing-monochange',
+      version: 'monochange 0.20.0',
+    });
+    setInputs({ 'github-token': 'gh-token', 'release-command': 'release' });
+
+    await runHostedRelease();
+
+    const calls = mockExec.mock.calls.map(([command, args]) => [command, ...args].join(' '));
+    expect(calls).toEqual([
+      'monochange run release',
+      'monochange step open-release-request --backend hosted --dry-run --format json',
+    ]);
+    expect(mockExec.mock.calls[0]?.[2]?.env).toMatchObject({
+      GITHUB_TOKEN: 'gh-token',
+      MONOCHANGE_HOSTED_URL: 'https://monochange.dev',
+      MONOCHANGE_RELEASE_BACKEND: 'hosted',
+    });
+    expect(mockExec.mock.calls[1]?.[2]?.env?.MONOCHANGE_RELEASE_BACKEND).toBeUndefined();
+    expect(outputs()).toMatchObject({
+      'head-branch': 'monochange/release/step-open-release-request',
+      'pull-request-number': '42',
+      result: 'success',
+      verified: 'true',
+    });
+  });
+
+  it('passes dry-run to the repository release command', async () => {
+    vi.stubEnv('ACTIONS_ID_TOKEN_REQUEST_URL', '');
+    mockResolve.mockResolvedValue({
+      command: 'monochange',
+      source: 'existing-monochange',
+      version: 'monochange 0.20.1',
+    });
+    setInputs({ 'dry-run': 'true', 'release-command': 'release-pr' });
+
+    await runHostedRelease();
+
+    const calls = mockExec.mock.calls.map(([command, args]) => [command, ...args].join(' '));
+    expect(calls).toEqual([
+      'monochange run release-pr --dry-run',
+      'monochange step open-release-request --backend hosted --dry-run --format json',
+    ]);
+    expect(mockGithub.getOctokit).not.toHaveBeenCalled();
+    expect(outputs()).toMatchObject({ result: 'dry-run' });
+  });
+
+  it('requires monochange 0.20.0 for a repository release command', async () => {
+    setInputs({ 'github-token': 'gh-token', 'release-command': 'release' });
+
+    await expect(runHostedRelease()).rejects.toThrow('requires monochange 0.20.0 or newer');
+    expect(mockExec).not.toHaveBeenCalled();
   });
 
   it('asks for the id-token permission when the job cannot mint an OIDC token', async () => {
@@ -266,6 +324,15 @@ describe('assertHostedReleaseSupport', () => {
     },
   );
 
+  it('checks a custom minimum version', () => {
+    expect(() => {
+      assertHostedReleaseSupport('monochange 0.19.1', '0.20.0');
+    }).toThrow('0.20.0 or newer');
+    expect(() => {
+      assertHostedReleaseSupport('monochange 0.20.0', '0.20.0');
+    }).not.toThrow();
+  });
+
   it('rejects output without a version', () => {
     expect(() => {
       assertHostedReleaseSupport('monochange dev');
@@ -286,6 +353,7 @@ describe('explainHostedFailure', () => {
     [403, 'different repository'],
     [404, 'Install the monochange GitHub App'],
     [409, 'Merge or close the open release pull request'],
+    [422, 'must not modify GitHub workflows'],
     [503, 'not configured for hosted releases'],
   ])('adds a hint for HTTP %i', (status, hint) => {
     expect(

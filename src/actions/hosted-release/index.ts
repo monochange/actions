@@ -11,6 +11,9 @@ type Octokit = ReturnType<typeof github.getOctokit>;
 /** The first monochange release whose release steps can delegate writes to the hosted app. */
 const MINIMUM_CLI_VERSION = '0.17.0';
 
+/** The first monochange release that moves every release step with `MONOCHANGE_RELEASE_BACKEND`. */
+const RELEASE_COMMAND_CLI_VERSION = '0.20.0';
+
 const DEFAULT_HOSTED_URL = 'https://monochange.dev';
 
 const OIDC_PERMISSION_HINT =
@@ -19,6 +22,7 @@ const OIDC_PERMISSION_HINT =
 /** Actionable guidance for the HTTP statuses the hosted release endpoints return. */
 const HOSTED_STATUS_HINTS: Readonly<Record<number, string>> = {
   400: 'The hosted app rejected the release payload. Check the error above; release files must be repository-relative and must not touch `.git` or `.github/workflows`.',
+  422: 'The release commit would change `.github/workflows`. Release commits must not modify GitHub workflows; commit workflow changes in a normal pull request.',
   401: 'The hosted app rejected the OIDC token. The token audience is the `hosted-url` host, so make sure `hosted-url` points at the monochange deployment that should verify it.',
   403: 'The OIDC token was minted for a different repository than the release request targets. Run the action in the repository configured in `[source]`.',
   404: 'Install the monochange GitHub App on this repository (or check that `hosted-url` points at a monochange deployment), then rerun the workflow.',
@@ -28,6 +32,7 @@ const HOSTED_STATUS_HINTS: Readonly<Record<number, string>> = {
 
 export interface HostedReleaseInputs {
   setupMonochange: string;
+  releaseCommand: string;
   workingDirectory: string;
   hostedUrl: string;
   githubToken: string;
@@ -47,6 +52,7 @@ function readInputs(): HostedReleaseInputs {
     dryRun: getBooleanInput('dry-run'),
     githubToken: getOptionalInput('github-token') ?? '',
     hostedUrl: parseHostedUrl(getOptionalInput('hosted-url') ?? DEFAULT_HOSTED_URL),
+    releaseCommand: getOptionalInput('release-command') ?? '',
     setupMonochange: getOptionalInput('setup-monochange') ?? 'true',
     workingDirectory: getOptionalInput('working-directory') ?? '.',
   };
@@ -79,20 +85,23 @@ function assertOidcAvailable(): void {
   );
 }
 
-/** Reject CLI versions that predate the hosted release backend. */
-export function assertHostedReleaseSupport(versionText: string): void {
+/** Reject CLI versions older than `minimum`, which defaults to the first hosted release backend. */
+export function assertHostedReleaseSupport(
+  versionText: string,
+  minimum: string = MINIMUM_CLI_VERSION,
+): void {
   const match = versionText.match(/\d+\.\d+\.\d+/);
 
   if (!match) {
     throw new Error(
-      `Could not read a monochange version from \`${versionText}\`; hosted-release requires monochange ${MINIMUM_CLI_VERSION} or newer.`,
+      `Could not read a monochange version from \`${versionText}\`; hosted-release requires monochange ${minimum} or newer.`,
     );
   }
 
   // Numeric collation compares each dotted component as a number.
-  if (match[0].localeCompare(MINIMUM_CLI_VERSION, undefined, { numeric: true }) < 0) {
+  if (match[0].localeCompare(minimum, undefined, { numeric: true }) < 0) {
     throw new Error(
-      `hosted-release requires monochange ${MINIMUM_CLI_VERSION} or newer, but found \`${versionText}\`. Upgrade the monochange CLI on PATH or set \`setup-monochange\` to a newer command.`,
+      `hosted-release requires monochange ${minimum} or newer, but found \`${versionText}\`. Upgrade the monochange CLI on PATH or set \`setup-monochange\` to a newer command.`,
     );
   }
 }
@@ -211,6 +220,72 @@ async function inspectRelease(octokit: Octokit, target: ReleaseRequestTarget): P
   core.info(`Release commit ${sha} on ${headBranch} is verified by GitHub.`);
 }
 
+interface CliOptions {
+  cwd: string;
+  env: Record<string, string>;
+}
+
+/**
+ * Run the repository's own release command with every release step moved to
+ * the hosted backend, so `Command` steps and `stage_all` behave exactly as
+ * they do locally.
+ */
+async function runReleaseCommand(
+  command: string,
+  inputs: HostedReleaseInputs,
+  options: CliOptions,
+): Promise<void> {
+  const args = ['run', inputs.releaseCommand, ...(inputs.dryRun ? ['--dry-run'] : [])];
+
+  await runHostedStep(command, args, {
+    ...options,
+    env: { ...options.env, MONOCHANGE_RELEASE_BACKEND: 'hosted' },
+  });
+}
+
+/**
+ * Report the release pull request branches from the prepared release that
+ * the previous command saved, without contacting the hosted app.
+ */
+async function reportReleaseTarget(
+  command: string,
+  options: CliOptions,
+): Promise<ReleaseRequestTarget> {
+  const target = parseReleaseRequestTarget(
+    await runHostedStep(
+      command,
+      ['step', 'open-release-request', '--backend', 'hosted', '--dry-run', '--format', 'json'],
+      options,
+    ),
+  );
+
+  core.setOutput('head-branch', target.headBranch);
+  core.setOutput('base-branch', target.baseBranch);
+
+  return target;
+}
+
+/** Commit and open the prepared release with the CLI's built-in steps. */
+async function publishWithBuiltInSteps(
+  command: string,
+  target: ReleaseRequestTarget,
+  options: CliOptions,
+): Promise<void> {
+  // monochange 0.17 and 0.18 commit to `GITHUB_HEAD_REF` (falling back to the
+  // triggering ref). Point it at the release branch so the bot commits there
+  // instead of on the branch that triggered the workflow.
+  await runHostedStep(
+    command,
+    ['step', 'commit-release', '--commit-backend', 'hosted', '--hosted-auth', 'oidc'],
+    { ...options, env: { ...options.env, GITHUB_HEAD_REF: target.headBranch } },
+  );
+  await runHostedStep(
+    command,
+    ['step', 'open-release-request', '--backend', 'hosted', '--format', 'json'],
+    options,
+  );
+}
+
 /**
  * Prepare the release locally, then let monochange.dev create the release
  * commit and pull request through the monochange GitHub App.
@@ -236,27 +311,40 @@ export async function runHostedRelease(): Promise<void> {
   const monochange = await resolveMonochange(inputs.setupMonochange);
 
   core.info(`Using monochange ${monochange.version} from ${monochange.source}`);
-  assertHostedReleaseSupport(monochange.version);
+  assertHostedReleaseSupport(
+    monochange.version,
+    inputs.releaseCommand ? RELEASE_COMMAND_CLI_VERSION : MINIMUM_CLI_VERSION,
+  );
 
   // The CLI reads the hosted app URL from `MONOCHANGE_HOSTED_URL`; step
   // commands ignore `--hosted-url` and derive the OIDC audience from its host.
+  // From monochange 0.20, `GITHUB_TOKEN` uploads the release files as a git
+  // tree so monochange.dev only receives the tree id.
   const options = {
     cwd: inputs.workingDirectory,
-    env: cliEnvironment({ MONOCHANGE_HOSTED_URL: inputs.hostedUrl }),
+    env: cliEnvironment({
+      MONOCHANGE_HOSTED_URL: inputs.hostedUrl,
+      ...(inputs.githubToken ? { GITHUB_TOKEN: inputs.githubToken } : {}),
+    }),
   };
 
-  await runHostedStep(monochange.command, ['step', 'prepare-release', '--format', 'json'], options);
+  let target: ReleaseRequestTarget;
 
-  const target = parseReleaseRequestTarget(
+  if (inputs.releaseCommand) {
+    await runReleaseCommand(monochange.command, inputs, options);
+    target = await reportReleaseTarget(monochange.command, options);
+  } else {
     await runHostedStep(
       monochange.command,
-      ['step', 'open-release-request', '--backend', 'hosted', '--dry-run', '--format', 'json'],
+      ['step', 'prepare-release', '--format', 'json'],
       options,
-    ),
-  );
+    );
+    target = await reportReleaseTarget(monochange.command, options);
 
-  core.setOutput('head-branch', target.headBranch);
-  core.setOutput('base-branch', target.baseBranch);
+    if (!inputs.dryRun) {
+      await publishWithBuiltInSteps(monochange.command, target, options);
+    }
+  }
 
   if (inputs.dryRun) {
     core.info(
@@ -266,20 +354,6 @@ export async function runHostedRelease(): Promise<void> {
 
     return;
   }
-
-  // The hosted commit targets `GITHUB_HEAD_REF` (falling back to the
-  // triggering ref). Point it at the release branch so the bot commits there
-  // instead of on the branch that triggered the workflow.
-  await runHostedStep(
-    monochange.command,
-    ['step', 'commit-release', '--commit-backend', 'hosted', '--hosted-auth', 'oidc'],
-    { ...options, env: { ...options.env, GITHUB_HEAD_REF: target.headBranch } },
-  );
-  await runHostedStep(
-    monochange.command,
-    ['step', 'open-release-request', '--backend', 'hosted', '--format', 'json'],
-    options,
-  );
 
   await inspectRelease(github.getOctokit(inputs.githubToken), target);
   core.setOutput('result', 'success');
