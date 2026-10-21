@@ -1,0 +1,294 @@
+{
+  "schema_version": "0.10",
+  "kind": "monochange.releaseRecord",
+  "created_at": "2026-10-21T13:07:27Z",
+  "command": "release",
+  "version": "0.10.1",
+  "versions": {
+    "actions": "0.10.1"
+  },
+  "release_targets": [
+    {
+      "id": "actions",
+      "kind": "package",
+      "version": "0.10.1",
+      "version_format": "primary",
+      "tag": true,
+      "release": true,
+      "tag_name": "v0.10.1",
+      "rendered_title": "v0.10.1 (2026-10-21)",
+      "rendered_changelog_title": "[0.10.1](https://github.com/monochange/actions/releases/tag/v0.10.1) (2026-10-21)",
+      "members": [
+        "actions"
+      ],
+      "floating_tags": [
+        "v{{ major }}.{{ minor }}",
+        "v{{ major }}"
+      ]
+    }
+  ],
+  "released_packages": [
+    "actions"
+  ],
+  "changed_files": [
+    "changelog.md",
+    "package.json"
+  ],
+  "package_publications": [],
+  "updated_changelogs": [
+    "changelog.md"
+  ],
+  "deleted_changesets": [
+    ".changeset/hosted-release.md",
+    ".changeset/pr-scoped-classification.md"
+  ],
+  "changesets": [
+    {
+      "path": ".changeset/hosted-release.md",
+      "summary": "Create release commits and pull requests through monochange.dev",
+      "details": "The new `hosted-release` variant prepares the release in the workflow, then lets monochange.dev create the release commit and the release pull request through the monochange GitHub App. The commit is verified by GitHub, the pull request triggers the repository's normal workflows, and the job needs no personal access token.\n\n```yaml\njobs:\n  release-pr:\n    runs-on: ubuntu-latest\n    permissions:\n      contents: write\n      pull-requests: read\n      id-token: write\n    steps:\n      - uses: actions/checkout@v6\n        with:\n          fetch-depth: 0\n          fetch-tags: true\n      - id: release\n        uses: monochange/actions/hosted-release@v0\n        with:\n          release-command: release\n```\n\n- `release-command` runs the repository's own `monochange.toml` command with `MONOCHANGE_RELEASE_BACKEND=hosted`, so its `Command` steps and `stage_all` run as they do locally. It requires monochange 0.20.0 or newer. Without it, the action runs the built-in prepare, commit, and open release steps.\n- `github-token` is passed to monochange as `GITHUB_TOKEN`. With `contents: write`, monochange 0.20.0 or newer uploads the release files as a git tree, so monochange.dev receives only the tree id.\n\n- Install the monochange GitHub App on the repository and grant `id-token: write`; the action fails early with that instruction when the job cannot mint an OIDC token.\n- Requires monochange 0.17.0 or newer. The action drives the CLI's hosted `CommitRelease` and `OpenReleaseRequest` backends instead of calling the endpoints itself.\n- `hosted-url` (default `https://monochange.dev`) selects the deployment; the OIDC audience is its host.\n- Outputs `commit-sha`, `verified`, `head-branch`, `base-branch`, `pull-request-number`, and `pull-request-url`, read back from GitHub. The step fails when GitHub does not verify the release commit.\n- Failed hosted requests keep the CLI error and add the next step to take, such as installing the app (HTTP 404), clearing a release branch that moved (HTTP 409), or keeping workflow changes out of the release (HTTP 422).",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "minor",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "feat"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "39df91ba461a7555ff97ad45fcda87b272c89058",
+            "short_sha": "39df91b",
+            "url": "https://github.com/monochange/actions/commit/39df91ba461a7555ff97ad45fcda87b272c89058",
+            "authored_at": "2026-10-09T15:08:15+01:00",
+            "committed_at": "2026-10-09T15:08:15+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#88",
+            "title": "feat(hosted-release): create release commits and pull requests through monochange.dev",
+            "url": "https://github.com/monochange/actions/pull/88",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "098fac5b60a1a4f68de784dbcf9742ea72383c11",
+            "short_sha": "098fac5",
+            "url": "https://github.com/monochange/actions/commit/098fac5b60a1a4f68de784dbcf9742ea72383c11",
+            "authored_at": "2026-10-20T09:26:42Z",
+            "committed_at": "2026-10-20T09:26:42Z",
+            "author_name": "Claude",
+            "author_email": "noreply@anthropic.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#100",
+            "title": "feat(hosted-release): run the repository release command on the hosted backend",
+            "url": "https://github.com/monochange/actions/pull/100",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    },
+    {
+      "path": ".changeset/pr-scoped-classification.md",
+      "summary": "Keep change-classification comments specific to the pull request",
+      "details": "The `change-classification` action now compares a pull request with the branch it targets and classifies the pull request head commit, so a stacked pull request no longer reports the changes of the branch below it.\n\n- `base` defaults to `origin/<base branch>` from the `pull_request` event, and `head` defaults to the event's head commit. Each is used only when the checkout contains it; otherwise the action warns and keeps the previous behavior. Explicit inputs still win.\n- The comment names the classified head commit and base commit.\n- Findings seen only between the latest release and the base branch move to an \"Unreleased changes already on `<base>` (not part of this pull request)\" list and no longer count toward the package's findings.\n\nAdd the `edited` event, guarded by `github.event.changes.base`, so a retargeted pull request is classified again:\n\n```yaml\non:\n  pull_request:\n    types: [opened, synchronize, reopened, edited]\njobs:\n  classify:\n    if: ${{ github.event.action != 'edited' || github.event.changes.base }}\n```",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "minor",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "change"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "ed0ea753800a5b309d30088fc18826c3383b458e",
+            "short_sha": "ed0ea75",
+            "url": "https://github.com/monochange/actions/commit/ed0ea753800a5b309d30088fc18826c3383b458e",
+            "authored_at": "2026-09-30T21:29:43+01:00",
+            "committed_at": "2026-09-30T21:29:43+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#75",
+            "title": "fix(change-classification): keep comments specific to the pull request",
+            "url": "https://github.com/monochange/actions/pull/75",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "ed0ea753800a5b309d30088fc18826c3383b458e",
+            "short_sha": "ed0ea75",
+            "url": "https://github.com/monochange/actions/commit/ed0ea753800a5b309d30088fc18826c3383b458e",
+            "authored_at": "2026-09-30T21:29:43+01:00",
+            "committed_at": "2026-09-30T21:29:43+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#75",
+            "title": "fix(change-classification): keep comments specific to the pull request",
+            "url": "https://github.com/monochange/actions/pull/75",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    }
+  ],
+  "changelogs": [
+    {
+      "owner_id": "actions",
+      "owner_kind": "package",
+      "output": "default",
+      "stream": "default",
+      "path": "changelog.md",
+      "format": "monochange",
+      "notes": {
+        "title": "[0.10.1](https://github.com/monochange/actions/releases/tag/v0.10.1) (2026-10-21)",
+        "summary": [],
+        "sections": [
+          {
+            "title": "🚀 Feature",
+            "collapsed": false,
+            "entries": [
+              "#### Create release commits and pull requests through monochange.dev\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #88](https://github.com/monochange/actions/pull/88)\n\nThe new `hosted-release` variant prepares the release in the workflow, then lets monochange.dev create the release commit and the release pull request through the monochange GitHub App. The commit is verified by GitHub, the pull request triggers the repository's normal workflows, and the job needs no personal access token.\n\n```yaml\njobs:\n  release-pr:\n    runs-on: ubuntu-latest\n    permissions:\n      contents: write\n      pull-requests: read\n      id-token: write\n    steps:\n      - uses: actions/checkout@v6\n        with:\n          fetch-depth: 0\n          fetch-tags: true\n      - id: release\n        uses: monochange/actions/hosted-release@v0\n        with:\n          release-command: release\n```\n\n- `release-command` runs the repository's own `monochange.toml` command with `MONOCHANGE_RELEASE_BACKEND=hosted`, so its `Command` steps and `stage_all` run as they do locally. It requires monochange 0.20.0 or newer. Without it, the action runs the built-in prepare, commit, and open release steps.\n- `github-token` is passed to monochange as `GITHUB_TOKEN`. With `contents: write`, monochange 0.20.0 or newer uploads the release files as a git tree, so monochange.dev receives only the tree id.\n\n- Install the monochange GitHub App on the repository and grant `id-token: write`; the action fails early with that instruction when the job cannot mint an OIDC token.\n- Requires monochange 0.17.0 or newer. The action drives the CLI's hosted `CommitRelease` and `OpenReleaseRequest` backends instead of calling the endpoints itself.\n- `hosted-url` (default `https://monochange.dev`) selects the deployment; the OIDC audience is its host.\n- Outputs `commit-sha`, `verified`, `head-branch`, `base-branch`, `pull-request-number`, and `pull-request-url`, read back from GitHub. The step fails when GitHub does not verify the release commit.\n- Failed hosted requests keep the CLI error and add the next step to take, such as installing the app (HTTP 404), clearing a release branch that moved (HTTP 409), or keeping workflow changes out of the release (HTTP 422)."
+            ]
+          },
+          {
+            "title": "📝 Changed",
+            "collapsed": false,
+            "entries": [
+              "#### Keep change-classification comments specific to the pull request\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #75](https://github.com/monochange/actions/pull/75)\n\nThe `change-classification` action now compares a pull request with the branch it targets and classifies the pull request head commit, so a stacked pull request no longer reports the changes of the branch below it.\n\n- `base` defaults to `origin/<base branch>` from the `pull_request` event, and `head` defaults to the event's head commit. Each is used only when the checkout contains it; otherwise the action warns and keeps the previous behavior. Explicit inputs still win.\n- The comment names the classified head commit and base commit.\n- Findings seen only between the latest release and the base branch move to an \"Unreleased changes already on `<base>` (not part of this pull request)\" list and no longer count toward the package's findings.\n\nAdd the `edited` event, guarded by `github.event.changes.base`, so a retargeted pull request is classified again:\n\n```yaml\non:\n  pull_request:\n    types: [opened, synchronize, reopened, edited]\njobs:\n  classify:\n    if: ${{ github.event.action != 'edited' || github.event.changes.base }}\n```"
+            ]
+          }
+        ]
+      },
+      "rendered": "## [0.10.1](https://github.com/monochange/actions/releases/tag/v0.10.1) (2026-10-21)\n\n### 🚀 Feature\n\n#### Create release commits and pull requests through monochange.dev\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #88](https://github.com/monochange/actions/pull/88)\n\nThe new `hosted-release` variant prepares the release in the workflow, then lets monochange.dev create the release commit and the release pull request through the monochange GitHub App. The commit is verified by GitHub, the pull request triggers the repository's normal workflows, and the job needs no personal access token.\n\n```yaml\njobs:\n  release-pr:\n    runs-on: ubuntu-latest\n    permissions:\n      contents: write\n      pull-requests: read\n      id-token: write\n    steps:\n      - uses: actions/checkout@v6\n        with:\n          fetch-depth: 0\n          fetch-tags: true\n      - id: release\n        uses: monochange/actions/hosted-release@v0\n        with:\n          release-command: release\n```\n\n- `release-command` runs the repository's own `monochange.toml` command with `MONOCHANGE_RELEASE_BACKEND=hosted`, so its `Command` steps and `stage_all` run as they do locally. It requires monochange 0.20.0 or newer. Without it, the action runs the built-in prepare, commit, and open release steps.\n- `github-token` is passed to monochange as `GITHUB_TOKEN`. With `contents: write`, monochange 0.20.0 or newer uploads the release files as a git tree, so monochange.dev receives only the tree id.\n\n- Install the monochange GitHub App on the repository and grant `id-token: write`; the action fails early with that instruction when the job cannot mint an OIDC token.\n- Requires monochange 0.17.0 or newer. The action drives the CLI's hosted `CommitRelease` and `OpenReleaseRequest` backends instead of calling the endpoints itself.\n- `hosted-url` (default `https://monochange.dev`) selects the deployment; the OIDC audience is its host.\n- Outputs `commit-sha`, `verified`, `head-branch`, `base-branch`, `pull-request-number`, and `pull-request-url`, read back from GitHub. The step fails when GitHub does not verify the release commit.\n- Failed hosted requests keep the CLI error and add the next step to take, such as installing the app (HTTP 404), clearing a release branch that moved (HTTP 409), or keeping workflow changes out of the release (HTTP 422).\n\n### 📝 Changed\n\n#### Keep change-classification comments specific to the pull request\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #75](https://github.com/monochange/actions/pull/75)\n\nThe `change-classification` action now compares a pull request with the branch it targets and classifies the pull request head commit, so a stacked pull request no longer reports the changes of the branch below it.\n\n- `base` defaults to `origin/<base branch>` from the `pull_request` event, and `head` defaults to the event's head commit. Each is used only when the checkout contains it; otherwise the action warns and keeps the previous behavior. Explicit inputs still win.\n- The comment names the classified head commit and base commit.\n- Findings seen only between the latest release and the base branch move to an \"Unreleased changes already on `<base>` (not part of this pull request)\" list and no longer count toward the package's findings.\n\nAdd the `edited` event, guarded by `github.event.changes.base`, so a retargeted pull request is classified again:\n\n```yaml\non:\n  pull_request:\n    types: [opened, synchronize, reopened, edited]\njobs:\n  classify:\n    if: ${{ github.event.action != 'edited' || github.event.changes.base }}\n```"
+    }
+  ],
+  "provider": {
+    "kind": "github",
+    "owner": "monochange",
+    "repo": "actions",
+    "host": null
+  }
+}
