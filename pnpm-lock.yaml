@@ -23,8 +23,8 @@ importers:
         version: 9.1.1
     devDependencies:
       '@monochange/cli':
-        specifier: 0.19.0
-        version: 0.19.0
+        specifier: 0.20.1
+        version: 0.20.1
       '@rslint/tsgo':
         specifier: ^0.5.0
         version: 0.5.0
@@ -154,52 +154,52 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@monochange/cli-darwin-arm64@0.19.0':
-    resolution: {integrity: sha512-N01e3oDE/GQcQdt1u6GvddQsRbvU/xA6INgu3Yd0bXgiUZ4M9fOcKHch6ZmB2OLUMhjF1hidwG4upu0SCYpcMA==}
+  '@monochange/cli-darwin-arm64@0.20.1':
+    resolution: {integrity: sha512-Id5DncQuMz7Im8zs0oWNua2Q+/fu8dq+/xSGyBjP0HX687AMppBqk2jYXKwPAhzEwL6f+tnuiW42UCmrdzmOUw==}
     cpu: [arm64]
     os: [darwin]
 
-  '@monochange/cli-darwin-x64@0.19.0':
-    resolution: {integrity: sha512-lK8/Vto7DvMlMUHqWHElb8QP/VZbmJGvm5AP4r0xUz6qLB2aWuAQcmO1WEKRxb4ipSdCaYJUrQ0ceJHBs7ic+A==}
+  '@monochange/cli-darwin-x64@0.20.1':
+    resolution: {integrity: sha512-rEpjDQkfxiRHPxsSQyA1WhRRoBXOdvpsRG8+8JnJ9v9TdwJBmnpt2uh2/xNh3jXV9OAw2kZbkIFssu2d2RsJ1Q==}
     cpu: [x64]
     os: [darwin]
 
-  '@monochange/cli-linux-arm64-gnu@0.19.0':
-    resolution: {integrity: sha512-Oepq7+6sOrhHbgMOlVxJzYxvznd6+Djw2roGcNZL7ULfsCqciq86JCX7mIlEwQGkwNGyVqu0vPzYMk7Y2NTEgQ==}
+  '@monochange/cli-linux-arm64-gnu@0.20.1':
+    resolution: {integrity: sha512-JZNlzKDRy5m8/ZcEZ5jIWyLqzNrENK3xGiPZ54ozVK5w7aPLPuMXj9IDjPaqBGZjppBmh4LHBoqQK6Ut9OZUWA==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@monochange/cli-linux-arm64-musl@0.19.0':
-    resolution: {integrity: sha512-ALF0gt6tLkW+YkWqK8zZFdOEvnLVyb3P3EW+wqTqII2zsYnZQR5BJKeGyteOMqZwBYS05ip7qJHdIxVSemCnqw==}
+  '@monochange/cli-linux-arm64-musl@0.20.1':
+    resolution: {integrity: sha512-JHiqFarYuYNoqxTEEwV3G/X9YcFc2/EX9wtOmR7aAqrxkBl8izgLqBEACxawv2rBrYCqf3bP80gF8dIfN/JX1A==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@monochange/cli-linux-x64-gnu@0.19.0':
-    resolution: {integrity: sha512-1ND72LYot87MGvyz/EvaefinlCcBbAYAdptBF6UN18hLvI9CUwjoBun4DKSjQ+T9nN2FY3p4PTBKRlMh+6dqRw==}
+  '@monochange/cli-linux-x64-gnu@0.20.1':
+    resolution: {integrity: sha512-Uhjth/c0q/Cq1vU0kUm0i/DItNmFQQHmKayGdHXYPJjMmXgxEW0wqh4q6izlqtGclr8SdCTDDTuitvOnzTuscw==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@monochange/cli-linux-x64-musl@0.19.0':
-    resolution: {integrity: sha512-1bT8YGX4G2t0dQl9Z18OXs/m3XhM8QpNZrWT1lY/qaKG8tNX+tYFOnMxXKbT9QeS7ITJgLKb1Qy7v0ZpQatikQ==}
+  '@monochange/cli-linux-x64-musl@0.20.1':
+    resolution: {integrity: sha512-R3vvQRaQMRvL/nNMFUxBTLNU3xRlzW8Ph3HyZ+s/NiZX8LymbjwQ6ExN3xXNpcKKukeK+fUnFZ/boR6JIrGYfw==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@monochange/cli-win32-arm64-msvc@0.19.0':
-    resolution: {integrity: sha512-3vy4Zd9PuUUzl+l2pMZCy9U9E4FbDC03+U5J5quxShEG1X+do/R3Pn4zBPp0/7prCkUl3wh/7zfwyGAnk+ZNPQ==}
+  '@monochange/cli-win32-arm64-msvc@0.20.1':
+    resolution: {integrity: sha512-U3bxMKxYxX/UwuUZUbR61jnbos1ezMaJyu+7/OPcFXMXMPv5WVPRZ05DFIzXhl4FOCLKH0/ABW4XpNqqyZfdGA==}
     cpu: [arm64]
     os: [win32]
 
-  '@monochange/cli-win32-x64-msvc@0.19.0':
-    resolution: {integrity: sha512-BlNp7yk3VbqeCqQFTfeu/f68x009kRkGcOU93BRlt5fFdqhbqEtu5SKfs7FL1xSfXmIdWDYd8hxLeK0d2A5Mww==}
+  '@monochange/cli-win32-x64-msvc@0.20.1':
+    resolution: {integrity: sha512-fIVYP/+WQwDfH6B/dXFMXATIjaKzkLNcBQLfR1VwfETvMEoyvu9yzZ5TnrwFL/LnjRpjvUb2bEcsZMci+2dnxw==}
     cpu: [x64]
     os: [win32]
 
-  '@monochange/cli@0.19.0':
-    resolution: {integrity: sha512-mJfwrgK65mjDsOr8EnQ6gbeJt9rXbGSltYsHrg9pNN3/+jqkmnJYZ4jIUWxFozOs7NCKKOgUEbSJR0hAmG4bfA==}
+  '@monochange/cli@0.20.1':
+    resolution: {integrity: sha512-J+z8qs1FGnWHPtYgcabg9za87D3+pHXYHfIDmijjctuS/XkJhAu49XmI5Th/Sek0JRckjnRpa4E4FPqLi2wqmw==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -2129,40 +2129,40 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@monochange/cli-darwin-arm64@0.19.0':
+  '@monochange/cli-darwin-arm64@0.20.1':
     optional: true
 
-  '@monochange/cli-darwin-x64@0.19.0':
+  '@monochange/cli-darwin-x64@0.20.1':
     optional: true
 
-  '@monochange/cli-linux-arm64-gnu@0.19.0':
+  '@monochange/cli-linux-arm64-gnu@0.20.1':
     optional: true
 
-  '@monochange/cli-linux-arm64-musl@0.19.0':
+  '@monochange/cli-linux-arm64-musl@0.20.1':
     optional: true
 
-  '@monochange/cli-linux-x64-gnu@0.19.0':
+  '@monochange/cli-linux-x64-gnu@0.20.1':
     optional: true
 
-  '@monochange/cli-linux-x64-musl@0.19.0':
+  '@monochange/cli-linux-x64-musl@0.20.1':
     optional: true
 
-  '@monochange/cli-win32-arm64-msvc@0.19.0':
+  '@monochange/cli-win32-arm64-msvc@0.20.1':
     optional: true
 
-  '@monochange/cli-win32-x64-msvc@0.19.0':
+  '@monochange/cli-win32-x64-msvc@0.20.1':
     optional: true
 
-  '@monochange/cli@0.19.0':
+  '@monochange/cli@0.20.1':
     optionalDependencies:
-      '@monochange/cli-darwin-arm64': 0.19.0
-      '@monochange/cli-darwin-x64': 0.19.0
-      '@monochange/cli-linux-arm64-gnu': 0.19.0
-      '@monochange/cli-linux-arm64-musl': 0.19.0
-      '@monochange/cli-linux-x64-gnu': 0.19.0
-      '@monochange/cli-linux-x64-musl': 0.19.0
-      '@monochange/cli-win32-arm64-msvc': 0.19.0
-      '@monochange/cli-win32-x64-msvc': 0.19.0
+      '@monochange/cli-darwin-arm64': 0.20.1
+      '@monochange/cli-darwin-x64': 0.20.1
+      '@monochange/cli-linux-arm64-gnu': 0.20.1
+      '@monochange/cli-linux-arm64-musl': 0.20.1
+      '@monochange/cli-linux-x64-gnu': 0.20.1
+      '@monochange/cli-linux-x64-musl': 0.20.1
+      '@monochange/cli-win32-arm64-msvc': 0.20.1
+      '@monochange/cli-win32-x64-msvc': 0.20.1
 
   '@napi-rs/wasm-runtime@1.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
@@ -2694,24 +2694,6 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser@4.1.11(vite@8.2.2(@types/node@25.6.0))(vitest@4.1.11)':
-    dependencies:
-      '@blazediff/core': 1.9.1
-      '@vitest/mocker': 4.1.11(vite@8.2.2(@types/node@25.6.0))
-      '@vitest/utils': 4.1.11
-      magic-string: 0.30.21
-      pngjs: 7.0.0
-      sirv: 3.0.2
-      tinyrainbow: 3.1.0
-      vitest: 4.1.11(@types/node@25.6.0)(@vitest/browser-preview@4.1.11)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@25.6.0))
-      ws: 8.21.0
-    transitivePeerDependencies:
-      - bufferutil
-      - msw
-      - utf-8-validate
-      - vite
-    optional: true
-
   '@vitest/coverage-v8@4.1.11(@vitest/browser@4.1.11)(vitest@4.1.11)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
@@ -2726,7 +2708,7 @@ snapshots:
       tinyrainbow: 3.1.0
       vitest: 4.1.11(@types/node@25.6.0)(@vitest/browser-preview@4.1.11)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@25.6.0))
     optionalDependencies:
-      '@vitest/browser': 4.1.11(vite@8.2.2(@types/node@25.6.0))(vitest@4.1.11)
+      '@vitest/browser': 4.1.11(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.6.0)(typescript@6.0.3)(unrun@0.2.37))(vitest@4.1.11)
 
   '@vitest/expect@4.1.11':
     dependencies:
