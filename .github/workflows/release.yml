@@ -8,8 +8,9 @@ on:
 
 concurrency:
   group: release-${{ github.ref }}
-  # Never cancel a release run mid-flight: it may already have pushed the
-  # release branch, and a partial update is worse than a queued run.
+  # Never cancel a release run mid-flight: it may already have asked
+  # monochange.dev to move the release branch, and a partial update is worse
+  # than a queued run.
   cancel-in-progress: false
 
 permissions:
@@ -22,8 +23,14 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     permissions:
+      # Upload the release files as git blobs and a tree, and delete a stale
+      # release branch. The monochange GitHub App writes the release commit
+      # and pull request on monochange.dev, and this run proves its repository
+      # with an OIDC token.
       contents: write
+      # Close a stale release pull request.
       pull-requests: write
+      id-token: write
     steps:
       - name: checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -32,7 +39,6 @@ jobs:
           # `v0.9.x` release baseline and move the floating aliases.
           fetch-depth: 0
           fetch-tags: true
-          token: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
           persist-credentials: false
 
       - name: setup pnpm
@@ -49,24 +55,6 @@ jobs:
 
       - name: install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: configure git
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-        run: |
-          set -euo pipefail
-          if user_info="$(gh api user --jq '{id: .id, login: .login, name: .name}')"; then
-            user_id="$(echo "$user_info" | jq -r '.id')"
-            user_login="$(echo "$user_info" | jq -r '.login')"
-            user_name="$(echo "$user_info" | jq -r '.name // .login')"
-          else
-            user_id="41898282"
-            user_login="github-actions[bot]"
-            user_name="github-actions[bot]"
-          fi
-
-          git config user.name "$user_name"
-          git config user.email "${user_id}+${user_login}@users.noreply.github.com"
 
       - name: refresh tags from origin
         run: git fetch --force --tags origin
@@ -93,23 +81,18 @@ jobs:
       - name: prepare release pull request
         if: steps.release_record.outputs.is_release_commit != 'true'
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
-        run: |
-          set -euo pipefail
-          # Checkout disables persisted credentials, so authenticate the
-          # release branch push explicitly. Without this the command fails with
-          # "could not read Username for 'https://github.com'".
-          export GIT_CONFIG_COUNT=1
-          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
-          auth_header="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w 0)"
-          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${auth_header}"
-          pnpm exec monochange run release --format json --commit --create-pr --write-empty-release-record
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # monochange.dev's GitHub App creates a verified release commit and
+          # opens the release pull request as the monochange bot, so the pull
+          # request's own workflows run without a personal access token.
+          MONOCHANGE_RELEASE_BACKEND: hosted
+        run: pnpm exec monochange run release --format json --commit --create-pr --write-empty-release-record
 
       - name: close a stale release PR when the plan is empty
         if: steps.release_record.outputs.is_release_commit != 'true'
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PR_MERGE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
