@@ -4,6 +4,67 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.10.1](https://github.com/monochange/actions/releases/tag/v0.10.1) (2026-10-21)
+
+### 🚀 Feature
+
+#### Create release commits and pull requests through monochange.dev
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #88](https://github.com/monochange/actions/pull/88)
+
+The new `hosted-release` variant prepares the release in the workflow, then lets monochange.dev create the release commit and the release pull request through the monochange GitHub App. The commit is verified by GitHub, the pull request triggers the repository's normal workflows, and the job needs no personal access token.
+
+```yaml
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - id: release
+        uses: monochange/actions/hosted-release@v0
+        with:
+          release-command: release
+```
+
+- `release-command` runs the repository's own `monochange.toml` command with `MONOCHANGE_RELEASE_BACKEND=hosted`, so its `Command` steps and `stage_all` run as they do locally. It requires monochange 0.20.0 or newer. Without it, the action runs the built-in prepare, commit, and open release steps.
+- `github-token` is passed to monochange as `GITHUB_TOKEN`. With `contents: write`, monochange 0.20.0 or newer uploads the release files as a git tree, so monochange.dev receives only the tree id.
+
+- Install the monochange GitHub App on the repository and grant `id-token: write`; the action fails early with that instruction when the job cannot mint an OIDC token.
+- Requires monochange 0.17.0 or newer. The action drives the CLI's hosted `CommitRelease` and `OpenReleaseRequest` backends instead of calling the endpoints itself.
+- `hosted-url` (default `https://monochange.dev`) selects the deployment; the OIDC audience is its host.
+- Outputs `commit-sha`, `verified`, `head-branch`, `base-branch`, `pull-request-number`, and `pull-request-url`, read back from GitHub. The step fails when GitHub does not verify the release commit.
+- Failed hosted requests keep the CLI error and add the next step to take, such as installing the app (HTTP 404), clearing a release branch that moved (HTTP 409), or keeping workflow changes out of the release (HTTP 422).
+
+### 📝 Changed
+
+#### Keep change-classification comments specific to the pull request
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #75](https://github.com/monochange/actions/pull/75)
+
+The `change-classification` action now compares a pull request with the branch it targets and classifies the pull request head commit, so a stacked pull request no longer reports the changes of the branch below it.
+
+- `base` defaults to `origin/<base branch>` from the `pull_request` event, and `head` defaults to the event's head commit. Each is used only when the checkout contains it; otherwise the action warns and keeps the previous behavior. Explicit inputs still win.
+- The comment names the classified head commit and base commit.
+- Findings seen only between the latest release and the base branch move to an "Unreleased changes already on `<base>` (not part of this pull request)" list and no longer count toward the package's findings.
+
+Add the `edited` event, guarded by `github.event.changes.base`, so a retargeted pull request is classified again:
+
+```yaml
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+jobs:
+  classify:
+    if: ${{ github.event.action != 'edited' || github.event.changes.base }}
+```
+
 ## [0.10.0](https://github.com/monochange/actions/releases/tag/v0.10.0) (2026-09-29)
 
 ### 💥 Breaking Change
