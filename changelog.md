@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.11.0](https://github.com/monochange/actions/releases/tag/v0.11.0) (2026-10-23)
+
+### 💥 Breaking Change
+
+#### Track the monochange 0.21.0 CLI release
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #102](https://github.com/monochange/actions/pull/102)
+
+The actions development and release tooling now resolves monochange 0.21.0, including Swift, CocoaPods and Gradle configuration support. This follows the breaking CLI release baseline. After the next maintainer-controlled actions release, pin its immutable commit SHA to adopt that CLI baseline; the existing action inputs remain supported.
+
 ## [0.10.1](https://github.com/monochange/actions/releases/tag/v0.10.1) (2026-10-21)
 
 ### 🚀 Feature
