@@ -4,6 +4,8 @@ import * as core from '@actions/core';
 
 import { exec, execRequired } from './exec';
 import { resolveMonochange, runMcCommand, runMcJsonCommand } from './monochange-cli';
+import { installMonochange } from './monochange-install';
+import { monochangeRelease } from './monochange-release';
 
 vi.mock('@actions/core', () => ({
   info: vi.fn(),
@@ -14,13 +16,17 @@ vi.mock('./exec', () => ({
   execRequired: vi.fn(),
 }));
 
+vi.mock('./monochange-install', () => ({ installMonochange: vi.fn() }));
+
 const mockExec = vi.mocked(exec);
 const mockExecRequired = vi.mocked(execRequired);
 const mockCoreInfo = vi.mocked(core.info);
+const mockInstall = vi.mocked(installMonochange);
 
 describe('resolveMonochange', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    mockInstall.mockResolvedValue('/tmp/action tools/monochange');
   });
 
   it('returns existing monochange when found and setupInput is true', async () => {
@@ -39,57 +45,55 @@ describe('resolveMonochange', () => {
     });
   });
 
-  it('falls back to npx when monochange not found', async () => {
-    mockExec
-      .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' })
-      .mockResolvedValueOnce({ exitCode: 0, stderr: '', stdout: '  monochange 2.0.0  ' });
+  it('executes the verified absolute binary when monochange is not found', async () => {
+    mockExec.mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' }).mockResolvedValueOnce({
+      exitCode: 0,
+      stderr: '',
+      stdout: `monochange ${monochangeRelease.version}`,
+    });
 
     const result = await resolveMonochange('true');
 
     expect(result).toEqual({
-      command: 'npx -y @monochange/cli',
-      source: 'npx-shim',
-      version: 'monochange 2.0.0',
+      command: '"/tmp/action tools/monochange"',
+      source: 'pinned-download',
+      version: `monochange ${monochangeRelease.version}`,
     });
-  });
-
-  it('falls back to cargo binstall when npx fails', async () => {
-    mockExec
-      .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' })
-      .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' });
-    mockExecRequired.mockResolvedValue('');
-    mockExec.mockResolvedValueOnce({ exitCode: 0, stderr: '', stdout: 'monochange 3.0.0' });
-
-    const result = await resolveMonochange('true');
-
-    expect(result).toEqual({
-      command: 'monochange',
-      source: 'cargo-binstall',
-      version: 'monochange 3.0.0',
+    expect(mockInstall).toHaveBeenCalledOnce();
+    expect(mockExec).toHaveBeenLastCalledWith(result.command, ['--version'], {
+      ignoreReturnCode: true,
+      silent: true,
     });
+
+    await runMcCommand({ command: result.command, args: ['check'], cwd: '/consumer' });
+
+    expect(mockExecRequired).toHaveBeenCalledWith(result.command, ['check'], { cwd: '/consumer' });
   });
 
-  it('throws when cargo binstall succeeds but monochange is still not found', async () => {
-    mockExec
-      .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' })
-      .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' });
-    mockExecRequired.mockResolvedValue('');
-    mockExec.mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' });
+  it('never executes package managers during automatic setup', async () => {
+    mockExec.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '' });
+    mockInstall.mockRejectedValue(new Error('installation failed'));
+    mockExecRequired.mockRejectedValue(new Error('installation failed'));
 
-    await expect(resolveMonochange('true')).rejects.toThrow(
-      'Could not resolve monochange automatically',
-    );
+    await expect(resolveMonochange('true')).rejects.toThrow();
+
+    expect(mockExec.mock.calls.map(([command]) => command)).not.toContain('npx');
+    expect(mockExecRequired.mock.calls.map(([command]) => command)).not.toContain('cargo');
   });
 
-  it('throws when cargo binstall itself fails', async () => {
+  it('rejects a downloaded binary reporting a different version', async () => {
     mockExec
       .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' })
-      .mockResolvedValueOnce({ exitCode: 1, stderr: '', stdout: '' });
-    mockExecRequired.mockRejectedValue(new Error('cargo not found'));
+      .mockResolvedValueOnce({ exitCode: 0, stderr: '', stdout: 'monochange 99.0.0' });
 
-    await expect(resolveMonochange('true')).rejects.toThrow(
-      'Could not resolve monochange automatically',
-    );
+    await expect(resolveMonochange('true')).rejects.toThrow('did not report the expected version');
+  });
+
+  it('fails closed when downloading the pinned artifact fails', async () => {
+    mockExec.mockResolvedValue({ exitCode: 1, stderr: '', stdout: '' });
+    mockInstall.mockRejectedValue(new Error('Integrity check failed'));
+
+    await expect(resolveMonochange('true')).rejects.toThrow('Integrity check failed');
   });
 
   it('throws when monochange returns exitCode 0 but empty stdout', async () => {

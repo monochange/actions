@@ -2,12 +2,10 @@ import * as core from '@actions/core';
 
 import { exec, execRequired } from './exec';
 import { parseMixedOutput } from './json';
+import { installMonochange } from './monochange-install';
+import { monochangeRelease } from './monochange-release';
 
-export type MonochangeSource =
-  | 'existing-monochange'
-  | 'npx-shim'
-  | 'cargo-binstall'
-  | 'custom-command';
+export type MonochangeSource = 'existing-monochange' | 'pinned-download' | 'custom-command';
 
 export interface ResolvedMonochange {
   command: string;
@@ -38,35 +36,21 @@ export async function resolveMonochange(setupInput: string): Promise<ResolvedMon
       return { command: 'monochange', version: existingVersion, source: 'existing-monochange' };
     }
 
-    core.info('monochange not found on PATH; trying npx @monochange/cli');
-
-    const npxVersion = await getMonochangeVersion('npx', ['-y', '@monochange/cli']);
-
-    if (npxVersion) {
-      return {
-        command: 'npx -y @monochange/cli',
-        version: npxVersion,
-        source: 'npx-shim',
-      };
-    }
-
-    core.info('npx fallback failed; trying cargo binstall monochange');
-
-    try {
-      await execRequired('cargo', ['binstall', 'monochange', '-y']);
-      const cargoVersion = await getMonochangeVersion('monochange');
-
-      if (cargoVersion) {
-        return { command: 'monochange', version: cargoVersion, source: 'cargo-binstall' };
-      }
-    } catch {
-      // fall through to error
-    }
-
-    throw new Error(
-      'Could not resolve monochange automatically. ' +
-        'Install monochange manually, use cargo binstall, or provide a custom command.',
+    core.info(
+      `monochange not found on PATH; downloading locked monochange ${monochangeRelease.version}`,
     );
+
+    const binary = await installMonochange();
+    const command = JSON.stringify(binary);
+    const version = await getMonochangeVersion(command);
+
+    if (version !== `monochange ${monochangeRelease.version}`) {
+      throw new Error(
+        `Downloaded monochange did not report the expected version ${monochangeRelease.version}.`,
+      );
+    }
+
+    return { command, version, source: 'pinned-download' };
   }
 
   const version = await getMonochangeVersion(setupInput);
@@ -80,15 +64,9 @@ export async function resolveMonochange(setupInput: string): Promise<ResolvedMon
   return { command: setupInput, version, source: 'custom-command' };
 }
 
-async function getMonochangeVersion(
-  command: string,
-  prefixArgs: string[] = [],
-): Promise<string | undefined> {
-  const bin = command;
-  const binArgs = [...prefixArgs, '--version'];
-
+async function getMonochangeVersion(command: string): Promise<string | undefined> {
   try {
-    const result = await exec(bin, binArgs, {
+    const result = await exec(command, ['--version'], {
       ignoreReturnCode: true,
       silent: true,
     });

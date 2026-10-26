@@ -694,13 +694,14 @@ See the full [`fail-when` documentation](fail-when/README.md) for inputs, output
 
 ## `setup-monochange`
 
-Install the `monochange` CLI from cargo or via `cargo binstall`. Falls back to installing from source if neither is available.
+Use an existing `monochange` on PATH, or download the exact CLI release tracked by this action. Automatic downloads use the npm registry directly and verify the archive against the SHA-512 checksum embedded from the action's lockfile before extraction. Consumer `.npmrc` files cannot redirect setup. A download or integrity failure stops the action.
+
+Set `setup-monochange: false` to require a preinstalled CLI, or provide a custom command. Automatic setup returns a quoted absolute command pointing to the verified binary in a private temporary directory. It requires `tar` (available on GitHub-hosted runners) and supports macOS, Windows, and Linux (glibc or musl) on x64 and ARM64.
 
 ```yaml
 - uses: monochange/actions/setup-monochange@v0.4.0
   with:
     setup-monochange: true
-    command: monochange
 ```
 
 ---
