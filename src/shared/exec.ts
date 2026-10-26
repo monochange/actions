@@ -19,8 +19,7 @@ export async function exec(
   let stdout = '';
   let stderr = '';
 
-  const [file, ...commandArgs] = splitCommand(command);
-  const exitCode = await actionsExec.exec(file, [...commandArgs, ...args], {
+  const exitCode = await actionsExec.exec(command, args, {
     ...(options?.cwd ? { cwd: options.cwd } : {}),
     ...(options?.env ? { env: options.env } : {}),
     ignoreReturnCode: options?.ignoreReturnCode ?? true,
@@ -36,20 +35,6 @@ export async function exec(
   });
 
   return { exitCode, stdout, stderr };
-}
-
-function splitCommand(command: string): [string, ...string[]] {
-  const parts = command
-    .match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)
-    ?.map((part) => part.replace(/^(["'])(.*)\1$/, '$2'));
-
-  if (!parts) {
-    return [command];
-  }
-
-  const [file = command, ...args] = parts;
-
-  return [file, ...args];
 }
 
 export async function execRequired(

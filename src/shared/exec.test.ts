@@ -40,14 +40,22 @@ describe('exec', () => {
     expect(actionsExec.exec).toHaveBeenCalledWith('', [], expect.any(Object));
   });
 
-  it('splits command shims into executable and prefix args', async () => {
+  it('lets the Actions toolkit parse command prefixes and quoted executable paths once', async () => {
     vi.mocked(actionsExec.exec).mockResolvedValue(0);
 
     await exec('npx -y @monochange/cli', ['check']);
 
     expect(actionsExec.exec).toHaveBeenCalledWith(
-      'npx',
-      ['-y', '@monochange/cli', 'check'],
+      'npx -y @monochange/cli',
+      ['check'],
+      expect.any(Object),
+    );
+
+    await exec('"/action tools/monochange"', ['check']);
+
+    expect(actionsExec.exec).toHaveBeenLastCalledWith(
+      '"/action tools/monochange"',
+      ['check'],
       expect.any(Object),
     );
   });

@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite-plus';
 
+import { readMonochangeRelease } from './scripts/monochange-release';
+
 export default defineConfig({
+  define: { __MONOCHANGE_RELEASE__: JSON.stringify(readMonochangeRelease()) },
   fmt: {
     ignorePatterns: ['coverage/**', 'dist/**'],
     semi: true,
@@ -27,6 +30,7 @@ export default defineConfig({
     },
   },
   pack: {
+    define: { __MONOCHANGE_RELEASE__: JSON.stringify(readMonochangeRelease()) },
     clean: true,
     deps: {
       alwaysBundle: ['@actions/core', '@actions/exec', '@actions/github'],

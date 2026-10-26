@@ -16,7 +16,7 @@ outputs:
   version:
     description: 'Resolved monochange version string.'
   source:
-    description: 'How monochange was resolved (existing-monochange, npx-shim, cargo-binstall, custom-command).'
+    description: 'How monochange was resolved (existing-monochange, pinned-download, custom-command).'
   result:
     description: 'success or failed.'
 runs:
