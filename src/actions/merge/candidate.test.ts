@@ -106,7 +106,7 @@ async function serve(request: IncomingMessage, response: ServerResponse): Promis
         : [],
     };
   } else if (path.endsWith('/status')) {
-    data = { statuses: [] };
+    data = { statuses: [], total_count: 0, state: 'pending' };
   } else if (path.endsWith('/permission')) {
     data = { role_name: role };
   } else if (path.endsWith('/dispatches')) {

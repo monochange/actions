@@ -17,6 +17,7 @@ type Scenario = {
   permissionError?: boolean;
   role?: string;
   pushError?: boolean;
+  laterStatus?: 'failure' | 'pending';
 };
 
 function shellQuote(value: string): string {
@@ -202,6 +203,22 @@ describe('published merge action preconditions', { timeout: 40_000 }, () => {
     expect(result.events.some((event) => event.startsWith('git '))).toBe(false);
     expect(result.hookRan).toBe(false);
   });
+
+  it.each(['failure', 'pending'] as const)(
+    'rejects a later-page legacy %s before Git or hooks',
+    async (laterStatus) => {
+      const result = await runAction({
+        inputs: { 'required-failing-check': 'release-blocker' },
+        scenario: { laterStatus },
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.stdout).toContain('security');
+      expectNoUpdates(result.events);
+      expect(result.events.some((event) => event.startsWith('git '))).toBe(false);
+      expect(result.hookRan).toBe(false);
+    },
+  );
 
   it('previews a divergent head without rebasing, pushing, or running hooks', async () => {
     const result = await runAction({ inputs: { 'dry-run': 'true' } });

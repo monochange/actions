@@ -22,7 +22,8 @@ const repository = {
 // The toolkit talks only to this local server, including its bundled HTTP client.
 const server = createServer((request, response) => {
   response.setHeader('connection', 'close');
-  const pathname = request.url ?? '';
+  const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+  const pathname = url.pathname;
   const send = (body: unknown, status = 200) => {
     response.writeHead(status, { 'content-type': 'application/json' });
     response.end(JSON.stringify(body));
@@ -52,7 +53,24 @@ const server = createServer((request, response) => {
             ],
     });
   } else if (pathname.endsWith('/status')) {
-    send({ statuses: [] });
+    if ('laterStatus' in scenario) {
+      const statuses =
+        url.searchParams.get('page') === '2'
+          ? [{ context: 'security', state: scenario.laterStatus, target_url: null }]
+          : [
+              { context: 'release-blocker', state: 'failure', target_url: null },
+              ...Array.from({ length: 99 }, (_, index) => ({
+                context: `ci-${index}`,
+                state: 'success',
+                target_url: null,
+              })),
+            ];
+      send({ statuses, total_count: 101, state: 'failure' });
+
+      return;
+    }
+
+    send({ statuses: [], total_count: 0, state: 'pending' });
   } else if (pathname.endsWith('/permission')) {
     if ('permissionError' in scenario && scenario.permissionError) {
       send({ message: 'permission lookup failed' }, 403);

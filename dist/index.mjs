@@ -22111,6 +22111,51 @@ function renderChecks(checks) {
 }
 
 //#endregion
+//#region src/actions/merge/statuses.ts
+/** Collects legacy status contexts used to decide whether a merge is safe. */
+async function collectStatuses(options) {
+	const { octokit, owner, repo, ref } = options;
+	const checks = [];
+	let totalCount;
+	let aggregateState;
+	for (let page = 1;; page += 1) {
+		const { data } = await octokit.rest.repos.getCombinedStatusForRef({
+			owner,
+			repo,
+			ref,
+			per_page: 100,
+			page
+		});
+		totalCount ??= data.total_count;
+		aggregateState ??= data.state;
+		if (data.total_count !== totalCount || data.state !== aggregateState) throw new Error("Commit statuses changed while paginating. Retry the merge.");
+		checks.push(...data.statuses.map((status) => ({
+			kind: "status",
+			name: status.context,
+			state: mapStatusState(status.state),
+			detailsUrl: status.target_url ?? void 0
+		})));
+		if (checks.length >= totalCount || data.statuses.length < 100) break;
+	}
+	if (checks.length !== totalCount || new Set(checks.map((check) => check.name)).size !== totalCount) throw new Error("Could not collect every commit status context. Retry the merge.");
+	let collectedState = "success";
+	if (checks.length === 0 || checks.some((check) => check.state === "pending")) collectedState = "pending";
+	if (checks.some((check) => check.state === "failure")) collectedState = "failure";
+	if (aggregateState !== collectedState) throw new Error("Collected commit statuses disagree with the aggregate state. Retry the merge.");
+	return checks;
+}
+/** Maps the legacy API states and rejects unknown states at the merge boundary. */
+function mapStatusState(state) {
+	switch (state) {
+		case "success":
+		case "pending": return state;
+		case "failure":
+		case "error": return "failure";
+		default: throw new Error(`Unknown commit status state: ${state}.`);
+	}
+}
+
+//#endregion
 //#region src/actions/merge/comment.ts
 function normalizeCommentMode(input) {
 	switch ((input ?? "on-error").trim().toLowerCase()) {
@@ -22463,17 +22508,12 @@ async function collectChecks(options) {
 		if (response.data.check_runs.length < 100) break;
 		page += 1;
 	}
-	const statuses = await octokit.rest.repos.getCombinedStatusForRef({
+	checks.push(...await collectStatuses({
+		octokit,
 		owner,
 		repo,
 		ref
-	});
-	checks.push(...statuses.data.statuses.map((status) => ({
-		kind: "status",
-		name: status.context,
-		state: mapStatusState(status.state),
-		detailsUrl: status.target_url ?? void 0
-	})));
+	}));
 	return checks;
 }
 async function createFastForwardWorkspace(options) {
@@ -22896,15 +22936,6 @@ function mapCheckRunState(status, conclusion) {
 		case "stale":
 		case "startup_failure":
 		case "timed_out": return "failure";
-		default: return "skipped";
-	}
-}
-function mapStatusState(state) {
-	switch (state) {
-		case "success": return "success";
-		case "pending": return "pending";
-		case "failure":
-		case "error": return "failure";
 		default: return "skipped";
 	}
 }

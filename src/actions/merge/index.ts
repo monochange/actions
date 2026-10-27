@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { evaluateChecks, renderChecks, type ActionCheck, type CheckEvaluation } from './checks';
+import { collectStatuses } from './statuses';
 import {
   normalizeCommentMode,
   serializeCommentOutput,
@@ -554,20 +555,7 @@ async function collectChecks(options: {
     page += 1;
   }
 
-  const statuses = await octokit.rest.repos.getCombinedStatusForRef({
-    owner,
-    repo,
-    ref,
-  });
-
-  checks.push(
-    ...statuses.data.statuses.map((status) => ({
-      kind: 'status' as const,
-      name: status.context,
-      state: mapStatusState(status.state),
-      detailsUrl: status.target_url ?? undefined,
-    })),
-  );
+  checks.push(...(await collectStatuses({ octokit, owner, repo, ref })));
 
   return checks;
 }
@@ -1173,20 +1161,6 @@ function mapCheckRunState(status: string, conclusion: string | null): ActionChec
     case 'stale':
     case 'startup_failure':
     case 'timed_out':
-      return 'failure';
-    default:
-      return 'skipped';
-  }
-}
-
-function mapStatusState(state: string): ActionCheck['state'] {
-  switch (state) {
-    case 'success':
-      return 'success';
-    case 'pending':
-      return 'pending';
-    case 'failure':
-    case 'error':
       return 'failure';
     default:
       return 'skipped';
