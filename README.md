@@ -8,7 +8,7 @@ This repository exists so monochange can own the critical parts of its workflow 
 
 The first action in this repository is `merge`.
 
-It is intentionally modeled after [`sequoia-pgp/fast-forward`](https://github.com/sequoia-pgp/fast-forward): by default it performs a **fast-forward-only** update of the base branch so the release commit lands unchanged. Set `merge-method: cherry-pick` to replay each PR commit with `git cherry-pick -x`, preserving commit messages and authors while producing new SHAs that rerun checks on the base branch.
+It is intentionally modeled after [`sequoia-pgp/fast-forward`](https://github.com/sequoia-pgp/fast-forward): by default it performs a **fast-forward-only** update of the base branch so the release commit lands unchanged. For a divergent PR, `merge-method: cherry-pick` replays its commits with `git cherry-pick -x` onto the base, publishes the result to the PR branch, and stops for fresh checks. A later run fast-forwards the checked head SHA to the base.
 
 That means it does **not** create a merge commit.
 
@@ -408,45 +408,51 @@ with:
 
 ### Shared merge inputs
 
-| Input                         | Required | Default                           | Description                                                                                                                                                       |
-| ----------------------------- | -------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `github-token`                | no       | `${{ github.token }}`             | Token used for GitHub API calls and the final git push.                                                                                                           |
-| `repository`                  | no       | `${{ github.repository }}`        | Target repository in `owner/repo` format.                                                                                                                         |
-| `pull-request`                | no       | empty                             | Explicit PR number. Must be a positive integer when provided.                                                                                                     |
-| `base-branch`                 | no       | `main`                            | Expected base branch for the release PR.                                                                                                                          |
-| `head-branch-prefix`          | no       | `monochange/release/`             | Required prefix for the release PR head branch.                                                                                                                   |
-| `merge-method`                | no       | `fast-forward`                    | How to update the base branch. Use `fast-forward` to preserve the PR head SHA, or `cherry-pick` to replay commits with `-x` and create new base-branch SHAs.      |
-| `required-failing-check`      | no       | `release-pr-manual-merge-blocker` | Name of the intentionally failing blocker check. Pass an empty string to disable this special rule.                                                               |
-| `allow-cross-repository`      | no       | `'false'`                         | Whether pull requests from forks are allowed.                                                                                                                     |
-| `require-green-checks`        | no       | `'true'`                          | Whether all checks must be complete and successful apart from the configured blocker check.                                                                       |
-| `minimum-reviewer-permission` | no       | `admin`                           | Minimum repository role required to trigger the merge. `admin` (default), `maintain`, or `push` (insecure). Strongly recommended for comment-triggered workflows. |
-| `comment`                     | no       | `on-error`                        | Whether to post a pull request comment: `always`, `never`, or `on-error`.                                                                                         |
-| `dry-run`                     | no       | `'false'`                         | Validate without updating either branch or running post-update hooks.                                                                                             |
-| `update-branch-on-failure`    | no       | `'false'`                         | When true, rebase the head branch onto the latest base branch and force-push it instead of failing when fast-forward is not possible.                             |
-| `post-update-script`          | no       | empty                             | Optional shell command to run after a successful rebase and force-push, before the fast-forward merge. Runs in the temp git workspace.                            |
-| `post-update-workflow`        | no       | empty                             | Optional workflow file path to dispatch via `workflow_dispatch` after a successful rebase and force-push. Requires `actions: write` permission.                   |
-| `trigger-command`             | no       | `/merge`                          | Slash command that triggers this action when posted as a pull request comment. Only validated when the workflow runs from an issue_comment event.                 |
-| `debug`                       | no       | `'false'`                         | Emit extra debug logging.                                                                                                                                         |
-
-Check policy and actor permission are enforced before creating the temporary git workspace. Dry-run reports the current head and whether it can fast-forward, including when the branches diverge, without rebasing, pushing, running a script, or dispatching a workflow.
-
-The post-update script receives only `PATH`, `LANG`, `LC_ALL`, `TMPDIR`, `TMP`, `TEMP`, and `RUNNER_TEMP` when set. It does not inherit action inputs, GitHub tokens, OIDC credentials, or other job environment variables.
+| Input                         | Required | Default                           | Description                                                                                                                                                                   |
+| ----------------------------- | -------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `github-token`                | no       | `${{ github.token }}`             | Token used for GitHub API calls and the final git push.                                                                                                                       |
+| `repository`                  | no       | `${{ github.repository }}`        | Target repository in `owner/repo` format.                                                                                                                                     |
+| `pull-request`                | no       | empty                             | Explicit PR number. Must be a positive integer when provided.                                                                                                                 |
+| `base-branch`                 | no       | `main`                            | Expected base branch for the release PR.                                                                                                                                      |
+| `head-branch-prefix`          | no       | `monochange/release/`             | Required prefix for the release PR head branch.                                                                                                                               |
+| `merge-method`                | no       | `fast-forward`                    | Use `fast-forward` to preserve the checked PR head. For divergent branches, `cherry-pick` replays commits with `-x` onto the base and updates the PR branch for fresh checks. |
+| `required-failing-check`      | no       | `release-pr-manual-merge-blocker` | Name of the intentionally failing blocker check. Pass an empty string to disable this special rule.                                                                           |
+| `allow-cross-repository`      | no       | `'false'`                         | Whether pull requests from forks are allowed.                                                                                                                                 |
+| `require-green-checks`        | no       | `'true'`                          | Whether all checks must be complete and successful apart from the configured blocker check.                                                                                   |
+| `minimum-reviewer-permission` | no       | `admin`                           | Minimum repository role required to trigger the merge. `admin` (default), `maintain`, or `push` (insecure). Strongly recommended for comment-triggered workflows.             |
+| `comment`                     | no       | `on-error`                        | Whether to post a pull request comment: `always`, `never`, or `on-error`.                                                                                                     |
+| `dry-run`                     | no       | `'false'`                         | Validate without updating either branch or running post-update hooks.                                                                                                         |
+| `update-branch-on-failure`    | no       | `'false'`                         | When true, rebase a divergent PR head onto the base, push it with a lease, and stop for fresh checks before a later merge run.                                                |
+| `post-update-script`          | no       | empty                             | Optional command after a rebase and PR branch push. Runs in the temp workspace; the action then stops for fresh checks.                                                       |
+| `post-update-workflow`        | no       | empty                             | Optional workflow file path to dispatch via `workflow_dispatch` after a successful rebase and force-push. Requires `actions: write` permission.                               |
+| `trigger-command`             | no       | `/merge`                          | Slash command that triggers this action when posted as a pull request comment. Only validated when the workflow runs from an issue_comment event.                             |
+| `debug`                       | no       | `'false'`                         | Emit extra debug logging.                                                                                                                                                     |
 
 ---
 
 ## Outputs
 
-| Output                | Description                                                                                                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `result`              | Final result. Currently `fast-forwarded`, `cherry-picked`, `dry-run`, or `failed`.                            |
-| `merged`              | `'true'` when the base branch was updated, otherwise `'false'`.                                               |
-| `rebased`             | `'true'` when the head branch was rebased onto the base branch before fast-forwarding.                        |
-| `pull-request-number` | Resolved PR number.                                                                                           |
-| `pull-request-url`    | Resolved PR URL.                                                                                              |
-| `base-sha`            | Base branch SHA before validation/push.                                                                       |
-| `head-sha`            | Head SHA used for validation.                                                                                 |
-| `fast-forward-sha`    | The SHA pushed to the base branch, or the candidate SHA reported during dry-run mode. Kept for compatibility. |
-| `comment`             | JSON string with a `body` field containing the summary comment text.                                          |
+| Output                | Description                                                                                                             |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `result`              | Successful result: `fast-forwarded`, `updated` (PR branch prepared; fresh checks and another run needed), or `dry-run`. |
+| `merged`              | `'true'` when the base branch was updated, otherwise `'false'`.                                                         |
+| `rebased`             | `'true'` when this run rebased and pushed the PR branch; the base remains unchanged.                                    |
+| `pull-request-number` | Resolved PR number.                                                                                                     |
+| `pull-request-url`    | Resolved PR URL.                                                                                                        |
+| `base-sha`            | Base branch SHA before validation/push.                                                                                 |
+| `head-sha`            | Checked head SHA, or the newly prepared PR head when `result` is `updated`.                                             |
+| `fast-forward-sha`    | The SHA pushed to the base branch, or the candidate SHA reported during dry-run mode. Kept for compatibility.           |
+| `comment`             | JSON string with a `body` field containing the summary comment text.                                                    |
+
+Check policy and actor permission are enforced before creating the temporary git workspace. Dry-run reports the current head and whether it can fast-forward, including when the branches diverge, without rebasing, pushing, running a script, or dispatching a workflow.
+
+The post-update script receives only `PATH`, `LANG`, `LC_ALL`, `TMPDIR`, `TMP`, `TEMP`, and `RUNNER_TEMP` when set. It does not inherit action inputs, GitHub tokens, OIDC credentials, or other job environment variables.
+
+### Branch updates and fresh checks
+
+Rebase and cherry-pick preparation return `result: updated` and `merged: false`. Wait for the PR checks on the new `head-sha`, then run the action again. The later run fast-forwards that exact checked SHA, including when `merge-method` is `cherry-pick`; a head already based on the base is not replayed again. The token must be able to update the PR branch.
+
+Use a token that triggers your PR workflows, such as a GitHub App token. Pushes made with `GITHUB_TOKEN` generally do not start a new workflow run. Post-update scripts and workflows dispatched on the base branch do not validate the new PR head or permit an immediate merge. With check enforcement enabled, missing, pending, cancelled, or failing checks block the later merge.
 
 ### Example: consume outputs
 
