@@ -135,166 +135,118 @@ export async function runMerge(): Promise<void> {
     });
 
     setCommonOutputs({ pullRequest, workspace });
+    core.setOutput('merged', 'false');
 
-    if (inputs.dryRun) {
-      commentBody = buildCommentBody({
-        actor: github.context.actor,
-        checkEvaluation,
-        checks,
-        errorMessage: undefined,
-        outcome: 'dry-run',
-        pullRequest,
-        workspace,
-      });
-
-      core.notice(`Dry run succeeded for PR #${pullRequest.number}.`);
-      core.setOutput('result', 'dry-run');
-      core.setOutput('merged', 'false');
-      core.setOutput('rebased', 'false');
-      core.setOutput('fast-forward-sha', workspace.headSha);
-      core.setOutput('comment', serializeCommentOutput(commentBody));
-
-      await writeSummary(commentBody);
-
-      if (shouldPostComment(inputs.commentMode, false)) {
-        await postPullRequestComment({
-          body: commentBody,
-          octokit,
-          owner,
-          pullRequestNumber: pullRequest.number,
-          repo,
-        });
-      }
-
-      return;
+    if (
+      !inputs.dryRun &&
+      !workspace.canFastForward &&
+      inputs.mergeMethod === 'fast-forward' &&
+      !inputs.updateBranchOnFailure
+    ) {
+      throw new Error(
+        renderFastForwardFailureMessage({
+          baseBranch: workspace.baseBranch,
+          baseSha: workspace.baseSha,
+          headBranch: workspace.headBranch,
+          headSha: workspace.headSha,
+          mergeBaseSha: workspace.mergeBaseSha,
+        }),
+      );
     }
 
-    if (inputs.mergeMethod === 'fast-forward' && !workspace.canFastForward) {
-      if (inputs.updateBranchOnFailure) {
-        core.notice(
-          `Fast-forward not possible. Rebase ${workspace.headBranch} onto ${workspace.baseBranch} and retry.`,
-        );
+    let outcome: 'dry-run' | 'updated' | 'fast-forwarded';
 
-        await runGit({
-          args: [
-            'fetch',
-            '--no-tags',
-            workspace.headRemote,
-            `+refs/heads/${workspace.headBranch}:refs/tmp/head`,
-          ],
-          authHeader: workspace.authHeader,
-          cwd: workspace.tempDir,
-          debug: inputs.debug,
-        });
-
-        const latestHeadSha = await getGitStdout({
-          args: ['rev-parse', 'refs/tmp/head'],
-          cwd: workspace.tempDir,
-          debug: inputs.debug,
-        });
-
-        if (latestHeadSha !== workspace.headSha) {
-          throw new Error(
-            `${workspace.headBranch} moved from ${workspace.headSha} to ${latestHeadSha} while the action was running. Re-run the workflow with the updated pull request head.`,
-          );
-        }
-
+    if (inputs.dryRun) {
+      outcome = 'dry-run';
+      core.setOutput('fast-forward-sha', workspace.headSha);
+    } else if (!workspace.canFastForward) {
+      if (inputs.mergeMethod === 'cherry-pick') {
+        workspace.headSha = await prepareCherryPick({ debug: inputs.debug, workspace });
+      } else {
         await rebaseHeadBranch({
           debug: inputs.debug,
           headBranch: workspace.headBranch,
           tempDir: workspace.tempDir,
         });
-
-        await pushRebasedHeadBranch({
-          authHeader: workspace.authHeader,
-          debug: inputs.debug,
-          headBranch: workspace.headBranch,
-          headRemote: workspace.headRemote,
-          tempDir: workspace.tempDir,
-        });
-
-        const newHeadSha = await getGitStdout({
+        workspace.headSha = await getGitStdout({
           args: ['rev-parse', 'HEAD'],
           cwd: workspace.tempDir,
           debug: inputs.debug,
         });
-
-        workspace.headSha = newHeadSha;
-        workspace.canFastForward = await didGitSucceed({
-          args: ['merge-base', '--is-ancestor', workspace.baseSha, workspace.headSha],
-          cwd: workspace.tempDir,
-          debug: inputs.debug,
-        });
-
-        if (!workspace.canFastForward) {
-          throw new Error(
-            `Rebased ${workspace.headBranch} onto ${workspace.baseBranch}, but fast-forward is still not possible.`,
-          );
-        }
-
-        core.setOutput('head-sha', workspace.headSha);
-        rebased = true;
-        core.setOutput('rebased', 'true');
-        core.notice(`Rebased and pushed ${workspace.headBranch} to ${workspace.headSha}.`);
-
-        if (inputs.postUpdateScript) {
-          await runPostUpdateScript({
-            debug: inputs.debug,
-            script: inputs.postUpdateScript,
-            tempDir: workspace.tempDir,
-          });
-        }
-
-        if (inputs.postUpdateWorkflow) {
-          await dispatchPostUpdateWorkflow({
-            baseBranch: workspace.baseBranch,
-            octokit,
-            owner,
-            repo,
-            workflowId: inputs.postUpdateWorkflow,
-          });
-        }
-      } else {
-        throw new Error(
-          renderFastForwardFailureMessage({
-            baseBranch: workspace.baseBranch,
-            baseSha: workspace.baseSha,
-            headBranch: workspace.headBranch,
-            headSha: workspace.headSha,
-            mergeBaseSha: workspace.mergeBaseSha,
-          }),
-        );
       }
+
+      workspace.canFastForward = await didGitSucceed({
+        args: ['merge-base', '--is-ancestor', workspace.baseSha, workspace.headSha],
+        cwd: workspace.tempDir,
+        debug: inputs.debug,
+      });
+
+      if (!workspace.canFastForward) {
+        throw new Error('Prepared head is not a fast-forward of the base branch.');
+      }
+
+      // Security: The original check results cannot authorize a generated commit.
+      checks = [];
+      checkEvaluation = undefined;
+      await pushUpdatedHeadBranch({ debug: inputs.debug, workspace });
+      rebased = inputs.mergeMethod === 'fast-forward';
+      core.setOutput('head-sha', workspace.headSha);
+
+      if (rebased && inputs.postUpdateScript) {
+        await runPostUpdateScript({
+          debug: inputs.debug,
+          script: inputs.postUpdateScript,
+          tempDir: workspace.tempDir,
+        });
+      }
+
+      if (rebased && inputs.postUpdateWorkflow) {
+        await dispatchPostUpdateWorkflow({
+          baseBranch: workspace.baseBranch,
+          octokit,
+          owner,
+          repo,
+          workflowId: inputs.postUpdateWorkflow,
+        });
+      }
+
+      outcome = 'updated';
+    } else {
+      const latest = await octokit.rest.pulls.get({ owner, repo, pull_number: pullRequest.number });
+      validatePullRequest({
+        allowCrossRepository: inputs.allowCrossRepository,
+        baseBranch: inputs.baseBranch,
+        headBranchPrefix: inputs.headBranchPrefix,
+        pullRequest: latest.data,
+      });
+
+      if (latest.data.head.sha !== workspace.headSha) {
+        throw new Error('Pull request head changed after check validation. Re-run the workflow.');
+      }
+
+      await fastForwardBaseBranch({ debug: inputs.debug, workspace });
+      outcome = 'fast-forwarded';
+      core.setOutput('merged', 'true');
+      core.setOutput('fast-forward-sha', workspace.headSha);
     }
-
-    const mergeSha =
-      inputs.mergeMethod === 'cherry-pick'
-        ? await cherryPickBaseBranch({ debug: inputs.debug, workspace })
-        : await fastForwardBaseBranch({ debug: inputs.debug, workspace });
-
-    workspace.headSha = mergeSha;
-    core.setOutput('head-sha', workspace.headSha);
 
     commentBody = buildCommentBody({
       actor: github.context.actor,
       checkEvaluation,
       checks,
       errorMessage: undefined,
-      outcome: inputs.mergeMethod === 'cherry-pick' ? 'cherry-picked' : 'fast-forwarded',
+      outcome,
       pullRequest,
       workspace,
     });
 
     core.notice(
-      `${inputs.mergeMethod === 'cherry-pick' ? 'Cherry-picked' : 'Fast-forwarded'} ${workspace.baseBranch} to ${workspace.headSha} from PR #${pullRequest.number}.`,
+      outcome === 'updated'
+        ? `Updated ${workspace.headBranch} to ${workspace.headSha}. Wait for fresh checks, then re-run this action to merge.`
+        : `${outcome} PR #${pullRequest.number} at ${workspace.headSha}.`,
     );
-    core.setOutput(
-      'result',
-      inputs.mergeMethod === 'cherry-pick' ? 'cherry-picked' : 'fast-forwarded',
-    );
-    core.setOutput('merged', 'true');
+    core.setOutput('result', outcome);
     core.setOutput('rebased', rebased ? 'true' : 'false');
-    core.setOutput('fast-forward-sha', workspace.headSha);
     core.setOutput('comment', serializeCommentOutput(commentBody));
 
     await writeSummary(commentBody);
@@ -754,7 +706,8 @@ async function fastForwardBaseBranch(options: {
   return workspace.headSha;
 }
 
-async function cherryPickBaseBranch(options: {
+/** Prepares a PR head for a separate check cycle without updating the base branch. */
+async function prepareCherryPick(options: {
   debug: boolean;
   workspace: FastForwardWorkspace;
 }): Promise<string> {
@@ -791,13 +744,6 @@ async function cherryPickBaseBranch(options: {
       debug,
     });
 
-    await runGit({
-      args: ['push', 'origin', `HEAD:refs/heads/${workspace.baseBranch}`],
-      authHeader: workspace.authHeader,
-      cwd: workspace.tempDir,
-      debug,
-    });
-
     return cherryPickSha;
   } catch (error) {
     await exec.getExecOutput('git', ['cherry-pick', '--abort'], {
@@ -808,7 +754,7 @@ async function cherryPickBaseBranch(options: {
 
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `Cherry-pick merge failed. The base branch may have advanced, a commit may conflict, the token may not be allowed to push, or branch protection may still be blocking the update. ${message}`,
+      `Cherry-pick preparation failed. A commit may conflict or already be present on the base branch. ${message}`,
     );
   }
 }
@@ -844,26 +790,24 @@ async function rebaseHeadBranch(options: {
   }
 }
 
-async function pushRebasedHeadBranch(options: {
-  authHeader: string;
+/** Publishes a candidate without overwriting a concurrently updated PR head. */
+async function pushUpdatedHeadBranch(options: {
   debug: boolean;
-  headBranch: string;
-  headRemote: string;
-  tempDir: string;
+  workspace: FastForwardWorkspace;
 }): Promise<void> {
-  const { authHeader, debug, headBranch, headRemote, tempDir } = options;
+  const { debug, workspace } = options;
 
-  try {
-    await runGit({
-      args: ['push', '--force', headRemote, `HEAD:refs/heads/${headBranch}`],
-      authHeader,
-      cwd: tempDir,
-      debug,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Force-push of rebased ${headBranch} failed: ${message}`);
-  }
+  await runGit({
+    args: [
+      'push',
+      `--force-with-lease=refs/heads/${workspace.headBranch}:${workspace.expectedHeadSha}`,
+      workspace.headRemote,
+      `${workspace.headSha}:refs/heads/${workspace.headBranch}`,
+    ],
+    authHeader: workspace.authHeader,
+    cwd: workspace.tempDir,
+    debug,
+  });
 }
 
 async function runPostUpdateScript(options: {
@@ -1099,7 +1043,7 @@ function buildCommentBody(options: {
   checkEvaluation: CheckEvaluation | undefined;
   checks: ActionCheck[];
   errorMessage: string | undefined;
-  outcome: 'cherry-picked' | 'dry-run' | 'error' | 'fast-forwarded';
+  outcome: 'updated' | 'dry-run' | 'error' | 'fast-forwarded';
   pullRequest: PullRequest | undefined;
   workspace: FastForwardWorkspace | undefined;
 }): string {
@@ -1147,9 +1091,9 @@ function buildCommentBody(options: {
     case 'dry-run':
       lines.push('Dry run succeeded. No branch was updated.');
       break;
-    case 'cherry-picked':
+    case 'updated':
       lines.push(
-        `Cherry-picked commits from \`${pullRequest?.head.ref ?? 'head'}\` onto \`${workspace?.baseBranch ?? pullRequest?.base.ref ?? 'base'}\` at \`${workspace?.headSha ?? pullRequest?.head.sha ?? 'head'}\`.`,
+        `Updated PR branch \`${workspace?.headBranch}\` to \`${workspace?.headSha}\`. The base branch was not updated. Wait for fresh checks on this commit, then re-run this action to merge.`,
       );
       break;
     case 'fast-forwarded':

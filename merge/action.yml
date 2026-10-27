@@ -62,11 +62,11 @@ inputs:
     required: false
     default: 'false'
   update-branch-on-failure:
-    description: 'When true, if the head branch is not a fast-forward of the base branch, rebase the head branch onto the latest base branch and force-push it instead of failing immediately.'
+    description: 'When true, rebase a divergent PR head onto the base, push it with a lease, and stop for fresh checks before another merge run.'
     required: false
     default: 'false'
   post-update-script:
-    description: 'Optional shell command to run after a successful rebase and force-push, before the fast-forward merge. Runs in the temporary git workspace without inherited action inputs or credentials.'
+    description: 'Optional shell command after a rebase and PR branch push. Runs in the temporary git workspace without inherited action inputs or credentials; the action then stops for fresh checks.'
     required: false
   post-update-workflow:
     description: 'Optional workflow file path to dispatch via workflow_dispatch after a successful rebase and force-push. Runs on the base branch.'
@@ -77,7 +77,7 @@ inputs:
     default: '/merge'
 outputs:
   result:
-    description: 'Final action result.'
+    description: 'Successful result: fast-forwarded, updated (wait for fresh PR head checks and run again), or dry-run.'
   merged:
     description: 'Whether the pull request was fast-forwarded.'
   pull-request-number:
@@ -87,13 +87,13 @@ outputs:
   base-sha:
     description: 'Base branch SHA before the fast-forward attempt.'
   head-sha:
-    description: 'Head commit SHA used for validation.'
+    description: 'Checked head SHA, or the newly prepared PR head when result is updated.'
   fast-forward-sha:
     description: 'Commit SHA pushed to the base branch after a successful fast-forward, or the candidate SHA reported during dry-run mode.'
   comment:
     description: 'JSON comment payload with a body field.'
   rebased:
-    description: 'Whether the head branch was rebased onto the base branch before the fast-forward.'
+    description: 'Whether this run rebased and pushed the PR branch without updating the base branch.'
 runs:
   using: node24
   main: ../dist/index.mjs

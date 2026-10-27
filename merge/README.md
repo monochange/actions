@@ -6,7 +6,7 @@ This directory exposes the merge action at:
 uses: monochange/actions/merge@v0.1.0
 ```
 
-It uses the shared runtime bundled at `../dist/index.mjs` and performs a **fast-forward-only** update of the target branch.
+It uses the shared runtime bundled at `../dist/index.mjs` and fast-forwards the target branch to the checked PR head. Rebase or cherry-pick preparation updates the PR branch and returns `result: updated` with `merged: false`. Wait for fresh checks on that commit and run the action again to merge.
 
 See the repository root [`README.md`](../README.md) for:
 

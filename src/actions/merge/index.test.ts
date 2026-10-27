@@ -52,7 +52,7 @@ case "$1" in
     printf 'merge-base-sha' ;;
   rebase) touch "$MERGE_TEST_DIRECTORY/rebased" ;;
   push)
-    if [ "$2" = '--force' ] && [ -f "$MERGE_TEST_DIRECTORY/push-error" ]; then
+    if [ -f "$MERGE_TEST_DIRECTORY/push-error" ]; then
       printf 'head push failed' >&2; exit 1
     fi ;;
 esac
@@ -214,16 +214,18 @@ describe('published merge action preconditions', { timeout: 40_000 }, () => {
     expect(result.outputs).toContain('\nhead-sha\n');
   });
 
-  it('updates both branches and runs hooks without inherited credentials when allowed', async () => {
+  it('prepares the head and runs hooks without inherited credentials when allowed', async () => {
     const result = await runAction();
 
     expect(result.ok, result.stdout).toBe(true);
-    expect(result.events).toContain('git push --force origin HEAD:refs/heads/release/next');
-    expect(result.events).toContain('git push origin rebased-sha:refs/heads/main');
+    expect(result.events).toContain(
+      'git push --force-with-lease=refs/heads/release/next:head-sha origin rebased-sha:refs/heads/release/next',
+    );
+    expect(result.events).not.toContain('git push origin rebased-sha:refs/heads/main');
     expect(result.events).toContain('dispatch');
     expect(result.events.indexOf('permission')).toBeLessThan(result.events.indexOf('git init .'));
     expect(result.hookRan).toBe(true);
-    expect(result.outputs).toContain('\nfast-forwarded\n');
+    expect(result.outputs).toContain('\nupdated\n');
   });
 
   it('stops before hooks and the base update when the head push fails', async () => {
