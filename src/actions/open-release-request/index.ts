@@ -37,11 +37,26 @@ export async function runOpenReleaseRequest(): Promise<void> {
   }
 
   const token = input('github-token');
+
   if (token) {
-    core.exportVariable('GITHUB_TOKEN', token);
+    core.setSecret(token);
   }
 
-  const stdout = await execRequired(monochange.command, args, { cwd });
+  const stdout = await execRequired(monochange.command, args, {
+    cwd,
+    ...(token
+      ? {
+          env: {
+            ...Object.fromEntries(
+              Object.entries(process.env).filter(
+                (entry): entry is [string, string] => entry[1] !== undefined,
+              ),
+            ),
+            GITHUB_TOKEN: token,
+          },
+        }
+      : {}),
+  });
   const mixed = parseMixedOutput(stdout);
   const parsed = isRecord(mixed) ? mixed : undefined;
   core.setOutput('result', 'success');

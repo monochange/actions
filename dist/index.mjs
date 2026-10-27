@@ -17480,15 +17480,36 @@ var ExitCode;
 	ExitCode[ExitCode["Failure"] = 1] = "Failure";
 })(ExitCode || (ExitCode = {}));
 /**
-* Sets env variable for this action and future actions in the job
-* @param name the name of the variable to set
-* @param val the value of the variable. Non-string values will be converted to a string via JSON.stringify
+* Registers a secret which will get masked from logs
+*
+* @param secret - Value of the secret to be masked
+* @remarks
+* This function instructs the Actions runner to mask the specified value in any
+* logs produced during the workflow run. Once registered, the secret value will
+* be replaced with asterisks (***) whenever it appears in console output, logs,
+* or error messages.
+*
+* This is useful for protecting sensitive information such as:
+* - API keys
+* - Access tokens
+* - Authentication credentials
+* - URL parameters containing signatures (SAS tokens)
+*
+* Note that masking only affects future logs; any previous appearances of the
+* secret in logs before calling this function will remain unmasked.
+*
+* @example
+* ```typescript
+* // Register an API token as a secret
+* const apiToken = "abc123xyz456";
+* setSecret(apiToken);
+*
+* // Now any logs containing this value will show *** instead
+* console.log(`Using token: ${apiToken}`); // Outputs: "Using token: ***"
+* ```
 */
-function exportVariable(name, val) {
-	const convertedVal = toCommandValue(val);
-	process.env[name] = convertedVal;
-	if (process.env["GITHUB_ENV"] || "") return issueFileCommand("ENV", prepareKeyValueMessage(name, val));
-	issueCommand("set-env", { name }, convertedVal);
+function setSecret(secret) {
+	issueCommand("add-mask", {}, secret);
 }
 /**
 * Gets the value of an input.
@@ -22923,8 +22944,14 @@ async function runOpenReleaseRequest() {
 		return;
 	}
 	const token = input$5("github-token");
-	if (token) exportVariable("GITHUB_TOKEN", token);
-	const mixed = parseMixedOutput(await execRequired(monochange.command, args, { cwd }));
+	if (token) setSecret(token);
+	const mixed = parseMixedOutput(await execRequired(monochange.command, args, {
+		cwd,
+		...token ? { env: {
+			...Object.fromEntries(Object.entries(process.env).filter((entry) => entry[1] !== void 0)),
+			GITHUB_TOKEN: token
+		} } : {}
+	}));
 	const parsed = isRecord$1(mixed) ? mixed : void 0;
 	setOutput("result", "success");
 	setOutput("json", JSON.stringify(parsed ?? null));
@@ -23245,8 +23272,14 @@ async function runReleasePr() {
 		"--format",
 		inputs.format
 	];
-	if (inputs.githubToken) exportVariable("GITHUB_TOKEN", inputs.githubToken);
-	const parsed = parseMixedOutput(await execRequired(monochange.command, args, { cwd: inputs.workingDirectory }));
+	if (inputs.githubToken) setSecret(inputs.githubToken);
+	const parsed = parseMixedOutput(await execRequired(monochange.command, args, {
+		cwd: inputs.workingDirectory,
+		...inputs.githubToken ? { env: {
+			...Object.fromEntries(Object.entries(process.env).filter((entry) => entry[1] !== void 0)),
+			GITHUB_TOKEN: inputs.githubToken
+		} } : {}
+	}));
 	const parsedRecord = typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : void 0;
 	setOutput("result", "success");
 	setOutput("json", JSON.stringify(parsedRecord ?? null));

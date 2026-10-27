@@ -52,7 +52,7 @@ describe('runOpenReleaseRequest', () => {
     );
   });
 
-  it('exports GITHUB_TOKEN and supports dry-run', async () => {
+  it('supports dry-run without passing credentials', async () => {
     mockCore.getInput.mockImplementation((name) => {
       if (name === 'github-token') return 'token';
       if (name === 'dry-run') return 'true';
@@ -63,6 +63,7 @@ describe('runOpenReleaseRequest', () => {
 
     expect(mockExec).not.toHaveBeenCalled();
     expect(mockCore.exportVariable).not.toHaveBeenCalled();
+    expect(mockCore.setSecret).not.toHaveBeenCalled();
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'dry-run');
   });
 
@@ -85,11 +86,17 @@ describe('runOpenReleaseRequest', () => {
     expect(mockCore.setOutput).toHaveBeenCalledWith('head-branch', 'false');
   });
 
-  it('exports GITHUB_TOKEN before running when provided', async () => {
+  it('masks the token and passes it only to the CLI', async () => {
     mockCore.getInput.mockImplementation((name) => (name === 'github-token' ? 'token' : ''));
 
     await runOpenReleaseRequest();
 
-    expect(mockCore.exportVariable).toHaveBeenCalledWith('GITHUB_TOKEN', 'token');
+    expect(mockCore.setSecret).toHaveBeenCalledWith('token');
+    expect(mockCore.exportVariable).not.toHaveBeenCalled();
+    expect(mockExec).toHaveBeenCalledWith(
+      'monochange',
+      ['step', 'open-release-request', '--format', 'json'],
+      { cwd: '.', env: expect.objectContaining({ GITHUB_TOKEN: 'token' }) },
+    );
   });
 });
