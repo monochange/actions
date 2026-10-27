@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.11.0](https://github.com/monochange/actions/releases/tag/v0.11.0) (2026-10-27)
+
+### 💥 Breaking Change
+
+#### Require fresh PR head checks after rebase or cherry-pick preparation before merging
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #113](https://github.com/monochange/actions/pull/113)
+
+Rebase and cherry-pick preparation now push the generated commit to the PR branch and return `result: updated` with `merged: false`. Wait for checks on the new `head-sha`, then run the action again to fast-forward that exact checked commit. A head already based on the base branch is fast-forwarded without replaying it again, including in cherry-pick mode.
+
+Update workflows that expected preparation and merging in one run to handle `updated` and trigger the later merge run. Use a token that starts PR checks when the head is pushed. Post-update scripts and workflows dispatched on the base branch do not authorize an immediate merge. Dry runs now leave both branches unchanged.
+
+#### Track the monochange 0.21.0 CLI release
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #102](https://github.com/monochange/actions/pull/102)
+
+The actions development and release tooling now resolves monochange 0.21.0, including Swift, CocoaPods and Gradle configuration support. This follows the breaking CLI release baseline. After the next maintainer-controlled actions release, pin its immutable commit SHA to adopt that CLI baseline; the existing action inputs remain supported.
+
+### 🐛 Fixed
+
+- **Pin automatic CLI setup to the action release and verify archive integrity before execution.**
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #109](https://github.com/monochange/actions/pull/109)
+- **Collect every legacy commit status before evaluating merge checks.**
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #111](https://github.com/monochange/actions/pull/111)
+- **Require HTTPS without embedded credentials for hosted release requests.**
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #112](https://github.com/monochange/actions/pull/112)
+- **Scope release-request GitHub tokens to the CLI child process instead of persisting them in later job steps.**
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #115](https://github.com/monochange/actions/pull/115)
+- **Enforce merge authorization, check policy, and dry-run before branch updates and hooks.** The merge action rejects unauthorized actors and blocked checks before creating its git workspace. Dry-run never rebases or pushes either branch, runs a post-update script, or dispatches a workflow. Post-update scripts receive only executable-path, locale, and temporary-directory variables instead of inheriting action inputs and job credentials.
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #114](https://github.com/monochange/actions/pull/114)
+
 ## [0.10.1](https://github.com/monochange/actions/releases/tag/v0.10.1) (2026-10-21)
 
 ### 🚀 Feature

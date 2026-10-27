@@ -1,0 +1,829 @@
+{
+  "schema_version": "0.10",
+  "kind": "monochange.releaseRecord",
+  "created_at": "2026-10-27T15:16:30Z",
+  "command": "release",
+  "version": "0.11.0",
+  "versions": {
+    "actions": "0.11.0"
+  },
+  "release_targets": [
+    {
+      "id": "actions",
+      "kind": "package",
+      "version": "0.11.0",
+      "version_format": "primary",
+      "tag": true,
+      "release": true,
+      "tag_name": "v0.11.0",
+      "rendered_title": "v0.11.0 (2026-10-27)",
+      "rendered_changelog_title": "[0.11.0](https://github.com/monochange/actions/releases/tag/v0.11.0) (2026-10-27)",
+      "members": [
+        "actions"
+      ],
+      "floating_tags": [
+        "v{{ major }}.{{ minor }}",
+        "v{{ major }}"
+      ]
+    }
+  ],
+  "released_packages": [
+    "actions"
+  ],
+  "changed_files": [
+    "changelog.md",
+    "package.json"
+  ],
+  "package_publications": [],
+  "updated_changelogs": [
+    "changelog.md"
+  ],
+  "deleted_changesets": [
+    ".changeset/1793043114-actions.md",
+    ".changeset/1793110373-actions.md",
+    ".changeset/1793111127-actions.md",
+    ".changeset/1793111150-actions.md",
+    ".changeset/1793111587-actions.md",
+    ".changeset/merge-update-guards.md",
+    ".changeset/monochange-021-tracking.md"
+  ],
+  "changesets": [
+    {
+      "path": ".changeset/1793043114-actions.md",
+      "summary": "Pin automatic CLI setup to the action release and verify archive integrity before execution",
+      "details": null,
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "patch",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "patch"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "47a302e7031c7712a74c956bb36288b725a58785",
+            "short_sha": "47a302e",
+            "url": "https://github.com/monochange/actions/commit/47a302e7031c7712a74c956bb36288b725a58785",
+            "authored_at": "2026-10-26T19:40:38Z",
+            "committed_at": "2026-10-26T19:40:38Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#109",
+            "title": "fix: verify pinned CLI downloads during automatic setup",
+            "url": "https://github.com/monochange/actions/pull/109",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "47a302e7031c7712a74c956bb36288b725a58785",
+            "short_sha": "47a302e",
+            "url": "https://github.com/monochange/actions/commit/47a302e7031c7712a74c956bb36288b725a58785",
+            "authored_at": "2026-10-26T19:40:38Z",
+            "committed_at": "2026-10-26T19:40:38Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#109",
+            "title": "fix: verify pinned CLI downloads during automatic setup",
+            "url": "https://github.com/monochange/actions/pull/109",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    },
+    {
+      "path": ".changeset/1793110373-actions.md",
+      "summary": "Require fresh PR head checks after rebase or cherry-pick preparation before merging",
+      "details": "Rebase and cherry-pick preparation now push the generated commit to the PR branch and return `result: updated` with `merged: false`. Wait for checks on the new `head-sha`, then run the action again to fast-forward that exact checked commit. A head already based on the base branch is fast-forwarded without replaying it again, including in cherry-pick mode.\n\nUpdate workflows that expected preparation and merging in one run to handle `updated` and trigger the later merge run. Use a token that starts PR checks when the head is pushed. Post-update scripts and workflows dispatched on the base branch do not authorize an immediate merge. Dry runs now leave both branches unchanged.",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "major",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "major"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "c2a5f43b1336a0c94e9dd934333ab7b6ce96c22e",
+            "short_sha": "c2a5f43",
+            "url": "https://github.com/monochange/actions/commit/c2a5f43b1336a0c94e9dd934333ab7b6ce96c22e",
+            "authored_at": "2026-10-27T14:26:40Z",
+            "committed_at": "2026-10-27T14:50:52Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#113",
+            "title": "fix(merge)!: require fresh checks after commit preparation",
+            "url": "https://github.com/monochange/actions/pull/113",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "c2a5f43b1336a0c94e9dd934333ab7b6ce96c22e",
+            "short_sha": "c2a5f43",
+            "url": "https://github.com/monochange/actions/commit/c2a5f43b1336a0c94e9dd934333ab7b6ce96c22e",
+            "authored_at": "2026-10-27T14:26:40Z",
+            "committed_at": "2026-10-27T14:50:52Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#113",
+            "title": "fix(merge)!: require fresh checks after commit preparation",
+            "url": "https://github.com/monochange/actions/pull/113",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    },
+    {
+      "path": ".changeset/1793111127-actions.md",
+      "summary": "Collect every legacy commit status before evaluating merge checks",
+      "details": null,
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "patch",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "patch"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "485cc76772360443883ebf51d54dafbc6df0a673",
+            "short_sha": "485cc76",
+            "url": "https://github.com/monochange/actions/commit/485cc76772360443883ebf51d54dafbc6df0a673",
+            "authored_at": "2026-10-27T14:32:35Z",
+            "committed_at": "2026-10-27T15:11:30Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#111",
+            "title": "fix(merge): collect all legacy commit statuses",
+            "url": "https://github.com/monochange/actions/pull/111",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "485cc76772360443883ebf51d54dafbc6df0a673",
+            "short_sha": "485cc76",
+            "url": "https://github.com/monochange/actions/commit/485cc76772360443883ebf51d54dafbc6df0a673",
+            "authored_at": "2026-10-27T14:32:35Z",
+            "committed_at": "2026-10-27T15:11:30Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#111",
+            "title": "fix(merge): collect all legacy commit statuses",
+            "url": "https://github.com/monochange/actions/pull/111",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    },
+    {
+      "path": ".changeset/1793111150-actions.md",
+      "summary": "Require HTTPS without embedded credentials for hosted release requests",
+      "details": null,
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "patch",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "patch"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "4e941e68e7bc928cdfffea2fcf6dcee3edf09e03",
+            "short_sha": "4e941e6",
+            "url": "https://github.com/monochange/actions/commit/4e941e68e7bc928cdfffea2fcf6dcee3edf09e03",
+            "authored_at": "2026-10-27T14:32:08Z",
+            "committed_at": "2026-10-27T14:32:56Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#112",
+            "title": "fix(hosted-release): require HTTPS for authenticated requests",
+            "url": "https://github.com/monochange/actions/pull/112",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "4e941e68e7bc928cdfffea2fcf6dcee3edf09e03",
+            "short_sha": "4e941e6",
+            "url": "https://github.com/monochange/actions/commit/4e941e68e7bc928cdfffea2fcf6dcee3edf09e03",
+            "authored_at": "2026-10-27T14:32:08Z",
+            "committed_at": "2026-10-27T14:32:56Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#112",
+            "title": "fix(hosted-release): require HTTPS for authenticated requests",
+            "url": "https://github.com/monochange/actions/pull/112",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    },
+    {
+      "path": ".changeset/1793111587-actions.md",
+      "summary": "Scope release-request GitHub tokens to the CLI child process instead of persisting them in later job steps.",
+      "details": null,
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "patch",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "patch"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "1fbb98a2624a3c50b5cfe9e15ae86a6956fe654b",
+            "short_sha": "1fbb98a",
+            "url": "https://github.com/monochange/actions/commit/1fbb98a2624a3c50b5cfe9e15ae86a6956fe654b",
+            "authored_at": "2026-10-27T14:45:05Z",
+            "committed_at": "2026-10-27T14:58:48Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#115",
+            "title": "fix(release): scope request tokens to the CLI process",
+            "url": "https://github.com/monochange/actions/pull/115",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "1fbb98a2624a3c50b5cfe9e15ae86a6956fe654b",
+            "short_sha": "1fbb98a",
+            "url": "https://github.com/monochange/actions/commit/1fbb98a2624a3c50b5cfe9e15ae86a6956fe654b",
+            "authored_at": "2026-10-27T14:45:05Z",
+            "committed_at": "2026-10-27T14:58:48Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#115",
+            "title": "fix(release): scope request tokens to the CLI process",
+            "url": "https://github.com/monochange/actions/pull/115",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    },
+    {
+      "path": ".changeset/merge-update-guards.md",
+      "summary": "Enforce merge authorization, check policy, and dry-run before branch updates and hooks",
+      "details": "The merge action rejects unauthorized actors and blocked checks before creating its git workspace. Dry-run never rebases or pushes either branch, runs a post-update script, or dispatches a workflow. Post-update scripts receive only executable-path, locale, and temporary-directory variables instead of inheriting action inputs and job credentials.",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "patch",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "patch"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "252e5f74fa4622b9f860318b48dced51b8ceaa1d",
+            "short_sha": "252e5f7",
+            "url": "https://github.com/monochange/actions/commit/252e5f74fa4622b9f860318b48dced51b8ceaa1d",
+            "authored_at": "2026-10-27T14:38:00Z",
+            "committed_at": "2026-10-27T14:41:44Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#114",
+            "title": "fix(merge): enforce guards before branch updates and hooks",
+            "url": "https://github.com/monochange/actions/pull/114",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "252e5f74fa4622b9f860318b48dced51b8ceaa1d",
+            "short_sha": "252e5f7",
+            "url": "https://github.com/monochange/actions/commit/252e5f74fa4622b9f860318b48dced51b8ceaa1d",
+            "authored_at": "2026-10-27T14:38:00Z",
+            "committed_at": "2026-10-27T14:41:44Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#114",
+            "title": "fix(merge): enforce guards before branch updates and hooks",
+            "url": "https://github.com/monochange/actions/pull/114",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    },
+    {
+      "path": ".changeset/monochange-021-tracking.md",
+      "summary": "Track the monochange 0.21.0 CLI release",
+      "details": "The actions development and release tooling now resolves monochange 0.21.0, including Swift, CocoaPods and Gradle configuration support. This follows the breaking CLI release baseline. After the next maintainer-controlled actions release, pin its immutable commit SHA to adopt that CLI baseline; the existing action inputs remain supported.",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "major",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "major"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "d86144b282af68969d00fe73b481b92ece5545fc",
+            "short_sha": "d86144b",
+            "url": "https://github.com/monochange/actions/commit/d86144b282af68969d00fe73b481b92ece5545fc",
+            "authored_at": "2026-10-23T10:39:39+01:00",
+            "committed_at": "2026-10-23T10:39:39+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#102",
+            "title": "chore(deps): track monochange 0.21.0",
+            "url": "https://github.com/monochange/actions/pull/102",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "d86144b282af68969d00fe73b481b92ece5545fc",
+            "short_sha": "d86144b",
+            "url": "https://github.com/monochange/actions/commit/d86144b282af68969d00fe73b481b92ece5545fc",
+            "authored_at": "2026-10-23T10:39:39+01:00",
+            "committed_at": "2026-10-23T10:39:39+01:00",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#102",
+            "title": "chore(deps): track monochange 0.21.0",
+            "url": "https://github.com/monochange/actions/pull/102",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    }
+  ],
+  "changelogs": [
+    {
+      "owner_id": "actions",
+      "owner_kind": "package",
+      "output": "default",
+      "stream": "default",
+      "path": "changelog.md",
+      "format": "monochange",
+      "notes": {
+        "title": "[0.11.0](https://github.com/monochange/actions/releases/tag/v0.11.0) (2026-10-27)",
+        "summary": [],
+        "sections": [
+          {
+            "title": "💥 Breaking Change",
+            "collapsed": false,
+            "entries": [
+              "#### Require fresh PR head checks after rebase or cherry-pick preparation before merging\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #113](https://github.com/monochange/actions/pull/113)\n\nRebase and cherry-pick preparation now push the generated commit to the PR branch and return `result: updated` with `merged: false`. Wait for checks on the new `head-sha`, then run the action again to fast-forward that exact checked commit. A head already based on the base branch is fast-forwarded without replaying it again, including in cherry-pick mode.\n\nUpdate workflows that expected preparation and merging in one run to handle `updated` and trigger the later merge run. Use a token that starts PR checks when the head is pushed. Post-update scripts and workflows dispatched on the base branch do not authorize an immediate merge. Dry runs now leave both branches unchanged.",
+              "#### Track the monochange 0.21.0 CLI release\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #102](https://github.com/monochange/actions/pull/102)\n\nThe actions development and release tooling now resolves monochange 0.21.0, including Swift, CocoaPods and Gradle configuration support. This follows the breaking CLI release baseline. After the next maintainer-controlled actions release, pin its immutable commit SHA to adopt that CLI baseline; the existing action inputs remain supported."
+            ]
+          },
+          {
+            "title": "🐛 Fixed",
+            "collapsed": false,
+            "entries": [
+              "- **Pin automatic CLI setup to the action release and verify archive integrity before execution.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #109](https://github.com/monochange/actions/pull/109)",
+              "- **Collect every legacy commit status before evaluating merge checks.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #111](https://github.com/monochange/actions/pull/111)",
+              "- **Require HTTPS without embedded credentials for hosted release requests.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #112](https://github.com/monochange/actions/pull/112)",
+              "- **Scope release-request GitHub tokens to the CLI child process instead of persisting them in later job steps.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #115](https://github.com/monochange/actions/pull/115)",
+              "- **Enforce merge authorization, check policy, and dry-run before branch updates and hooks.** The merge action rejects unauthorized actors and blocked checks before creating its git workspace. Dry-run never rebases or pushes either branch, runs a post-update script, or dispatches a workflow. Post-update scripts receive only executable-path, locale, and temporary-directory variables instead of inheriting action inputs and job credentials.\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #114](https://github.com/monochange/actions/pull/114)"
+            ]
+          }
+        ]
+      },
+      "rendered": "## [0.11.0](https://github.com/monochange/actions/releases/tag/v0.11.0) (2026-10-27)\n\n### 💥 Breaking Change\n\n#### Require fresh PR head checks after rebase or cherry-pick preparation before merging\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #113](https://github.com/monochange/actions/pull/113)\n\nRebase and cherry-pick preparation now push the generated commit to the PR branch and return `result: updated` with `merged: false`. Wait for checks on the new `head-sha`, then run the action again to fast-forward that exact checked commit. A head already based on the base branch is fast-forwarded without replaying it again, including in cherry-pick mode.\n\nUpdate workflows that expected preparation and merging in one run to handle `updated` and trigger the later merge run. Use a token that starts PR checks when the head is pushed. Post-update scripts and workflows dispatched on the base branch do not authorize an immediate merge. Dry runs now leave both branches unchanged.\n\n#### Track the monochange 0.21.0 CLI release\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #102](https://github.com/monochange/actions/pull/102)\n\nThe actions development and release tooling now resolves monochange 0.21.0, including Swift, CocoaPods and Gradle configuration support. This follows the breaking CLI release baseline. After the next maintainer-controlled actions release, pin its immutable commit SHA to adopt that CLI baseline; the existing action inputs remain supported.\n\n### 🐛 Fixed\n\n- **Pin automatic CLI setup to the action release and verify archive integrity before execution.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #109](https://github.com/monochange/actions/pull/109)\n- **Collect every legacy commit status before evaluating merge checks.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #111](https://github.com/monochange/actions/pull/111)\n- **Require HTTPS without embedded credentials for hosted release requests.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #112](https://github.com/monochange/actions/pull/112)\n- **Scope release-request GitHub tokens to the CLI child process instead of persisting them in later job steps.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #115](https://github.com/monochange/actions/pull/115)\n- **Enforce merge authorization, check policy, and dry-run before branch updates and hooks.** The merge action rejects unauthorized actors and blocked checks before creating its git workspace. Dry-run never rebases or pushes either branch, runs a post-update script, or dispatches a workflow. Post-update scripts receive only executable-path, locale, and temporary-directory variables instead of inheriting action inputs and job credentials.\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #114](https://github.com/monochange/actions/pull/114)"
+    }
+  ],
+  "provider": {
+    "kind": "github",
+    "owner": "monochange",
+    "repo": "actions",
+    "host": null
+  }
+}
