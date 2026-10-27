@@ -78,7 +78,7 @@ The release branch is `<branch_prefix>/release` from monochange 0.19.0. Older ve
 | `setup-monochange`  | No       | `true`                   | How to resolve monochange: `true` auto-resolves, `false` requires `monochange` on `PATH`, any other string is a custom command.                          |
 | `working-directory` | No       | `.`                      | Directory to run monochange in.                                                                                                                          |
 | `release-command`   | No       | empty                    | `monochange.toml` command to run on the hosted backend, such as `release`. Requires monochange 0.20.0. Empty runs the built-in steps.                    |
-| `hosted-url`        | No       | `https://monochange.dev` | Base URL of the monochange app. The OIDC token audience is this URL's host.                                                                              |
+| `hosted-url`        | No       | `https://monochange.dev` | HTTPS base URL of the monochange app, without embedded credentials. The OIDC token audience is this URL's host.                                          |
 | `github-token`      | No       | `${{ github.token }}`    | Passed to monochange as `GITHUB_TOKEN` to upload the release tree, and used to read the release back. Needs `contents: write` and `pull-requests: read`. |
 | `dry-run`           | No       | `false`                  | Prepare the release and report the branches without contacting the hosted app. Does not need `id-token: write`.                                          |
 
@@ -95,6 +95,10 @@ The release branch is `<branch_prefix>/release` from monochange 0.19.0. Older ve
 | `pull-request-url`    | Open release pull request URL.                            |
 
 ## Troubleshooting
+
+### "Input `hosted-url` must use https"
+
+Use an HTTPS URL for the monochange deployment to protect the OIDC token and release request in transit. HTTP URLs, including loopback addresses, are rejected before CLI setup in both normal and dry-run mode. URLs with embedded credentials are also rejected.
 
 ### "this job cannot request one. Add `permissions: id-token: write`"
 
