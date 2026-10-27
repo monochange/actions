@@ -60,10 +60,24 @@ export async function runReleasePr(): Promise<void> {
   const args = ['step', 'open-release-request', '--format', inputs.format];
 
   if (inputs.githubToken) {
-    core.exportVariable('GITHUB_TOKEN', inputs.githubToken);
+    core.setSecret(inputs.githubToken);
   }
 
-  const stdout = await execRequired(monochange.command, args, { cwd: inputs.workingDirectory });
+  const stdout = await execRequired(monochange.command, args, {
+    cwd: inputs.workingDirectory,
+    ...(inputs.githubToken
+      ? {
+          env: {
+            ...Object.fromEntries(
+              Object.entries(process.env).filter(
+                (entry): entry is [string, string] => entry[1] !== undefined,
+              ),
+            ),
+            GITHUB_TOKEN: inputs.githubToken,
+          },
+        }
+      : {}),
+  });
   const parsed = parseMixedOutput(stdout);
   const parsedRecord =
     typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
