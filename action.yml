@@ -65,7 +65,7 @@ inputs:
     required: false
     default: on-error
   dry-run:
-    description: 'Resolve and validate the pull request without updating the base branch.'
+    description: 'Resolve and validate the pull request without updating either branch or running post-update hooks.'
     required: false
     default: 'false'
   debug:
@@ -77,7 +77,7 @@ inputs:
     required: false
     default: 'false'
   post-update-script:
-    description: 'Optional shell command to run after a successful rebase and force-push, before the fast-forward merge. Runs in the temporary git workspace.'
+    description: 'Optional shell command to run after a successful rebase and force-push, before the fast-forward merge. Runs in the temporary git workspace without inherited action inputs or credentials.'
     required: false
   post-update-workflow:
     description: 'Optional workflow file path to dispatch via workflow_dispatch after a successful rebase and force-push. Runs on the base branch.'

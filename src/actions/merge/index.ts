@@ -111,6 +111,19 @@ export async function runMerge(): Promise<void> {
       requireGreenChecks: inputs.requireGreenChecks,
     });
 
+    if (!checkEvaluation.ok) {
+      throw new Error(checkEvaluation.errors.join(' '));
+    }
+
+    // Security: Both branch updates and their hooks require the same authorization.
+    await ensureActorPermission({
+      actor: github.context.actor,
+      minimumPermission: inputs.minimumReviewerPermission,
+      octokit,
+      owner,
+      repo,
+    });
+
     workspace = await createFastForwardWorkspace({
       baseBranch: pullRequest.base.ref,
       baseCloneUrl: pullRequest.base.repo.clone_url,
@@ -122,6 +135,39 @@ export async function runMerge(): Promise<void> {
     });
 
     setCommonOutputs({ pullRequest, workspace });
+
+    if (inputs.dryRun) {
+      commentBody = buildCommentBody({
+        actor: github.context.actor,
+        checkEvaluation,
+        checks,
+        errorMessage: undefined,
+        outcome: 'dry-run',
+        pullRequest,
+        workspace,
+      });
+
+      core.notice(`Dry run succeeded for PR #${pullRequest.number}.`);
+      core.setOutput('result', 'dry-run');
+      core.setOutput('merged', 'false');
+      core.setOutput('rebased', 'false');
+      core.setOutput('fast-forward-sha', workspace.headSha);
+      core.setOutput('comment', serializeCommentOutput(commentBody));
+
+      await writeSummary(commentBody);
+
+      if (shouldPostComment(inputs.commentMode, false)) {
+        await postPullRequestComment({
+          body: commentBody,
+          octokit,
+          owner,
+          pullRequestNumber: pullRequest.number,
+          repo,
+        });
+      }
+
+      return;
+    }
 
     if (inputs.mergeMethod === 'fast-forward' && !workspace.canFastForward) {
       if (inputs.updateBranchOnFailure) {
@@ -219,51 +265,6 @@ export async function runMerge(): Promise<void> {
           }),
         );
       }
-    }
-
-    if (!checkEvaluation.ok) {
-      throw new Error(checkEvaluation.errors.join(' '));
-    }
-
-    await ensureActorPermission({
-      actor: github.context.actor,
-      minimumPermission: inputs.minimumReviewerPermission,
-      octokit,
-      owner,
-      repo,
-    });
-
-    if (inputs.dryRun) {
-      commentBody = buildCommentBody({
-        actor: github.context.actor,
-        checkEvaluation,
-        checks,
-        errorMessage: undefined,
-        outcome: 'dry-run',
-        pullRequest,
-        workspace,
-      });
-
-      core.notice(`Dry run succeeded for PR #${pullRequest.number}.`);
-      core.setOutput('result', 'dry-run');
-      core.setOutput('merged', 'false');
-      core.setOutput('rebased', 'false');
-      core.setOutput('fast-forward-sha', workspace.headSha);
-      core.setOutput('comment', serializeCommentOutput(commentBody));
-
-      await writeSummary(commentBody);
-
-      if (shouldPostComment(inputs.commentMode, false)) {
-        await postPullRequestComment({
-          body: commentBody,
-          octokit,
-          owner,
-          pullRequestNumber: pullRequest.number,
-          repo,
-        });
-      }
-
-      return;
     }
 
     const mergeSha =
@@ -876,6 +877,14 @@ async function runPostUpdateScript(options: {
 
   const result = await exec.getExecOutput('bash', ['-c', script], {
     cwd: tempDir,
+    // Security: PR-controlled commands must not inherit action inputs or credentials.
+    env: Object.fromEntries(
+      ['PATH', 'LANG', 'LC_ALL', 'TMPDIR', 'TMP', 'TEMP', 'RUNNER_TEMP'].flatMap((name) => {
+        const value = process.env[name];
+
+        return value === undefined ? [] : [[name, value]];
+      }),
+    ),
     ignoreReturnCode: true,
     silent: !debug,
   });

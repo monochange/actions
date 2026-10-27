@@ -22161,6 +22161,14 @@ async function runMerge() {
 			requiredFailingCheck: inputs.requiredFailingCheck,
 			requireGreenChecks: inputs.requireGreenChecks
 		});
+		if (!checkEvaluation.ok) throw new Error(checkEvaluation.errors.join(" "));
+		await ensureActorPermission({
+			actor: context.actor,
+			minimumPermission: inputs.minimumReviewerPermission,
+			octokit,
+			owner,
+			repo
+		});
 		workspace = await createFastForwardWorkspace({
 			baseBranch: pullRequest.base.ref,
 			baseCloneUrl: pullRequest.base.repo.clone_url,
@@ -22174,6 +22182,32 @@ async function runMerge() {
 			pullRequest,
 			workspace
 		});
+		if (inputs.dryRun) {
+			commentBody = buildCommentBody({
+				actor: context.actor,
+				checkEvaluation,
+				checks,
+				errorMessage: void 0,
+				outcome: "dry-run",
+				pullRequest,
+				workspace
+			});
+			notice(`Dry run succeeded for PR #${pullRequest.number}.`);
+			setOutput("result", "dry-run");
+			setOutput("merged", "false");
+			setOutput("rebased", "false");
+			setOutput("fast-forward-sha", workspace.headSha);
+			setOutput("comment", serializeCommentOutput(commentBody));
+			await writeSummary(commentBody);
+			if (shouldPostComment(inputs.commentMode, false)) await postPullRequestComment({
+				body: commentBody,
+				octokit,
+				owner,
+				pullRequestNumber: pullRequest.number,
+				repo
+			});
+			return;
+		}
 		if (inputs.mergeMethod === "fast-forward" && !workspace.canFastForward) if (inputs.updateBranchOnFailure) {
 			notice(`Fast-forward not possible. Rebase ${workspace.headBranch} onto ${workspace.baseBranch} and retry.`);
 			await runGit({
@@ -22245,40 +22279,6 @@ async function runMerge() {
 			headSha: workspace.headSha,
 			mergeBaseSha: workspace.mergeBaseSha
 		}));
-		if (!checkEvaluation.ok) throw new Error(checkEvaluation.errors.join(" "));
-		await ensureActorPermission({
-			actor: context.actor,
-			minimumPermission: inputs.minimumReviewerPermission,
-			octokit,
-			owner,
-			repo
-		});
-		if (inputs.dryRun) {
-			commentBody = buildCommentBody({
-				actor: context.actor,
-				checkEvaluation,
-				checks,
-				errorMessage: void 0,
-				outcome: "dry-run",
-				pullRequest,
-				workspace
-			});
-			notice(`Dry run succeeded for PR #${pullRequest.number}.`);
-			setOutput("result", "dry-run");
-			setOutput("merged", "false");
-			setOutput("rebased", "false");
-			setOutput("fast-forward-sha", workspace.headSha);
-			setOutput("comment", serializeCommentOutput(commentBody));
-			await writeSummary(commentBody);
-			if (shouldPostComment(inputs.commentMode, false)) await postPullRequestComment({
-				body: commentBody,
-				octokit,
-				owner,
-				pullRequestNumber: pullRequest.number,
-				repo
-			});
-			return;
-		}
 		const mergeSha = inputs.mergeMethod === "cherry-pick" ? await cherryPickBaseBranch({
 			debug: inputs.debug,
 			workspace
@@ -22725,6 +22725,18 @@ async function runPostUpdateScript(options) {
 	info(`Running post-update script: ${script}`);
 	const result = await getExecOutput("bash", ["-c", script], {
 		cwd: tempDir,
+		env: Object.fromEntries([
+			"PATH",
+			"LANG",
+			"LC_ALL",
+			"TMPDIR",
+			"TMP",
+			"TEMP",
+			"RUNNER_TEMP"
+		].flatMap((name) => {
+			const value = process.env[name];
+			return value === void 0 ? [] : [[name, value]];
+		})),
 		ignoreReturnCode: true,
 		silent: !debug
 	});

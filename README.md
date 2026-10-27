@@ -421,12 +421,16 @@ with:
 | `require-green-checks`        | no       | `'true'`                          | Whether all checks must be complete and successful apart from the configured blocker check.                                                                       |
 | `minimum-reviewer-permission` | no       | `admin`                           | Minimum repository role required to trigger the merge. `admin` (default), `maintain`, or `push` (insecure). Strongly recommended for comment-triggered workflows. |
 | `comment`                     | no       | `on-error`                        | Whether to post a pull request comment: `always`, `never`, or `on-error`.                                                                                         |
-| `dry-run`                     | no       | `'false'`                         | Validate everything without updating the base branch.                                                                                                             |
+| `dry-run`                     | no       | `'false'`                         | Validate without updating either branch or running post-update hooks.                                                                                             |
 | `update-branch-on-failure`    | no       | `'false'`                         | When true, rebase the head branch onto the latest base branch and force-push it instead of failing when fast-forward is not possible.                             |
 | `post-update-script`          | no       | empty                             | Optional shell command to run after a successful rebase and force-push, before the fast-forward merge. Runs in the temp git workspace.                            |
 | `post-update-workflow`        | no       | empty                             | Optional workflow file path to dispatch via `workflow_dispatch` after a successful rebase and force-push. Requires `actions: write` permission.                   |
 | `trigger-command`             | no       | `/merge`                          | Slash command that triggers this action when posted as a pull request comment. Only validated when the workflow runs from an issue_comment event.                 |
 | `debug`                       | no       | `'false'`                         | Emit extra debug logging.                                                                                                                                         |
+
+Check policy and actor permission are enforced before creating the temporary git workspace. Dry-run reports the current head and whether it can fast-forward, including when the branches diverge, without rebasing, pushing, running a script, or dispatching a workflow.
+
+The post-update script receives only `PATH`, `LANG`, `LC_ALL`, `TMPDIR`, `TMP`, `TEMP`, and `RUNNER_TEMP` when set. It does not inherit action inputs, GitHub tokens, OIDC credentials, or other job environment variables.
 
 ---
 
