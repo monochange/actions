@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: Git ref to release. Defaults to HEAD.
+        description: Git ref to release. Must resolve to the checked-out commit. Defaults to HEAD.
         required: false
         type: string
       dry_run:
@@ -60,10 +60,17 @@ jobs:
 
       - name: detect current release commit
         id: release_record
+        env:
+          RELEASE_REF: ${{ inputs.ref || 'HEAD' }}
         run: |
           set -euo pipefail
 
-          ref="${{ inputs.ref || 'HEAD' }}"
+          # Treat caller input as data and pin detection to the commit publication uses.
+          ref="$(git rev-parse --verify --end-of-options "${RELEASE_REF}^{commit}")"
+          if [[ "$ref" != "$(git rev-parse HEAD)" ]]; then
+            echo "::error::Release ref must resolve to the checked-out commit."
+            exit 1
+          fi
 
           if is_release_commit="$(pnpm exec monochange step release-record --from "$ref" --format json --jq '.resolved_commit == .record_commit')"; then
             echo "is_release_commit=${is_release_commit}" >> "$GITHUB_OUTPUT"
