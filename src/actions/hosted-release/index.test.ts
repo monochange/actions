@@ -137,22 +137,33 @@ describe('runHostedRelease', () => {
     });
   });
 
-  it('passes a custom hosted URL and working directory to the CLI', async () => {
-    setInputs({
-      'github-token': 'gh-token',
-      'hosted-url': 'https://staging.monochange.dev/',
-      'setup-monochange': 'false',
-      'working-directory': 'packages/app',
-    });
+  it.each([
+    ['https://staging.monochange.dev/', 'https://staging.monochange.dev'],
+    ['HTTPS://STAGING.MONOCHANGE.DEV:443/releases/../api///', 'https://staging.monochange.dev/api'],
+    ['https://staging.monochange.dev:8443/api/', 'https://staging.monochange.dev:8443/api'],
+    ['https://staging.monochange.dev/api/?key=/', 'https://staging.monochange.dev/api?key=/'],
+  ])(
+    'passes the normalized hosted URL %s and working directory to the CLI',
+    async (hostedUrl, expectedUrl) => {
+      setInputs({
+        'github-token': 'gh-token',
+        'hosted-url': hostedUrl,
+        'setup-monochange': 'false',
+        'working-directory': 'packages/app',
+      });
 
-    await runHostedRelease();
+      await runHostedRelease();
 
-    expect(mockResolve).toHaveBeenCalledWith('false');
-    expect(mockExec.mock.calls[0]?.[2]).toMatchObject({
-      cwd: 'packages/app',
-      env: { MONOCHANGE_HOSTED_URL: 'https://staging.monochange.dev' },
-    });
-  });
+      expect(mockResolve).toHaveBeenCalledWith('false');
+
+      for (const call of mockExec.mock.calls) {
+        expect(call[2]).toMatchObject({
+          cwd: 'packages/app',
+          env: { MONOCHANGE_HOSTED_URL: expectedUrl },
+        });
+      }
+    },
+  );
 
   it('reports the planned release without contacting the hosted app in dry-run mode', async () => {
     vi.stubEnv('ACTIONS_ID_TOKEN_REQUEST_URL', '');
@@ -241,11 +252,44 @@ describe('runHostedRelease', () => {
 
   it.each([
     ['not a url', 'must be an absolute URL'],
-    ['ftp://monochange.dev', 'must use http or https'],
+    ['https://user:password@[', 'must be an absolute URL'],
+    ['ftp://monochange.dev', 'must use https'],
+    ['http://monochange.dev', 'must use https'],
+    ['http://localhost:3000', 'must use https'],
+    ['http://127.0.0.1:3000', 'must use https'],
+    ['http://[::1]:3000', 'must use https'],
+    ['https://user@monochange.dev', 'must not include credentials'],
+    ['https://:password@monochange.dev', 'must not include credentials'],
+    ['https://user:password@monochange.dev', 'must not include credentials'],
   ])('rejects the hosted URL %s', async (hostedUrl, message) => {
     setInputs({ 'github-token': 'gh-token', 'hosted-url': hostedUrl });
 
-    await expect(runHostedRelease()).rejects.toThrow(message);
+    const release = runHostedRelease();
+
+    await expect(release).rejects.toThrow(message);
+    await expect(release).rejects.not.toThrow(hostedUrl);
+    expect(mockResolve).not.toHaveBeenCalled();
+    expect(mockExec).not.toHaveBeenCalled();
+    expect(mockGithub.getOctokit).not.toHaveBeenCalled();
+  });
+
+  it('rejects HTTP before starting a dry run', async () => {
+    setInputs({ 'dry-run': 'true', 'hosted-url': 'http://monochange.dev' });
+
+    await expect(runHostedRelease()).rejects.toThrow('must use https');
+    expect(mockResolve).not.toHaveBeenCalled();
+    expect(mockExec).not.toHaveBeenCalled();
+  });
+
+  it('rejects HTTP before running a repository release command', async () => {
+    setInputs({
+      'github-token': 'gh-token',
+      'hosted-url': 'http://monochange.dev',
+      'release-command': 'release',
+    });
+
+    await expect(runHostedRelease()).rejects.toThrow('must use https');
+    expect(mockResolve).not.toHaveBeenCalled();
     expect(mockExec).not.toHaveBeenCalled();
   });
 

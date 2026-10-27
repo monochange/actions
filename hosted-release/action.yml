@@ -11,7 +11,7 @@ inputs:
     required: false
     default: '.'
   hosted-url:
-    description: "Base URL of the monochange app. The GitHub Actions OIDC token audience is this URL's host."
+    description: "HTTPS base URL of the monochange app, without embedded credentials. The GitHub Actions OIDC token audience is this URL's host."
     required: false
     default: 'https://monochange.dev'
   release-command:

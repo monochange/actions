@@ -58,20 +58,26 @@ function readInputs(): HostedReleaseInputs {
   };
 }
 
+/** Validate and normalize the endpoint before exposing OIDC credentials to the CLI. */
 function parseHostedUrl(value: string): string {
   let url: URL;
 
   try {
     url = new URL(value);
   } catch {
-    throw new Error(`Input \`hosted-url\` must be an absolute URL, received \`${value}\`.`);
+    throw new Error('Input `hosted-url` must be an absolute URL.');
   }
 
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    throw new Error(`Input \`hosted-url\` must use http or https, received \`${value}\`.`);
+  // Security: Hosted requests carry an OIDC bearer token and release data.
+  if (url.protocol !== 'https:') {
+    throw new Error('Input `hosted-url` must use https.');
   }
 
-  return value.replace(/\/+$/, '');
+  if (url.username || url.password) {
+    throw new Error('Input `hosted-url` must not include credentials.');
+  }
+
+  return `${url.origin}${url.pathname.replace(/\/+$/, '')}${url.search}${url.hash}`;
 }
 
 /** Fail before any work when the job cannot mint a GitHub Actions OIDC token. */

@@ -171,7 +171,7 @@ inputs:
     required: false
     default: 'false'
   hosted-url:
-    description: "Base URL of the monochange app that hosted-release delegates the release commit and pull request to. The GitHub Actions OIDC token audience is this URL's host."
+    description: "HTTPS base URL without embedded credentials of the monochange app that hosted-release delegates the release commit and pull request to. The GitHub Actions OIDC token audience is this URL's host."
     required: false
     default: 'https://monochange.dev'
   release-command:
