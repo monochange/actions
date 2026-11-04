@@ -33,7 +33,7 @@
   "devDependencies": {
     "@monochange/cli": "0.21.1",
     "@rslint/tsgo": "^0.7.3",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.9.9",
     "@vitest/coverage-v8": "5.1.0",
     "oxfmt": "^0.46.0",
     "oxlint": "^1.61.0",
