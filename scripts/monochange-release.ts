@@ -8,7 +8,9 @@ import type { MonochangeRelease } from '../src/shared/monochange-release';
 /** Bind the runtime download to the same release and checksums used by the build. */
 export function readMonochangeRelease(): MonochangeRelease {
   const version = packageJson.devDependencies['@monochange/cli'];
-  const documents = parseAllDocuments(readFileSync(new URL('../pnpm-lock.yaml', import.meta.url), 'utf8'));
+  const documents = parseAllDocuments(
+    readFileSync(new URL('../pnpm-lock.yaml', import.meta.url), 'utf8'),
+  );
   // pnpm 12 writes a leading document with its own package-manager
   // dependencies and keeps the project lockfile in the final document, so
   // read the last one rather than assuming a single-document file.
