@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { parseDocument } from 'yaml';
+import { parseAllDocuments } from 'yaml';
 
 import packageJson from '../package.json' with { type: 'json' };
 import type { MonochangeRelease } from '../src/shared/monochange-release';
@@ -8,7 +8,13 @@ import type { MonochangeRelease } from '../src/shared/monochange-release';
 /** Bind the runtime download to the same release and checksums used by the build. */
 export function readMonochangeRelease(): MonochangeRelease {
   const version = packageJson.devDependencies['@monochange/cli'];
-  const lock = parseDocument(readFileSync(new URL('../pnpm-lock.yaml', import.meta.url), 'utf8'));
+  const documents = parseAllDocuments(
+    readFileSync(new URL('../pnpm-lock.yaml', import.meta.url), 'utf8'),
+  );
+  // pnpm 12 writes a leading document with its own package-manager
+  // dependencies and keeps the project lockfile in the final document, so
+  // read the last one rather than assuming a single-document file.
+  const lock = documents.at(-1);
   const targets = [
     'darwin-arm64',
     'darwin-x64',
@@ -20,7 +26,11 @@ export function readMonochangeRelease(): MonochangeRelease {
     'win32-x64-msvc',
   ];
 
-  if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version) || lock.errors.length > 0) {
+  if (
+    !/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version) ||
+    lock === undefined ||
+    documents.some((document) => document.errors.length > 0)
+  ) {
     throw new Error('Automatic monochange setup requires an exact CLI version and valid lockfile.');
   }
 
