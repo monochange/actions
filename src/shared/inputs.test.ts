@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { getBooleanInput, getOptionalInput, normalizeName, parseRepository } from './inputs';
+import {
+  getBooleanInput,
+  getOptionalBooleanInput,
+  getOptionalInput,
+  normalizeName,
+  parseRepository,
+} from './inputs';
 
 vi.mock('@actions/core', () => ({
   getInput: vi.fn(),
@@ -61,5 +67,25 @@ describe('getBooleanInput', () => {
   it('throws for non-boolean values', () => {
     mockCore.getInput.mockReturnValue('maybe');
     expect(() => getBooleanInput('flag')).toThrow(/must be a boolean-like value/);
+  });
+});
+
+describe('getOptionalBooleanInput', () => {
+  it('returns undefined for empty input', () => {
+    mockCore.getInput.mockReturnValue('');
+    expect(getOptionalBooleanInput('flag')).toBeUndefined();
+  });
+
+  it.each([
+    ['true', true],
+    ['0', false],
+  ])(`parses %s as %s`, (input, expected) => {
+    mockCore.getInput.mockReturnValue(input);
+    expect(getOptionalBooleanInput('flag')).toBe(expected);
+  });
+
+  it('throws for non-boolean values', () => {
+    mockCore.getInput.mockReturnValue('maybe');
+    expect(() => getOptionalBooleanInput('flag')).toThrow(/must be a boolean-like value/);
   });
 });

@@ -6,6 +6,7 @@ import { join } from 'node:path';
 const variants = [
   'change-classification',
   'check',
+  'ci',
   'release-preview',
   'release-record',
   'open-release-request',
