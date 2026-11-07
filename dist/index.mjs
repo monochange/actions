@@ -6,14 +6,13 @@ import * as fs from "fs";
 import { constants, existsSync, promises, readFileSync } from "fs";
 import * as path from "path";
 import * as events from "events";
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 import { StringDecoder } from "string_decoder";
 import * as child from "child_process";
 import { setTimeout as setTimeout$1 } from "timers";
 import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { existsSync as existsSync$1, mkdirSync, readFileSync as readFileSync$1, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { setTimeout as setTimeout$2 } from "node:timers/promises";
 
 //#region \0rolldown/runtime.js
@@ -17548,13 +17547,6 @@ function setFailed(message) {
 	error(message);
 }
 /**
-* Writes debug message to user log
-* @param message debug message
-*/
-function debug(message) {
-	issueCommand("debug", {}, message);
-}
-/**
 * Adds an error issue
 * @param message error issue message. Errors will be converted to string via toString()
 * @param properties optional properties to add to the annotation.
@@ -21062,14 +21054,14 @@ async function getMonochangeVersion(command) {
 //#region src/actions/change-classification/index.ts
 const COMMENT_MARKER$1 = "<!-- monochange:change-classification -->";
 const MAX_MARKDOWN_LENGTH = 6e4;
-function input$7(name, fallback) {
+function input$8(name, fallback) {
 	return getInput(name).trim() || fallback;
 }
-function readInputs$6() {
+function readInputs$7() {
 	return {
 		base: getOptionalInput$1("base"),
-		dependencyPropagation: input$7("dependency-propagation", "public"),
-		detectionLevel: input$7("detection-level", "signature"),
+		dependencyPropagation: input$8("dependency-propagation", "public"),
+		detectionLevel: input$8("detection-level", "signature"),
 		githubToken: getInput("github-token").trim(),
 		head: getOptionalInput$1("head"),
 		includeUnchanged: getBooleanInput("include-unchanged"),
@@ -21078,12 +21070,12 @@ function readInputs$6() {
 		postComment: getBooleanInput("post-comment"),
 		pullRequest: getOptionalInput$1("pull-request"),
 		release: getOptionalInput$1("release"),
-		repository: input$7("repository", `${context.repo.owner}/${context.repo.repo}`),
-		setupMonochange: input$7("setup-monochange", "true"),
-		workingDirectory: input$7("working-directory", ".")
+		repository: input$8("repository", `${context.repo.owner}/${context.repo.repo}`),
+		setupMonochange: input$8("setup-monochange", "true"),
+		workingDirectory: input$8("working-directory", ".")
 	};
 }
-function splitList$2(value) {
+function splitList$1(value) {
 	return value.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean);
 }
 /**
@@ -21092,8 +21084,8 @@ function splitList$2(value) {
 */
 function eventLabels() {
 	const pullRequest = context.payload.pull_request;
-	if (!isRecord$5(pullRequest) || !Array.isArray(pullRequest.labels)) return;
-	const names = pullRequest.labels.map((label) => isRecord$5(label) && typeof label.name === "string" ? label.name : void 0).filter((name) => typeof name === "string");
+	if (!isRecord$6(pullRequest) || !Array.isArray(pullRequest.labels)) return;
+	const names = pullRequest.labels.map((label) => isRecord$6(label) && typeof label.name === "string" ? label.name : void 0).filter((name) => typeof name === "string");
 	return names.length > 0 ? names.join(",") : void 0;
 }
 /**
@@ -21103,7 +21095,7 @@ function eventLabels() {
 */
 function eventBaseRef() {
 	const base = context.payload.pull_request?.base;
-	return isRecord$5(base) && typeof base.ref === "string" && base.ref ? `origin/${base.ref}` : void 0;
+	return isRecord$6(base) && typeof base.ref === "string" && base.ref ? `origin/${base.ref}` : void 0;
 }
 /**
 * Classify the exact pull request head commit, so the report names the commit
@@ -21111,7 +21103,7 @@ function eventBaseRef() {
 */
 function eventHeadSha() {
 	const head = context.payload.pull_request?.head;
-	return isRecord$5(head) && typeof head.sha === "string" && head.sha ? head.sha : void 0;
+	return isRecord$6(head) && typeof head.sha === "string" && head.sha ? head.sha : void 0;
 }
 /**
 * Use an event ref only when the checkout contains it. A shallow checkout
@@ -21128,7 +21120,7 @@ async function checkedOutRef(ref, cwd, endpoint) {
 	], { cwd })).exitCode === 0) return ref;
 	warning(`Pull request ${endpoint} \`${ref}\` is not in the checkout, so change classification falls back to the default ${endpoint}. Check out with fetch-depth: 0 to classify against the pull request ${endpoint}.`);
 }
-function isRecord$5(value) {
+function isRecord$6(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSeverity(value) {
@@ -21149,7 +21141,7 @@ function stringArray(value) {
 	return value.filter((item) => typeof item === "string");
 }
 function readFinding(value) {
-	if (!isRecord$5(value)) throw new Error("monochange classification findings must be objects.");
+	if (!isRecord$6(value)) throw new Error("monochange classification findings must be objects.");
 	return {
 		bump: requiredSeverity(value, "bump"),
 		comparisons: stringArray(value.comparisons),
@@ -21162,7 +21154,7 @@ function readFinding(value) {
 	};
 }
 function readPackage(value) {
-	if (!isRecord$5(value) || !isRecord$5(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
+	if (!isRecord$6(value) || !isRecord$6(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
 	return {
 		action: requiredString$1(value, "action"),
 		compatibility_impact: requiredString$1(value.decision, "compatibility_impact"),
@@ -21178,7 +21170,7 @@ function readPackage(value) {
 	};
 }
 function readChangeClassificationReport(value) {
-	if (!isRecord$5(value) || typeof value.schema_version !== "string" || !/^\d+\.\d+$/u.test(value.schema_version) || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.");
+	if (!isRecord$6(value) || typeof value.schema_version !== "string" || !/^\d+\.\d+$/u.test(value.schema_version) || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.");
 	return {
 		...typeof value.base_commit === "string" ? { base_commit: value.base_commit } : {},
 		candidate: requiredString$1(value, "candidate"),
@@ -21310,7 +21302,7 @@ function pullRequestNumber(explicit) {
 		return Number(explicit);
 	}
 	const pullRequest = context.payload.pull_request;
-	return isRecord$5(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
+	return isRecord$6(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
 }
 async function upsertComment(inputs, markdown) {
 	if (!inputs.postComment) return;
@@ -21424,7 +21416,7 @@ async function markCommentStale(inputs, head) {
 	}
 }
 async function runChangeClassification() {
-	const inputs = readInputs$6();
+	const inputs = readInputs$7();
 	const monochange = await resolveMonochange(inputs.setupMonochange);
 	const base = inputs.base ?? await checkedOutRef(eventBaseRef(), inputs.workingDirectory, "base");
 	const head = inputs.head ?? await checkedOutRef(eventHeadSha(), inputs.workingDirectory, "head") ?? "HEAD";
@@ -21443,8 +21435,8 @@ async function runChangeClassification() {
 	if (base) args.push("--base", base);
 	if (inputs.release) args.push("--release", inputs.release);
 	if (inputs.includeUnchanged) args.push("--include-unchanged");
-	if (inputs.labels) for (const label of splitList$2(inputs.labels)) args.push("--label", label);
-	if (inputs.packages) for (const packageId of splitList$2(inputs.packages)) args.push("--package", packageId);
+	if (inputs.labels) for (const label of splitList$1(inputs.labels)) args.push("--label", label);
+	if (inputs.packages) for (const packageId of splitList$1(inputs.packages)) args.push("--package", packageId);
 	info(`Using monochange ${monochange.version} from ${monochange.source}`);
 	let parsed;
 	let report;
@@ -21486,7 +21478,7 @@ async function runChangeClassification() {
 //#endregion
 //#region src/actions/changeset-policy/index.ts
 const COMMENT_MARKER = "<!-- monochange:changeset-policy -->";
-function readInputs$5() {
+function readInputs$6() {
 	return {
 		changedPaths: getOptionalInput("changed-paths"),
 		commentOnFailure: getBoolean$2("comment-on-failure"),
@@ -21506,7 +21498,7 @@ function getOptionalInput(name) {
 function firstNonEmpty(...values) {
 	return values.find((value) => value !== "");
 }
-function splitList$1(value) {
+function splitList(value) {
 	return value.split(/[\n, ]+/).map((item) => item.trim()).filter(Boolean);
 }
 function getBoolean$2(name) {
@@ -21519,7 +21511,7 @@ function getBoolean$2(name) {
 	].includes(value);
 }
 async function runChangesetPolicy() {
-	const inputs = readInputs$5();
+	const inputs = readInputs$6();
 	if (inputs.debug) info(`changeset-policy inputs: ${JSON.stringify({
 		...inputs,
 		githubToken: "[redacted]"
@@ -21534,9 +21526,9 @@ async function runChangesetPolicy() {
 		"--verify"
 	];
 	if (inputs.from) args.push("--from", inputs.from);
-	if (inputs.changedPaths) for (const changedPath of splitList$1(inputs.changedPaths)) args.push("--changed-paths", changedPath);
-	if (inputs.labels) for (const label of splitList$1(inputs.labels)) args.push("--label", label);
-	if (inputs.skipLabels) for (const label of splitList$1(inputs.skipLabels)) args.push("--skip-label", label);
+	if (inputs.changedPaths) for (const changedPath of splitList(inputs.changedPaths)) args.push("--changed-paths", changedPath);
+	if (inputs.labels) for (const label of splitList(inputs.labels)) args.push("--label", label);
+	if (inputs.skipLabels) for (const label of splitList(inputs.skipLabels)) args.push("--skip-label", label);
 	if (inputs.dryRun) {
 		info(`Dry-run: would run \`${monochange.command} ${args.join(" ")}\``);
 		setOutput("result", "dry-run");
@@ -21565,25 +21557,25 @@ async function runChangesetPolicy() {
 	info(skipped ? "changeset-policy skipped" : "changeset-policy completed successfully");
 }
 function changesetStatus(parsed) {
-	if (!isRecord$4(parsed)) return;
+	if (!isRecord$5(parsed)) return;
 	const status = parsed.status;
 	return typeof status === "string" ? status : void 0;
 }
 function changesetSkipped(parsed) {
-	if (!isRecord$4(parsed)) return false;
+	if (!isRecord$5(parsed)) return false;
 	return parsed.skip === true || parsed.skipped === true || parsed.status === "skipped";
 }
 function changesetSummary(parsed) {
-	if (!isRecord$4(parsed)) return;
+	if (!isRecord$5(parsed)) return;
 	const summary = parsed.summary;
 	return typeof summary === "string" ? summary : void 0;
 }
 function changesetComment(parsed) {
-	if (!isRecord$4(parsed)) return;
+	if (!isRecord$5(parsed)) return;
 	const comment = parsed.comment;
 	return typeof comment === "string" && comment.trim() ? comment : void 0;
 }
-function isRecord$4(value) {
+function isRecord$5(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function extractContentWithoutMarker(body) {
@@ -21688,13 +21680,13 @@ async function findPolicyComments(context) {
 
 //#endregion
 //#region src/actions/check/index.ts
-function input$6(name, fallback = "") {
+function input$7(name, fallback = "") {
 	return getInput(name).trim() || fallback;
 }
-async function runCheck() {
-	const monochange = await resolveMonochange(input$6("setup-monochange", "true"));
-	const cwd = input$6("working-directory", ".");
-	const format = input$6("format");
+async function runCheck$1() {
+	const monochange = await resolveMonochange(input$7("setup-monochange", "true"));
+	const cwd = input$7("working-directory", ".");
+	const format = input$7("format");
 	const args = ["check"];
 	if (format) args.push("--format", format);
 	const stdout = await execRequired(monochange.command, args, { cwd });
@@ -21703,836 +21695,366 @@ async function runCheck() {
 }
 
 //#endregion
-//#region src/actions/ci/index.ts
-const AUTH_PATH = ".monochange/ci-auth.json";
-const DEFAULT_MEMORY_PATH = ".monochange/ci-memory.json";
-const DEFAULT_MODEL = "deepseek-v4.1";
-const TOKEN_PREFIX = "mc_ci";
-const DEFAULT_PROVIDER_URLS = {
-	"opencode-go": "https://api.opencode.ai/v1/chat/completions",
-	openrouter: "https://openrouter.ai/api/v1/chat/completions"
-};
+//#region src/actions/ci/support.ts
+function pushValue(args, flag, value) {
+	if (value !== "") args.push(flag, value);
+}
+function failureDetail(result) {
+	const stderr = result.stderr.trim();
+	if (stderr !== "") return stderr;
+	const stdout = result.stdout.trim();
+	return stdout === "" ? `exit code ${result.exitCode}` : stdout;
+}
+function errorMessage(error) {
+	return error instanceof Error ? error.message : String(error);
+}
+function isRecord$4(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+//#endregion
+//#region src/actions/ci/check.ts
+/**
+* Run `monochange ci check` against the consumer's configuration and the
+* workflow files that reference its `decisions` outputs. Any reported problem
+* exits non-zero and fails the step.
+*/
+async function runCheck(command, inputs) {
+	const args = ["ci", "check"];
+	for (const workflow of parseWorkflows(inputs.workflow)) args.push("--workflow", workflow);
+	const result = await exec(command, args, { cwd: inputs.workingDirectory });
+	if (result.exitCode !== 0) throw new Error(`monochange ci check failed: ${failureDetail(result)}`);
+	info(result.stdout.trim());
+	setOutput("result", "success");
+}
+function parseWorkflows(value) {
+	return value.split(/[\n,]+/u).map((entry) => entry.trim()).filter((entry) => entry !== "");
+}
+
+//#endregion
+//#region src/actions/ci/decide.ts
+/**
+* Run `monochange ci decide` for every configured `[ci.jobs]` id.
+*
+* The CLI writes `$GITHUB_OUTPUT` itself. The action also republishes the same
+* values with `core.setOutput` so `steps.<id>.outputs.decisions` is populated
+* even when the CLI's file write is followed by a later step output.
+*/
+async function runDecide(command, inputs, context) {
+	let result;
+	try {
+		result = await exec(command, buildDecideArgs(inputs, context), { cwd: inputs.workingDirectory });
+	} catch (error) {
+		handleDecideFailure(inputs, errorMessage(error));
+		return;
+	}
+	const outputs = result.exitCode === 0 ? parseDecideOutputs(result.stdout) : void 0;
+	if (outputs === void 0) {
+		handleDecideFailure(inputs, failureDetail(result));
+		return;
+	}
+	setOutput("decisions", outputs.decisions);
+	setOutput("affected-packages", outputs.affectedPackages);
+	setOutput("run-all", outputs.runAll);
+	setOutput("result", "success");
+}
+/**
+* Apply `on-error` after a decide failure.
+*
+* `run-all` fails open: the gate runs every job and exits successfully because
+* GitHub skips dependent jobs when a gate fails, and a skipped required check
+* counts as passing. `fail` keeps the failure loud.
+*/
+function handleDecideFailure(inputs, detail) {
+	if (inputs.onError === "run-all") {
+		error(`monochange ci decide did not produce usable outputs (${detail}); running every job.`);
+		setRunAllOutputs();
+		return;
+	}
+	throw new Error(`monochange ci decide failed: ${detail}`);
+}
+function buildDecideArgs(inputs, context) {
+	const args = [
+		"ci",
+		"decide",
+		"--format",
+		"github-outputs",
+		"--on-error",
+		inputs.onError,
+		"--base",
+		resolveBase(inputs.base, context),
+		"--head",
+		inputs.head === "" ? "HEAD" : inputs.head
+	];
+	pushValue(args, "--event", context.eventName);
+	pushValue(args, "--branch", context.branch);
+	pushValue(args, "--ref", context.ref);
+	pushValue(args, "--commit", context.commit);
+	for (const label of context.labels) args.push("--labels", label);
+	pushValue(args, "--commit-message", context.commitMessage);
+	pushValue(args, "--provider", inputs.provider);
+	pushValue(args, "--model", inputs.model);
+	pushValue(args, "--api-key", inputs.apiKey);
+	pushValue(args, "--api-url", inputs.apiUrl);
+	pushValue(args, "--account-id", inputs.cloudflareAccountId);
+	pushValue(args, "--token", inputs.authToken);
+	if (inputs.requireAuth) args.push("--require-auth");
+	pushValue(args, "--repo-id", inputs.repoId);
+	return args;
+}
+/**
+* Resolve the diff base for `ci decide`.
+*
+* A `pull_request` checkout is GitHub's merge commit, so its first parent is
+* the base. A push uses the event's `before` SHA unless that is the all-zero
+* deletion marker, and everything else compares against the default branch.
+*/
+function resolveBase(base, context) {
+	if (base !== "") return base;
+	if (context.eventName === "pull_request") return "HEAD^1";
+	if (context.eventName === "push" && context.before !== "" && !/^0+$/u.test(context.before)) return context.before;
+	return `origin/${context.defaultBranch}`;
+}
+function parseDecideOutputs(stdout) {
+	const values = /* @__PURE__ */ new Map();
+	for (const line of stdout.split("\n")) {
+		const separator = line.indexOf("=");
+		if (separator > 0) values.set(line.slice(0, separator).trim(), line.slice(separator + 1).trim());
+	}
+	const decisions = values.get("decisions");
+	const affectedPackages = values.get("affected-packages");
+	const runAll = values.get("run-all");
+	if (decisions === void 0 || affectedPackages === void 0 || runAll === void 0 || !isDecisionMap(decisions) || !isStringArrayJson(affectedPackages) || runAll !== "true" && runAll !== "false") return;
+	return {
+		affectedPackages,
+		decisions,
+		runAll
+	};
+}
+function setRunAllOutputs() {
+	setOutput("decisions", "{}");
+	setOutput("affected-packages", "[]");
+	setOutput("run-all", "true");
+	setOutput("result", "success");
+}
+function isDecisionMap(value) {
+	const parsed = safeJsonParse(value);
+	return isRecord$4(parsed) && Object.values(parsed).every((entry) => typeof entry === "boolean");
+}
+function isStringArrayJson(value) {
+	const parsed = safeJsonParse(value);
+	return Array.isArray(parsed) && parsed.every((entry) => typeof entry === "string");
+}
+
+//#endregion
+//#region src/actions/ci/github-context.ts
+function readGitHubContext() {
+	const payload = context.payload;
+	const record = isRecord$3(payload) ? payload : void 0;
+	const pullRequest = recordField(record, "pull_request");
+	const headCommit = recordField(record, "head_commit");
+	const repository = recordField(record, "repository");
+	const ref = context.ref;
+	return {
+		before: stringField(record, "before") ?? "",
+		branch: pullRequestBranch(pullRequest) || refToBranch(ref),
+		commit: context.sha,
+		commitMessage: stringField(headCommit, "message") ?? "",
+		defaultBranch: stringField(repository, "default_branch") ?? "main",
+		eventName: context.eventName,
+		labels: pullRequestLabels(pullRequest),
+		ref
+	};
+}
+function pullRequestBranch(pullRequest) {
+	return stringField(recordField(pullRequest, "head"), "ref") ?? "";
+}
+function pullRequestLabels(pullRequest) {
+	const labels = pullRequest?.labels;
+	if (!Array.isArray(labels)) return [];
+	return labels.flatMap((label) => {
+		const name = stringField(isRecord$3(label) ? label : void 0, "name");
+		return name === void 0 ? [] : [name];
+	});
+}
+function refToBranch(ref) {
+	return ref.replace(/^refs\/(?:heads|tags)\//u, "");
+}
+function recordField(record, key) {
+	const value = record?.[key];
+	return isRecord$3(value) ? value : void 0;
+}
+function stringField(record, key) {
+	const value = record?.[key];
+	return typeof value === "string" && value !== "" ? value : void 0;
+}
 function isRecord$3(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function isUnknownArray(value) {
-	return Array.isArray(value);
+
+//#endregion
+//#region src/actions/ci/inputs.ts
+function readInputs$5() {
+	return {
+		apiKey: input$6("api-key"),
+		apiUrl: input$6("api-url"),
+		authToken: input$6("auth-token"),
+		base: input$6("base"),
+		cloudflareAccountId: input$6("cloudflare-account-id"),
+		decisions: input$6("decisions"),
+		head: input$6("head"),
+		mode: parseMode(input$6("mode", "decide")),
+		model: input$6("model"),
+		needs: input$6("needs"),
+		onError: parseOnError(input$6("on-error", "run-all")),
+		provider: input$6("provider"),
+		repoId: input$6("repo-id"),
+		requireAuth: getOptionalBooleanInput("require-auth") ?? false,
+		setupMonochange: input$6("setup-monochange", "true"),
+		workflow: input$6("workflow"),
+		workingDirectory: input$6("working-directory", ".")
+	};
 }
-function asOptionalString(value) {
-	return typeof value === "string" ? value : void 0;
+function input$6(name, fallback = "") {
+	return getInput(name).trim() || fallback;
 }
-function asString(value, fallback) {
-	return typeof value === "string" ? value : fallback;
+function parseMode(value) {
+	if (value === "decide" || value === "verify" || value === "check") return value;
+	throw new Error(`Input \`mode\` must be decide, verify, or check; received \`${value}\`.`);
 }
-function asNumber(value, fallback) {
-	return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+function parseOnError(value) {
+	if (value === "fail" || value === "run-all") return value;
+	throw new Error(`Input \`on-error\` must be fail or run-all; received \`${value}\`.`);
 }
-function asStringArray(value) {
-	if (!Array.isArray(value)) return [];
-	return value.filter((item) => typeof item === "string");
-}
-function asNumberRecord(value) {
-	if (!isRecord$3(value)) return {};
-	const record = {};
-	for (const [key, item] of Object.entries(value)) if (typeof item === "number" && Number.isFinite(item)) record[key] = item;
-	return record;
-}
-function splitList(raw) {
-	return raw.split(/[,\n]/u).map((item) => item.trim()).filter((item) => item.length > 0);
-}
-function parseProvider(raw) {
-	switch (raw.trim().toLowerCase()) {
-		case "opencode":
-		case "opencode-go": return "opencode-go";
-		case "openrouter": return "openrouter";
-		case "cloudflare": return "cloudflare";
-		case "jev":
-		case "webhook": return "jev";
-		case "openai":
-		case "openai-compatible":
-		case "ollama":
-		case "opensource": return "openai-compatible";
-		case "graph": return "graph";
-		default: throw new Error(`Unsupported \`provider\` value \`${raw}\`. Expected opencode-go, openrouter, cloudflare, jev, openai-compatible, or graph.`);
+
+//#endregion
+//#region src/actions/ci/verify.ts
+/**
+* Record one `monochange ci verify` outcome per gated workflow job.
+*
+* `needs` is the workflow's `${{ toJSON(needs) }}` map and `decisions` is the
+* gate's `decisions` output. Jobs missing from either map are not verifiable
+* and are skipped; `cancelled` runs are skipped because a cancelled job says
+* nothing about whether the gate was right.
+*/
+async function runVerify(command, inputs, context) {
+	const pending = pendingVerifications(parseNeeds(inputs.needs), parseDecisions(inputs.decisions));
+	for (const job of pending) {
+		const result = await exec(command, buildVerifyArgs({
+			conclusion: job.conclusion,
+			context,
+			inputs,
+			jobId: job.jobId,
+			priorDecision: job.priorDecision
+		}), { cwd: inputs.workingDirectory });
+		if (result.exitCode !== 0) throw new Error(`monochange ci verify failed for \`${job.jobId}\`: ${failureDetail(result)}`);
+		info(result.stdout.trim());
 	}
+	setOutput("result", "success");
 }
-function parseMode(raw) {
-	switch (raw.trim().toLowerCase()) {
-		case "decide": return "decide";
-		case "verify": return "verify";
-		case "analytics": return "analytics";
-		case "auth": return "auth";
-		default: throw new Error(`Input \`mode\` must be \`decide\`, \`verify\`, \`analytics\`, or \`auth\`, received \`${raw}\`.`);
+/**
+* Work out which workflow jobs can be verified.
+*
+* A job is verifiable when the gate produced a decision for it and its GitHub
+* result maps onto a CLI conclusion. `cancelled` runs say nothing about the
+* gate, so they are skipped rather than recorded as a failure.
+*/
+function pendingVerifications(needs, decisions) {
+	const pending = [];
+	for (const [jobId, jobResult] of Object.entries(needs)) {
+		const priorDecision = decisions[jobId];
+		if (priorDecision !== void 0) {
+			const conclusion = mapConclusion(jobResult);
+			if (conclusion === void 0) info(`Skipping verify for \`${jobId}\`: result \`${jobResult}\` is not verifiable.`);
+			else pending.push({
+				conclusion,
+				jobId,
+				priorDecision
+			});
+		}
 	}
+	return pending;
 }
-function normalizeDecisionFlag(raw) {
-	if (!raw) return void 0;
-	const trimmed = raw.trim().toLowerCase();
-	if (trimmed === "y" || trimmed === "yes" || trimmed === "true" || trimmed === "1") return "y";
-	if (trimmed === "n" || trimmed === "no" || trimmed === "false" || trimmed === "0") return "n";
+function buildVerifyArgs(options) {
+	const { conclusion, context, inputs, jobId, priorDecision } = options;
+	const args = [
+		"ci",
+		"verify",
+		"--job",
+		jobId,
+		"--conclusion",
+		conclusion,
+		"--prior-decision",
+		priorDecision ? "y" : "n"
+	];
+	pushValue(args, "--commit", context.commit);
+	pushValue(args, "--branch", context.branch);
+	pushValue(args, "--token", inputs.authToken);
+	if (inputs.requireAuth) args.push("--require-auth");
+	pushValue(args, "--repo-id", inputs.repoId);
+	return args;
 }
-function parseDecisionFlagValue(value) {
-	return typeof value === "string" ? normalizeDecisionFlag(value) : void 0;
+function parseNeeds(value) {
+	const parsed = parseJsonObject(value, "needs");
+	const results = {};
+	for (const [jobId, entry] of Object.entries(parsed)) {
+		const result = isRecord$4(entry) ? entry.result : void 0;
+		if (typeof result !== "string") throw new Error(`Input \`needs\` entry \`${jobId}\` must be an object with a string result.`);
+		results[jobId] = result;
+	}
+	return results;
 }
-function parseVerdictClass(value) {
-	switch (value) {
-		case "true_negative":
-		case "false_negative":
-		case "true_positive":
-		case "false_positive":
-		case "pending": return value;
+function parseDecisions(value) {
+	const parsed = parseJsonObject(value, "decisions");
+	const decisions = {};
+	for (const [jobId, decision] of Object.entries(parsed)) {
+		if (typeof decision !== "boolean") throw new Error(`Input \`decisions\` entry \`${jobId}\` must be a boolean.`);
+		decisions[jobId] = decision;
+	}
+	return decisions;
+}
+function parseJsonObject(value, name) {
+	const parsed = safeJsonParse(value);
+	if (!isRecord$4(parsed)) throw new Error(`Input \`${name}\` must be a JSON object.`);
+	return parsed;
+}
+function mapConclusion(result) {
+	switch (result.trim().toLowerCase()) {
+		case "failure": return "failure";
+		case "skipped": return "skipped";
+		case "success": return "success";
 		default: return;
 	}
 }
-function readCiInputs() {
-	return {
-		apiKey: getOptionalInput$1("api-key") ?? process.env.OPENCODE_GO_API_KEY ?? process.env.OPENROUTER_API_KEY ?? process.env.CI_DECISION_API_KEY,
-		apiUrl: getOptionalInput$1("api-url"),
-		authToken: getOptionalInput$1("auth-token") ?? process.env.MONOCHANGE_CI_TOKEN,
-		base: getOptionalInput$1("base") ?? "origin/main",
-		cloudflareAccountId: getOptionalInput$1("cloudflare-account-id"),
-		durationMinutes: Number.parseFloat(getOptionalInput$1("duration-minutes") ?? "0") || 0,
-		head: getOptionalInput$1("head") ?? "HEAD",
-		job: getOptionalInput$1("job") ?? "default",
-		jobCommand: getOptionalInput$1("job-command") ?? "",
-		maxDurationMinutes: Number.parseFloat(getOptionalInput$1("max-duration-minutes") ?? "10") || 10,
-		maxSkipsOnMain: Number.parseInt(getOptionalInput$1("max-skips-on-main") ?? "5", 10) || 5,
-		memoryPath: getOptionalInput$1("memory-path") ?? DEFAULT_MEMORY_PATH,
-		mode: parseMode(getOptionalInput$1("mode") ?? "decide"),
-		model: getOptionalInput$1("model") ?? DEFAULT_MODEL,
-		outcome: getOptionalInput$1("outcome")?.toLowerCase(),
-		packages: splitList(getOptionalInput$1("packages") ?? ""),
-		paths: splitList(getOptionalInput$1("paths") ?? ""),
-		priorDecision: normalizeDecisionFlag(getOptionalInput$1("prior-decision")),
-		provider: parseProvider(getOptionalInput$1("provider") ?? "opencode-go"),
-		repoId: getOptionalInput$1("repo-id"),
-		requireAuth: getOptionalBooleanInput("require-auth"),
-		unconditional: getBooleanInput("unconditional"),
-		unconditionalBranches: splitList(getOptionalInput$1("unconditional-branches") ?? "monochange/release/*,release/*,refs/tags/v*"),
-		unconditionalEvents: splitList(getOptionalInput$1("unconditional-events") ?? "schedule,workflow_dispatch"),
-		unconditionalLabels: splitList(getOptionalInput$1("unconditional-labels") ?? "ci:full,ci:unconditional,release"),
-		unconditionalPaths: splitList(getOptionalInput$1("unconditional-paths") ?? "Cargo.lock,rust-toolchain.toml,.github/workflows/"),
-		workingDirectory: getOptionalInput$1("working-directory") ?? "."
-	};
-}
-function emptyLedger() {
-	return {
-		history: [],
-		lessons: [],
-		mainSkipStreak: {},
-		schemaVersion: 1,
-		stats: {
-			falseNegatives: 0,
-			falsePositives: 0,
-			savedMinutes: 0,
-			trueNegatives: 0,
-			truePositives: 0,
-			wastedMinutes: 0
-		}
-	};
-}
-function parseHistoryEntry(value) {
-	if (!isRecord$3(value)) return void 0;
-	const job = asOptionalString(value.job);
-	const decision = parseDecisionFlagValue(value.decision);
-	if (!job || !decision) return void 0;
-	const entry = {
-		changedFiles: asStringArray(value.changedFiles),
-		commit: asString(value.commit, ""),
-		decision,
-		job,
-		reason: asString(value.reason, ""),
-		timestamp: asString(value.timestamp, ""),
-		unconditional: value.unconditional === true
-	};
-	const duration = asNumber(value.durationMinutes, -1);
-	if (duration >= 0) entry.durationMinutes = duration;
-	const verdictClass = parseVerdictClass(value.verdictClass);
-	if (verdictClass) entry.verdictClass = verdictClass;
-	return entry;
-}
-function parseLesson(value) {
-	if (!isRecord$3(value)) return void 0;
-	const id = asOptionalString(value.id);
-	const job = asOptionalString(value.job);
-	if (!id || !job) return void 0;
-	return {
-		id,
-		job,
-		packages: asStringArray(value.packages),
-		paths: asStringArray(value.paths),
-		reason: asString(value.reason, "")
-	};
-}
-function loadMemoryLedger(fullPath) {
-	if (!existsSync$1(fullPath)) return emptyLedger();
-	const parsed = safeJsonParse(readFileSync$1(fullPath, "utf8"));
-	if (!isRecord$3(parsed)) return emptyLedger();
-	const rawStats = isRecord$3(parsed.stats) ? parsed.stats : {};
-	const rawLessons = Array.isArray(parsed.lessons) ? parsed.lessons : [];
-	const rawHistory = Array.isArray(parsed.history) ? parsed.history : [];
-	const repoId = asOptionalString(parsed.repoId);
-	return {
-		history: rawHistory.flatMap((item) => {
-			const entry = parseHistoryEntry(item);
-			return entry ? [entry] : [];
-		}),
-		lessons: rawLessons.flatMap((item) => {
-			const lesson = parseLesson(item);
-			return lesson ? [lesson] : [];
-		}),
-		mainSkipStreak: asNumberRecord(parsed.mainSkipStreak),
-		schemaVersion: asNumber(parsed.schemaVersion, 1),
-		...repoId ? { repoId } : {},
-		stats: {
-			falseNegatives: asNumber(rawStats.falseNegatives, 0),
-			falsePositives: asNumber(rawStats.falsePositives, 0),
-			savedMinutes: asNumber(rawStats.savedMinutes, 0),
-			trueNegatives: asNumber(rawStats.trueNegatives, 0),
-			truePositives: asNumber(rawStats.truePositives, 0),
-			wastedMinutes: asNumber(rawStats.wastedMinutes, 0)
-		}
-	};
-}
-function saveMemoryLedger(fullPath, ledger) {
-	mkdirSync(dirname(fullPath), { recursive: true });
-	writeFileSync(fullPath, `${JSON.stringify(ledger, null, 2)}\n`, "utf8");
-}
-function canonicalRepoId(raw) {
-	if (!raw) return void 0;
-	const trimmed = raw.trim();
-	if (trimmed.length === 0) return void 0;
-	let path = trimmed;
-	const scpMatch = trimmed.match(/^[^@\s]+@[^:\s]+:(.+)$/u);
-	if (scpMatch?.[1]) path = scpMatch[1];
-	else try {
-		path = new URL(trimmed).pathname;
-	} catch {}
-	const parts = path.replace(/^\/+/u, "").replace(/\.git$/u, "").replace(/\/+$/u, "").split("/").filter((part) => part.length > 0);
-	if (parts.length < 2) return trimmed.toLowerCase();
-	return parts.slice(0, 2).join("/").toLowerCase();
-}
-async function resolveRepoId(options) {
-	const fromInput = canonicalRepoId(options.inputRepoId);
-	if (fromInput) return fromInput;
-	const fromEnv = canonicalRepoId(options.envRepoId);
-	if (fromEnv) return fromEnv;
-	const remote = await exec("git", [
-		"config",
-		"--get",
-		"remote.origin.url"
-	], { cwd: options.workingDirectory });
-	if (remote.exitCode !== 0) return void 0;
-	return canonicalRepoId(remote.stdout.trim());
-}
-function repoHash(repoId) {
-	return createHash("sha256").update(repoId).digest("hex").slice(0, 12);
-}
-function signRepoId(repoId, secret) {
-	return createHmac("sha256", secret).update(repoId).digest("hex");
-}
-function buildCiToken(repoId, secret) {
-	return `${TOKEN_PREFIX}_${repoHash(repoId)}_${signRepoId(repoId, secret)}`;
-}
-function parseCiToken(token) {
-	const match = token.match(/^mc_ci_([a-f0-9]+)_([a-f0-9]{64})$/u);
-	if (!match?.[1] || !match[2]) return void 0;
-	return {
-		hmac: match[2],
-		repoHash: match[1]
-	};
-}
-function constantTimeEqual(left, right) {
-	const leftBuffer = Buffer.from(left, "utf8");
-	const rightBuffer = Buffer.from(right, "utf8");
-	if (leftBuffer.length !== rightBuffer.length) return false;
-	return timingSafeEqual(leftBuffer, rightBuffer);
-}
-function verifyCiToken(options) {
-	const { repoId, secret, storedToken, token } = options;
-	const parsed = parseCiToken(token);
-	if (!secret) {
-		if (storedToken && constantTimeEqual(token, storedToken)) return {
-			reason: "ok",
-			valid: true
-		};
-		return {
-			reason: "missing-secret",
-			valid: false
-		};
-	}
-	if (!parsed) return {
-		reason: "malformed",
-		valid: false
-	};
-	if (!constantTimeEqual(parsed.hmac, signRepoId(repoId, secret))) return {
-		reason: parsed.repoHash === repoHash(repoId) ? "signature" : "repo-mismatch",
-		valid: false
-	};
-	return {
-		reason: "ok",
-		valid: true
-	};
-}
-function loadCiAuthFile(fullPath) {
-	if (!existsSync$1(fullPath)) return void 0;
-	const parsed = safeJsonParse(readFileSync$1(fullPath, "utf8"));
-	if (!isRecord$3(parsed)) return void 0;
-	const repoId = canonicalRepoId(asOptionalString(parsed.repoId));
-	const secret = asOptionalString(parsed.secret);
-	const token = asOptionalString(parsed.token);
-	if (!repoId || !secret && !token) return void 0;
-	return {
-		repoId,
-		...secret ? { secret } : {},
-		...token ? { token } : {}
-	};
-}
-function saveCiAuthFile(fullPath, authFile) {
-	mkdirSync(dirname(fullPath), { recursive: true });
-	writeFileSync(fullPath, `${JSON.stringify(authFile, null, 2)}\n`, {
-		encoding: "utf8",
-		mode: 384
-	});
-}
-function resolveRepoAuth(options) {
-	const { authFile, authToken, repoId } = options;
-	if (authFile && authFile.repoId !== repoId) return {
-		authenticated: false,
-		method: "none",
-		reason: `local auth file is bound to ${authFile.repoId}`,
-		repoId
-	};
-	const candidate = authToken ?? authFile?.token;
-	if (candidate) {
-		const verification = verifyCiToken({
-			repoId,
-			secret: authFile?.secret,
-			storedToken: authFile?.token,
-			token: candidate
-		});
-		if (verification.valid) return {
-			authenticated: true,
-			method: authToken ? "token" : "local-secret",
-			reason: "valid repo-scoped token",
-			repoId,
-			token: candidate
-		};
-		return {
-			authenticated: false,
-			method: "none",
-			reason: `invalid repo-scoped token (${verification.reason})`,
-			repoId
-		};
-	}
-	if (authFile?.secret) return {
-		authenticated: true,
-		method: "local-secret",
-		reason: "local auth file secret",
-		repoId,
-		token: buildCiToken(repoId, authFile.secret)
-	};
-	return {
-		authenticated: false,
-		method: "none",
-		reason: "no repo-scoped token or auth file",
-		repoId
-	};
-}
-function repoAuthError(repoId) {
-	return /* @__PURE__ */ new Error(`Unauthorized: repo-scoped authentication failed for ${repoId}. Only the authenticated local repository can access CI history and analytics.`);
-}
-function requireRepoAuth(auth) {
-	if (!auth.authenticated) throw repoAuthError(auth.repoId);
-	return auth;
-}
-async function resolveChangedFiles(cwd, base, head) {
-	const diff = await exec("git", [
-		"diff",
-		"--name-only",
-		`${base}..${head}`
-	], { cwd });
-	let text = diff.exitCode === 0 ? diff.stdout : "";
-	if (text.trim() === "") text = (await exec("git", [
-		"diff-tree",
-		"--no-commit-id",
-		"--name-only",
-		"-r",
-		head
-	], { cwd })).stdout;
-	return [...new Set(text.split("\n").map((line) => line.trim()).filter((line) => line.length > 0))].toSorted();
-}
-function matchesGlobPattern(value, pattern) {
-	if (pattern.endsWith("*")) return value.startsWith(pattern.slice(0, -1));
-	return value === pattern || value.startsWith(`${pattern}/`);
-}
-function matchesAnyPath(changedFiles, patterns) {
-	return changedFiles.some((file) => patterns.some((pattern) => file === pattern || file.startsWith(pattern) || matchesGlobPattern(file, pattern)));
-}
-function jobPatterns(inputs) {
-	return [...inputs.paths, ...inputs.packages.flatMap((pkg) => [`crates/${pkg}/`, `packages/${pkg}/`])];
-}
-function resolveAffectedFiles(changedFiles, inputs) {
-	const patterns = jobPatterns(inputs);
-	if (patterns.length === 0) return [...changedFiles];
-	return changedFiles.filter((file) => matchesAnyPath([file], patterns));
-}
-function readPullRequestLabels() {
-	const payload = context.payload;
-	if (!isRecord$3(payload)) return [];
-	const pullRequest = payload.pull_request;
-	if (!isRecord$3(pullRequest) || !Array.isArray(pullRequest.labels)) return [];
-	return pullRequest.labels.flatMap((label) => {
-		if (!isRecord$3(label)) return [];
-		const name = asOptionalString(label.name);
-		return name ? [name] : [];
-	});
-}
-function readCommitMessage() {
-	const payload = context.payload;
-	if (!isRecord$3(payload)) return "";
-	const headCommit = payload.head_commit;
-	if (!isRecord$3(headCommit)) return "";
-	return asString(headCommit.message, "");
-}
-function checkUnconditionalOverride(options) {
-	const { branchName, changedFiles, commitMessage, eventName, inputs, isMainBranch, labels, ledger } = options;
-	if (inputs.unconditional) return "forced by unconditional=true input";
-	if (inputs.unconditionalEvents.includes(eventName)) return `unconditional event (${eventName})`;
-	if (inputs.unconditionalBranches.some((pattern) => matchesGlobPattern(branchName, pattern) || matchesGlobPattern(context.ref, pattern))) return `unconditional branch/ref (${branchName})`;
-	const matchedLabel = labels.find((label) => inputs.unconditionalLabels.includes(label));
-	if (matchedLabel) return `unconditional PR label (${matchedLabel})`;
-	if (/\[ci:(?:full|unconditional|all)\]/iu.test(commitMessage)) return "commit message contains [ci:full] override";
-	if (matchesAnyPath(changedFiles, inputs.unconditionalPaths)) return "modified unconditional global path (lockfile, toolchain, or workflow)";
-	const matchedLesson = ledger.lessons.find((lesson) => {
-		if (lesson.job !== inputs.job) return false;
-		return matchesAnyPath(changedFiles, lesson.paths) || matchesAnyPath(changedFiles, jobPatterns({
-			packages: lesson.packages,
-			paths: []
-		}));
-	});
-	if (matchedLesson) return `learned memory rule (${matchedLesson.id}): ${matchedLesson.reason}`;
-	if (isMainBranch) {
-		const streak = ledger.mainSkipStreak[inputs.job] ?? 0;
-		if (streak >= inputs.maxSkipsOnMain) return `main skip streak reached ${streak}/${inputs.maxSkipsOnMain} max-skips-on-main`;
-	}
-}
-function evaluateDeterministicGraph(changedFiles, inputs) {
-	const suggestion = buildDurationSuggestion(inputs);
-	if (inputs.paths.length === 0 && inputs.packages.length === 0) return {
-		decision: "y",
-		reason: "no path/package filter restricted this job",
-		suggestion,
-		unconditional: false
-	};
-	const matched = matchesAnyPath(changedFiles, jobPatterns(inputs));
-	return {
-		decision: matched ? "y" : "n",
-		reason: matched ? `diff touches paths/packages for ${inputs.job}` : `diff does not touch paths/packages for ${inputs.job}`,
-		suggestion,
-		unconditional: false
-	};
-}
-function buildDurationSuggestion(inputs) {
-	if (inputs.durationMinutes <= inputs.maxDurationMinutes) return "";
-	return `Red flag: job \`${inputs.job}\` takes ${inputs.durationMinutes.toFixed(1)}m (budget: ${inputs.maxDurationMinutes}m). Split into parallel shards or scope cargo/test targets to affected packages.`;
-}
-function resolveProviderEndpoint(inputs) {
-	if (inputs.apiUrl) return inputs.apiUrl;
-	if (inputs.provider === "cloudflare") {
-		if (!inputs.cloudflareAccountId) throw new Error("Provider `cloudflare` requires either `api-url` or `cloudflare-account-id`.");
-		return `https://api.cloudflare.com/client/v4/accounts/${inputs.cloudflareAccountId}/ai/v1/chat/completions`;
-	}
-	const preset = DEFAULT_PROVIDER_URLS[inputs.provider];
-	if (!preset) throw new Error(`Provider \`${inputs.provider}\` requires \`api-url\` to be configured.`);
-	return preset;
-}
-function parseDecisionPayload(rawText, fallbackSuggestion) {
-	const directFlag = normalizeDecisionFlag(rawText);
-	if (directFlag) return {
-		decision: directFlag,
-		reason: `provider returned '${directFlag}'`,
-		suggestion: fallbackSuggestion,
-		unconditional: false
-	};
-	const parsed = safeJsonParse(rawText);
-	if (!isRecord$3(parsed)) return {
-		decision: "y",
-		reason: "unrecognized provider payload; defaulting to y",
-		suggestion: fallbackSuggestion,
-		unconditional: false
-	};
-	const choices = parsed.choices;
-	if (isUnknownArray(choices) && choices.length > 0) {
-		const [firstChoice] = choices;
-		if (isRecord$3(firstChoice)) {
-			const message = firstChoice.message;
-			if (isRecord$3(message)) {
-				const content = asOptionalString(message.content);
-				if (content) return parseDecisionPayload(content, fallbackSuggestion);
-			}
-		}
-	}
-	const result = parsed.result;
-	if (isRecord$3(result)) {
-		const response = asOptionalString(result.response);
-		if (response) return parseDecisionPayload(response, fallbackSuggestion);
-	}
-	const flag = normalizeDecisionFlag(asOptionalString(parsed.decision) ?? asOptionalString(parsed.run)) ?? "y";
-	return {
-		decision: flag,
-		reason: asOptionalString(parsed.reason) ?? `AI provider decided '${flag}'`,
-		suggestion: asOptionalString(parsed.suggestion) ?? fallbackSuggestion,
-		unconditional: false
-	};
-}
-async function queryDecisionProvider(options) {
-	const { changedFiles, graphDefault, inputs, ledger } = options;
-	if (inputs.provider === "graph" || !inputs.apiKey && !inputs.apiUrl) return graphDefault;
-	const endpoint = resolveProviderEndpoint(inputs);
-	const contextPayload = {
-		changed_files: changedFiles.slice(0, 100),
-		duration_minutes: inputs.durationMinutes,
-		graph_default: graphDefault.decision,
-		job: inputs.job,
-		job_command: inputs.jobCommand,
-		lessons: ledger.lessons.filter((lesson) => lesson.job === inputs.job),
-		max_duration_minutes: inputs.maxDurationMinutes,
-		packages: inputs.packages,
-		paths: inputs.paths,
-		recent_history: ledger.history.slice(-10)
-	};
-	const body = inputs.provider === "jev" ? JSON.stringify(contextPayload) : JSON.stringify({
-		messages: [{
-			content: "Decide if this CI job must run (\"y\" or \"n\"). Return JSON: {\"decision\":\"y\"|\"n\",\"reason\":\"short reason\",\"suggestion\":\"speedup tip if slow\"}.",
-			role: "system"
-		}, {
-			content: JSON.stringify(contextPayload),
-			role: "user"
-		}],
-		model: inputs.model,
-		response_format: { type: "json_object" },
-		temperature: 0
-	});
-	const headers = { "Content-Type": "application/json" };
-	if (inputs.apiKey) headers.Authorization = `Bearer ${inputs.apiKey}`;
-	try {
-		const response = await fetch(endpoint, {
-			body,
-			headers,
-			method: "POST"
-		});
-		if (!response.ok) throw new Error(`HTTP ${response.status}`);
-		return parseDecisionPayload(await response.text(), graphDefault.suggestion);
-	} catch (error) {
-		warning(`Decision provider ${inputs.provider} failed (${error instanceof Error ? error.message : String(error)}); falling back to graph verdict (${graphDefault.decision}).`);
-		return graphDefault;
-	}
-}
-function normalizeVerifyOutcome(raw) {
-	if (raw === "failure" || raw === "cancelled" || raw === "timed_out") return "failure";
-	if (raw === "skipped") return "skipped";
-	return "success";
-}
-function buildFalseNegativeLesson(options) {
-	const { changedFiles, commit, inputs } = options;
-	const paths = changedFiles.length > 0 ? changedFiles.slice(0, 12) : [...inputs.paths];
-	return {
-		id: `fn-${commit.slice(0, 8) || "local"}-${inputs.job}`,
-		job: inputs.job,
-		packages: [...inputs.packages],
-		paths,
-		reason: `Skipped on PR/commit ${commit.slice(0, 8) || "local"} but failed when run on main.`
-	};
-}
-function hasEquivalentLesson(ledger, lesson) {
-	return ledger.lessons.some((existing) => existing.job === lesson.job && existing.paths.join("\n") === lesson.paths.join("\n") && existing.packages.join("\n") === lesson.packages.join("\n"));
-}
-function applyVerifyOutcome(options) {
-	const { changedFiles, commit, inputs, ledger } = options;
-	const lastForJob = ledger.history.findLast((entry) => entry.job === inputs.job);
-	const graphDefault = evaluateDeterministicGraph(changedFiles, inputs);
-	const prior = inputs.priorDecision ?? lastForJob?.decision ?? graphDefault.decision;
-	const outcome = normalizeVerifyOutcome(inputs.outcome);
-	const affectedFiles = resolveAffectedFiles(changedFiles, inputs);
-	const duration = inputs.durationMinutes;
-	let verdictClass;
-	let reason;
-	if (outcome === "failure") {
-		ledger.mainSkipStreak[inputs.job] = 0;
-		if (prior === "n") {
-			verdictClass = "false_negative";
-			ledger.stats.falseNegatives += 1;
-			const lesson = buildFalseNegativeLesson({
-				changedFiles,
-				commit,
-				inputs
-			});
-			if (!hasEquivalentLesson(ledger, lesson)) ledger.lessons.push(lesson);
-			reason = `False negative recorded: ${inputs.job} was skipped ('n') and failed on main. Added memory lesson ${lesson.id}.`;
-		} else {
-			verdictClass = "true_positive";
-			ledger.stats.truePositives += 1;
-			reason = `True positive confirmed: ${inputs.job} ran ('y') and caught a failure.`;
-		}
-	} else if (outcome === "skipped") {
-		ledger.mainSkipStreak[inputs.job] = (ledger.mainSkipStreak[inputs.job] ?? 0) + 1;
-		verdictClass = "true_negative";
-		ledger.stats.trueNegatives += 1;
-		ledger.stats.savedMinutes += duration;
-		reason = `True negative recorded: ${inputs.job} was skipped ('n') and passed on main (streak: ${ledger.mainSkipStreak[inputs.job]}).`;
-	} else if (prior === "n") {
-		ledger.mainSkipStreak[inputs.job] = 0;
-		verdictClass = "true_negative";
-		ledger.stats.trueNegatives += 1;
-		ledger.stats.savedMinutes += duration;
-		reason = `True negative verified: ${inputs.job} was skipped ('n') earlier and passed on main.`;
-	} else if (affectedFiles.length === 0) {
-		ledger.mainSkipStreak[inputs.job] = 0;
-		verdictClass = "false_positive";
-		ledger.stats.falsePositives += 1;
-		ledger.stats.wastedMinutes += duration;
-		reason = `False positive recorded: ${inputs.job} ran ('y') but no job paths/packages matched and it passed on main. Tighten paths/packages to skip unaffected runs.`;
-	} else {
-		ledger.mainSkipStreak[inputs.job] = 0;
-		verdictClass = "true_positive";
-		ledger.stats.truePositives += 1;
-		reason = `True positive confirmed: ${inputs.job} ran ('y') with affected changes and passed on main.`;
-	}
-	const historyEntry = ledger.history.findLast((entry) => entry.job === inputs.job);
-	if (historyEntry) historyEntry.verdictClass = verdictClass;
-	return {
-		reason,
-		verdictClass
-	};
-}
-function ratio(part, total) {
-	if (total <= 0) return 0;
-	return Math.round(part / total * 1e3) / 10;
-}
-function emptyJobAnalytics() {
-	return {
-		accuracy: 0,
-		decisions: 0,
-		falseNegatives: 0,
-		falsePositives: 0,
-		runs: 0,
-		savedMinutes: 0,
-		skips: 0,
-		trueNegatives: 0,
-		truePositives: 0
-	};
-}
-function buildAnalytics(repoId, ledger) {
-	const { stats } = ledger;
-	const decisions = stats.trueNegatives + stats.falseNegatives + stats.truePositives + stats.falsePositives;
-	const jobs = {};
-	for (const entry of ledger.history) if (entry.verdictClass) {
-		const job = jobs[entry.job] ?? emptyJobAnalytics();
-		job.decisions += 1;
-		if (entry.decision === "y") job.runs += 1;
-		else job.skips += 1;
-		switch (entry.verdictClass) {
-			case "true_negative":
-				job.trueNegatives += 1;
-				job.savedMinutes += entry.durationMinutes ?? 0;
-				break;
-			case "false_negative":
-				job.falseNegatives += 1;
-				break;
-			case "true_positive":
-				job.truePositives += 1;
-				break;
-			case "false_positive":
-				job.falsePositives += 1;
-				break;
-			case "pending": break;
-		}
-		jobs[entry.job] = job;
-	}
-	for (const job of Object.values(jobs)) job.accuracy = ratio(job.trueNegatives + job.truePositives, job.decisions);
-	return {
-		accuracy: ratio(stats.trueNegatives + stats.truePositives, decisions),
-		decisions,
-		falseNegativeRate: ratio(stats.falseNegatives, stats.falseNegatives + stats.trueNegatives),
-		falseNegatives: stats.falseNegatives,
-		falsePositiveRate: ratio(stats.falsePositives, stats.falsePositives + stats.truePositives),
-		falsePositives: stats.falsePositives,
-		generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-		jobs,
-		lessons: ledger.lessons.length,
-		repoId,
-		runs: stats.truePositives + stats.falsePositives,
-		savedMinutes: stats.savedMinutes,
-		skips: stats.trueNegatives + stats.falseNegatives,
-		trueNegatives: stats.trueNegatives,
-		truePositives: stats.truePositives,
-		wastedMinutes: stats.wastedMinutes
-	};
-}
-function setAnalyticsOutputs(analytics) {
-	setOutput("false-negatives", String(analytics.falseNegatives));
-	setOutput("false-positives", String(analytics.falsePositives));
-	setOutput("true-negatives", String(analytics.trueNegatives));
-	setOutput("true-positives", String(analytics.truePositives));
-	setOutput("analytics", JSON.stringify(analytics));
-}
-function establishRepoAuth(options) {
-	const { authFile, authPath, repoId } = options;
-	if (authFile && authFile.repoId !== repoId) throw repoAuthError(repoId);
-	if (authFile?.token) {
-		if (!verifyCiToken({
-			repoId,
-			secret: authFile.secret,
-			storedToken: authFile.token,
-			token: authFile.token
-		}).valid) throw repoAuthError(repoId);
-		return {
-			authFile,
-			token: authFile.token
-		};
-	}
-	const secret = authFile?.secret ?? randomBytes(32).toString("hex");
-	const token = buildCiToken(repoId, secret);
-	const created = {
-		repoId,
-		secret,
-		token
-	};
-	saveCiAuthFile(authPath, created);
-	return {
-		authFile: created,
-		token
-	};
-}
+
+//#endregion
+//#region src/actions/ci/index.ts
+/**
+* Thin wrapper around the `monochange ci` CLI.
+*
+* The CLI owns job rules (`[ci.jobs.*]` in `monochange.toml`), git diffing,
+* provider calls, memory, and learned rules. This action only maps GitHub
+* context onto CLI flags and republishes the CLI's outputs for later steps.
+*/
 async function runCi() {
-	const inputs = readCiInputs();
-	const memoryFullPath = join(inputs.workingDirectory, inputs.memoryPath);
-	const authPath = join(inputs.workingDirectory, AUTH_PATH);
-	const authFile = loadCiAuthFile(authPath);
-	const repoId = await resolveRepoId({
-		envRepoId: process.env.GITHUB_REPOSITORY,
-		inputRepoId: inputs.repoId,
-		workingDirectory: inputs.workingDirectory
-	}) ?? "local/unknown";
-	const auth = resolveRepoAuth({
-		authFile,
-		authToken: inputs.authToken,
-		repoId
-	});
-	if (inputs.mode === "auth") {
-		const token = inputs.authToken ?? establishRepoAuth({
-			authFile,
-			authPath,
-			repoId
-		}).token;
-		if (inputs.authToken && !auth.authenticated) throw repoAuthError(repoId);
-		setSecret(token);
-		setOutput("result", "success");
-		setOutput("repo-id", repoId);
-		setOutput("auth-token", token);
-		setOutput("authenticated", "true");
-		setAnalyticsOutputs(buildAnalytics(repoId, loadMemoryLedger(memoryFullPath)));
-		setOutput("json", JSON.stringify({
-			authenticated: true,
-			repoId
-		}));
-		return;
+	const inputs = readInputs$5();
+	maskSecrets(inputs);
+	const context = readGitHubContext();
+	const { command } = await resolveMonochange(inputs.setupMonochange);
+	switch (inputs.mode) {
+		case "check":
+			await runCheck(command, inputs);
+			return;
+		case "decide":
+			await runDecide(command, inputs, context);
+			return;
+		case "verify":
+			await runVerify(command, inputs, context);
+			return;
 	}
-	const effectiveAuth = inputs.mode === "analytics" || (inputs.requireAuth ?? (authFile !== void 0 || inputs.authToken !== void 0)) ? requireRepoAuth(auth) : auth;
-	debug(`CI repo auth: ${effectiveAuth.reason}`);
-	const ledger = loadMemoryLedger(memoryFullPath);
-	ledger.repoId = repoId;
-	if (inputs.mode === "analytics") {
-		const analytics = buildAnalytics(repoId, ledger);
-		setOutput("result", "success");
-		setOutput("repo-id", repoId);
-		setOutput("authenticated", String(effectiveAuth.authenticated));
-		setAnalyticsOutputs(analytics);
-		setOutput("json", JSON.stringify({
-			analytics,
-			repoId,
-			stats: ledger.stats
-		}));
-		return;
-	}
-	const changedFiles = await resolveChangedFiles(inputs.workingDirectory, inputs.base, inputs.head);
-	if (inputs.mode === "verify") {
-		const verification = applyVerifyOutcome({
-			changedFiles,
-			commit: context.sha || inputs.head,
-			inputs,
-			ledger
-		});
-		saveMemoryLedger(memoryFullPath, ledger);
-		const analytics = buildAnalytics(repoId, ledger);
-		setOutput("result", "success");
-		setOutput("repo-id", repoId);
-		setOutput("authenticated", String(effectiveAuth.authenticated));
-		setOutput("verdict-class", verification.verdictClass);
-		setOutput("reason", verification.reason);
-		setAnalyticsOutputs(analytics);
-		setOutput("json", JSON.stringify({
-			analytics,
-			ledgerStats: ledger.stats,
-			...verification,
-			repoId
-		}));
-		return;
-	}
-	const branchName = process.env.GITHUB_REF_NAME ?? context.ref.replace("refs/heads/", "");
-	const isMainBranch = branchName === "main" || branchName === "master";
-	const unconditionalReason = checkUnconditionalOverride({
-		branchName,
-		changedFiles,
-		commitMessage: readCommitMessage(),
-		eventName: context.eventName,
-		inputs,
-		isMainBranch,
-		labels: readPullRequestLabels(),
-		ledger
-	});
-	const graphDefault = evaluateDeterministicGraph(changedFiles, inputs);
-	const result = unconditionalReason ? {
-		decision: "y",
-		reason: unconditionalReason,
-		suggestion: graphDefault.suggestion,
-		unconditional: true
-	} : await queryDecisionProvider({
-		changedFiles,
-		graphDefault,
-		inputs,
-		ledger
-	});
-	if (isMainBranch) ledger.mainSkipStreak[inputs.job] = result.decision === "n" ? (ledger.mainSkipStreak[inputs.job] ?? 0) + 1 : 0;
-	ledger.history.push({
-		changedFiles: changedFiles.slice(0, 20),
-		commit: (context.sha || inputs.head).slice(0, 12),
-		decision: result.decision,
-		durationMinutes: inputs.durationMinutes,
-		job: inputs.job,
-		reason: result.reason,
-		timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-		unconditional: result.unconditional
-	});
-	ledger.history = ledger.history.slice(-100);
-	saveMemoryLedger(memoryFullPath, ledger);
-	const analytics = buildAnalytics(repoId, ledger);
-	setOutput("result", "success");
-	setOutput("repo-id", repoId);
-	setOutput("authenticated", String(effectiveAuth.authenticated));
-	setOutput("decision", result.decision);
-	setOutput("should-run", result.decision === "y" ? "true" : "false");
-	setOutput("unconditional", String(result.unconditional));
-	setOutput("reason", result.reason);
-	setOutput("suggestion", result.suggestion);
-	setAnalyticsOutputs(analytics);
-	setOutput("json", JSON.stringify({
-		...result,
-		analytics,
-		authenticated: effectiveAuth.authenticated,
-		repoId
-	}));
+}
+function maskSecrets(inputs) {
+	for (const secret of [inputs.apiKey, inputs.authToken]) if (secret !== "") setSecret(secret);
 }
 
 //#endregion
@@ -24255,7 +23777,7 @@ async function run() {
 			await runChangesetPolicy();
 			return;
 		case "check":
-			await runCheck();
+			await runCheck$1();
 			return;
 		case "ci":
 			await runCi();
