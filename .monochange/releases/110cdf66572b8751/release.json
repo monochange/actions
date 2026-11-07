@@ -1,0 +1,181 @@
+{
+  "schema_version": "0.10",
+  "kind": "monochange.releaseRecord",
+  "created_at": "2026-11-07T18:38:51Z",
+  "command": "release",
+  "version": "0.11.1",
+  "versions": {
+    "actions": "0.11.1"
+  },
+  "release_targets": [
+    {
+      "id": "actions",
+      "kind": "package",
+      "version": "0.11.1",
+      "version_format": "primary",
+      "tag": true,
+      "release": true,
+      "tag_name": "v0.11.1",
+      "rendered_title": "v0.11.1 (2026-11-07)",
+      "rendered_changelog_title": "[0.11.1](https://github.com/monochange/actions/releases/tag/v0.11.1) (2026-11-07)",
+      "members": [
+        "actions"
+      ],
+      "floating_tags": [
+        "v{{ major }}.{{ minor }}",
+        "v{{ major }}"
+      ]
+    }
+  ],
+  "released_packages": [
+    "actions"
+  ],
+  "changed_files": [
+    "changelog.md",
+    "package.json"
+  ],
+  "package_publications": [],
+  "updated_changelogs": [
+    "changelog.md"
+  ],
+  "deleted_changesets": [
+    ".changeset/ci-gatekeeper-action.md"
+  ],
+  "changesets": [
+    {
+      "path": ".changeset/ci-gatekeeper-action.md",
+      "summary": "add the `monochange/actions/ci` conditional CI gatekeeper, outcome verifier, and repo-scoped analytics action",
+      "details": null,
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "minor",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "feat"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "b1343d0f59b95bac15b718543d4025a3050cd75a",
+            "short_sha": "b1343d0",
+            "url": "https://github.com/monochange/actions/commit/b1343d0f59b95bac15b718543d4025a3050cd75a",
+            "authored_at": "2026-11-07T18:34:21Z",
+            "committed_at": "2026-11-07T18:34:21Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#120",
+            "title": "feat(ci): add monochange/actions/ci conditional gatekeeper, verification, and analytics action",
+            "url": "https://github.com/monochange/actions/pull/120",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "b1343d0f59b95bac15b718543d4025a3050cd75a",
+            "short_sha": "b1343d0",
+            "url": "https://github.com/monochange/actions/commit/b1343d0f59b95bac15b718543d4025a3050cd75a",
+            "authored_at": "2026-11-07T18:34:21Z",
+            "committed_at": "2026-11-07T18:34:21Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#120",
+            "title": "feat(ci): add monochange/actions/ci conditional gatekeeper, verification, and analytics action",
+            "url": "https://github.com/monochange/actions/pull/120",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    }
+  ],
+  "changelogs": [
+    {
+      "owner_id": "actions",
+      "owner_kind": "package",
+      "output": "default",
+      "stream": "default",
+      "path": "changelog.md",
+      "format": "monochange",
+      "notes": {
+        "title": "[0.11.1](https://github.com/monochange/actions/releases/tag/v0.11.1) (2026-11-07)",
+        "summary": [],
+        "sections": [
+          {
+            "title": "🚀 Feature",
+            "collapsed": false,
+            "entries": [
+              "- **add the `monochange/actions/ci` conditional CI gatekeeper, outcome verifier, and repo-scoped analytics action.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #120](https://github.com/monochange/actions/pull/120)"
+            ]
+          }
+        ]
+      },
+      "rendered": "## [0.11.1](https://github.com/monochange/actions/releases/tag/v0.11.1) (2026-11-07)\n\n### 🚀 Feature\n\n- **add the `monochange/actions/ci` conditional CI gatekeeper, outcome verifier, and repo-scoped analytics action.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #120](https://github.com/monochange/actions/pull/120)"
+    }
+  ],
+  "provider": {
+    "kind": "github",
+    "owner": "monochange",
+    "repo": "actions",
+    "host": null
+  }
+}
