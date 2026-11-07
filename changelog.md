@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.11.1](https://github.com/monochange/actions/releases/tag/v0.11.1) (2026-11-07)
+
+### 🚀 Feature
+
+- **add the `monochange/actions/ci` conditional CI gatekeeper, outcome verifier, and repo-scoped analytics action.**
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #120](https://github.com/monochange/actions/pull/120)
+
 ## [0.11.0](https://github.com/monochange/actions/releases/tag/v0.11.0) (2026-11-04)
 
 ### 💥 Breaking Change
