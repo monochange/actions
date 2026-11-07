@@ -13,8 +13,12 @@ export function getOptionalInput(name: string): string | undefined {
   return value;
 }
 
-export function getBooleanInput(name: string): boolean {
+export function getOptionalBooleanInput(name: string): boolean | undefined {
   const value = core.getInput(name).trim().toLowerCase();
+
+  if (value === '') {
+    return undefined;
+  }
 
   if (TRUE_VALUES.has(value)) {
     return true;
@@ -25,6 +29,10 @@ export function getBooleanInput(name: string): boolean {
   }
 
   throw new Error(`Input \`${name}\` must be a boolean-like value, received \`${value}\`.`);
+}
+
+export function getBooleanInput(name: string): boolean {
+  return getOptionalBooleanInput(name) ?? false;
 }
 
 export function parseRepository(input: string): {

@@ -1,0 +1,152 @@
+name: ci
+description: 'Decide whether a CI job should run (y/n) using dependency graphs and AI providers, and verify decisions when main runs.'
+author: monochange
+inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as ci.'
+    required: false
+    default: ci
+  mode:
+    description: 'Action mode: decide (evaluate whether job should run: y/n), verify (record actual job outcome on main and update learned memory), analytics (report repo CI gatekeeper accuracy), or auth (create or validate repo-scoped credentials).'
+    required: false
+    default: decide
+  job:
+    description: 'Identifier of the CI job being evaluated or verified.'
+    required: false
+    default: default
+  job-command:
+    description: 'Optional description or command that the job executes, providing context to the decision API.'
+    required: false
+    default: ''
+  paths:
+    description: 'Comma- or newline-separated path prefixes relevant to this job.'
+    required: false
+    default: ''
+  packages:
+    description: 'Comma- or newline-separated package names relevant to this job.'
+    required: false
+    default: ''
+  provider:
+    description: 'Decision API provider: opencode-go (recommended), openrouter, cloudflare, jev, openai-compatible, or graph.'
+    required: false
+    default: opencode-go
+  api-key:
+    description: 'Bearer token / API key for the selected decision provider.'
+    required: false
+    default: ''
+  api-url:
+    description: 'Custom decision endpoint URL (used for jev, cloudflare gateway/account URL, or self-hosted open-source models).'
+    required: false
+    default: ''
+  cloudflare-account-id:
+    description: 'Cloudflare Account ID when provider is cloudflare and api-url is not explicitly set.'
+    required: false
+    default: ''
+  model:
+    description: 'Model identifier for AI providers. Defaults to deepseek-v4.1 for opencode-go.'
+    required: false
+    default: deepseek-v4.1
+  base:
+    description: 'Base git ref for diff calculation.'
+    required: false
+    default: origin/main
+  head:
+    description: 'Candidate git ref for diff calculation.'
+    required: false
+    default: HEAD
+  working-directory:
+    description: 'Working directory to inspect.'
+    required: false
+    default: '.'
+  unconditional:
+    description: 'Force the job to run unconditionally (true/false).'
+    required: false
+    default: 'false'
+  unconditional-events:
+    description: 'Comma-separated GitHub event names that force an unconditional run.'
+    required: false
+    default: 'schedule,workflow_dispatch'
+  unconditional-branches:
+    description: 'Comma-separated branch or ref globs that force an unconditional run.'
+    required: false
+    default: 'monochange/release/*,release/*,refs/tags/v*'
+  unconditional-labels:
+    description: 'Comma-separated pull request labels that force an unconditional run.'
+    required: false
+    default: 'ci:full,ci:unconditional,release'
+  unconditional-paths:
+    description: 'Comma-separated file paths or prefixes that force an unconditional run when modified.'
+    required: false
+    default: 'Cargo.lock,rust-toolchain.toml,.github/workflows/'
+  max-skips-on-main:
+    description: 'Maximum consecutive conditional skips allowed on main before forcing an unconditional verification run.'
+    required: false
+    default: '5'
+  max-duration-minutes:
+    description: 'Duration threshold in minutes above which the job is flagged as a slow CI red flag.'
+    required: false
+    default: '10'
+  duration-minutes:
+    description: 'Observed or baseline duration of the job in minutes.'
+    required: false
+    default: '0'
+  outcome:
+    description: 'Observed job outcome when mode is verify: success, failure, or skipped.'
+    required: false
+    default: ''
+  prior-decision:
+    description: 'Prior gate decision (y or n) being verified when mode is verify.'
+    required: false
+    default: ''
+  memory-path:
+    description: 'Path to the JSON ledger tracking decisions, main skip streaks, and learned failure rules.'
+    required: false
+    default: '.monochange/ci-memory.json'
+  auth-token:
+    description: 'Optional repo-scoped token (or MONOCHANGE_CI_TOKEN) required to access repo history and analytics.'
+    required: false
+    default: ''
+  repo-id:
+    description: 'Optional canonical repository identifier override (defaults to GITHUB_REPOSITORY or normalized git remote origin).'
+    required: false
+    default: ''
+  require-auth:
+    description: "Require valid repo-scoped token before reading history or computing analytics (default: 'true' for analytics mode, 'false' otherwise unless auth-token or .monochange/ci-auth.json is present)."
+    required: false
+    default: ''
+outputs:
+  result:
+    description: 'Action execution status: success.'
+  decision:
+    description: 'Single-character verdict: y (run job) or n (skip job).'
+  should-run:
+    description: 'Boolean string matching decision: true when decision is y, false when n.'
+  unconditional:
+    description: 'true if an unconditional rule forced the job to run, false otherwise.'
+  reason:
+    description: 'Human-readable explanation for the y/n verdict.'
+  suggestion:
+    description: 'Optimization suggestion when the job exceeds max-duration-minutes.'
+  verdict-class:
+    description: 'In verify mode, classification of the prior decision: true_negative, false_negative, true_positive, or false_positive.'
+  repo-id:
+    description: 'Canonical repository identifier used for repo-scoped authentication and analytics.'
+  authenticated:
+    description: 'true when a valid repo-scoped token or local auth file authenticated this run, false otherwise.'
+  auth-token:
+    description: 'Repo-scoped token created or validated by mode: auth. Treat it as a secret.'
+  false-negatives:
+    description: 'Count of runs that did not run (n) but should have (failed on main).'
+  false-positives:
+    description: 'Count of runs that ran (y) but did not need to (unaffected files and passed).'
+  true-negatives:
+    description: 'Count of runs safely skipped (n) and verified green on main.'
+  true-positives:
+    description: 'Count of runs that ran (y) and caught a failure or verified affected code.'
+  analytics:
+    description: 'JSON object with full repo CI gatekeeper analytics (false negatives, false positives, accuracy, saved minutes).'
+  json:
+    description: 'Full structured JSON payload of the decision, verification, or analytics record.'
+runs:
+  using: node24
+  main: ../dist/index.mjs

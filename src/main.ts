@@ -3,6 +3,7 @@ import * as core from '@actions/core';
 import { runChangeClassification } from './actions/change-classification';
 import { runChangesetPolicy } from './actions/changeset-policy';
 import { runCheck } from './actions/check';
+import { runCi } from './actions/ci';
 import { runFailWhen } from './actions/fail-when';
 import { runHostedRelease } from './actions/hosted-release';
 import { runMerge } from './actions/merge';
@@ -42,6 +43,10 @@ async function run(): Promise<void> {
       return;
     case 'check':
       await runCheck();
+
+      return;
+    case 'ci':
+      await runCi();
 
       return;
     case 'release-preview':
@@ -86,7 +91,7 @@ async function run(): Promise<void> {
       return;
     default:
       throw new Error(
-        `Unsupported action variant \`${name}\`. Supported values: change-classification, merge, setup-monochange, changeset-policy, check, release-preview, release-record, open-release-request, release-pr, hosted-release, tag-release, publish-readiness, publish-packages, post-merge-release, fail-when.`,
+        `Unsupported action variant \`${name}\`. Supported values: change-classification, merge, setup-monochange, changeset-policy, check, ci, release-preview, release-record, open-release-request, release-pr, hosted-release, tag-release, publish-readiness, publish-packages, post-merge-release, fail-when.`,
       );
   }
 }
