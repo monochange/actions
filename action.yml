@@ -103,17 +103,17 @@ inputs:
     required: false
     default: '.'
   base:
-    description: 'Default-branch git ref for change-classification and the ci variant.'
+    description: 'Default-branch git ref for change-classification, or the diff base for ci decide.'
     required: false
   head:
-    description: 'Candidate git ref for change-classification and the ci variant.'
+    description: 'Candidate git ref for change-classification, or the diff head for ci decide.'
     required: false
     default: HEAD
   release:
     description: 'Release git ref override for change-classification.'
     required: false
   packages:
-    description: 'Comma- or newline-separated package ids or names for change-classification and the ci variant.'
+    description: 'Comma- or newline-separated package ids or names for change-classification.'
     required: false
   detection-level:
     description: 'Analysis level for change-classification: basic, signature, or semantic.'
@@ -182,95 +182,55 @@ inputs:
     description: 'Base git ref (e.g. origin/main) for changeset-policy instead of explicit changed paths. Requires a full-history checkout and enables API classification bump alignment: changesets that understate the classified impact fail the policy.'
     required: false
   mode:
-    description: 'Mode for the ci variant: decide, verify, analytics, or auth.'
+    description: 'Mode for the ci variant: decide (evaluate every [ci.jobs] id), verify (record main outcomes), or check (validate [ci] configuration and workflow wiring).'
     required: false
     default: 'decide'
-  job:
-    description: 'CI job identifier for the ci variant.'
-    required: false
-    default: 'default'
-  job-command:
-    description: 'Command or description of the CI job for the ci variant.'
-    required: false
-    default: ''
-  paths:
-    description: 'Comma- or newline-separated path prefixes for the ci variant.'
-    required: false
-    default: ''
   provider:
-    description: 'Decision API provider for the ci variant: opencode-go, openrouter, cloudflare, jev, openai-compatible, or graph.'
-    required: false
-    default: 'opencode-go'
-  api-key:
-    description: 'API key / bearer token for the ci variant.'
-    required: false
-    default: ''
-  api-url:
-    description: 'Custom decision endpoint URL for the ci variant.'
-    required: false
-    default: ''
-  cloudflare-account-id:
-    description: 'Cloudflare Account ID for the ci variant.'
+    description: 'Decision provider override for the ci variant: opencode-go, openrouter, cloudflare, jev, openai-compatible, or graph. Defaults to [ci].provider in monochange.toml.'
     required: false
     default: ''
   model:
-    description: 'AI model identifier for the ci variant (defaults to deepseek-v4.1).'
-    required: false
-    default: 'deepseek-v4.1'
-  unconditional:
-    description: 'Force the job to run unconditionally in the ci variant.'
-    required: false
-    default: 'false'
-  unconditional-events:
-    description: 'Comma-separated events that force an unconditional run in the ci variant.'
-    required: false
-    default: 'schedule,workflow_dispatch'
-  unconditional-branches:
-    description: 'Comma-separated branch globs that force an unconditional run in the ci variant.'
-    required: false
-    default: 'monochange/release/*,release/*,refs/tags/v*'
-  unconditional-labels:
-    description: 'Comma-separated PR labels that force an unconditional run in the ci variant.'
-    required: false
-    default: 'ci:full,ci:unconditional,release'
-  unconditional-paths:
-    description: 'Comma-separated global paths that force an unconditional run in the ci variant.'
-    required: false
-    default: 'Cargo.lock,rust-toolchain.toml,.github/workflows/'
-  max-skips-on-main:
-    description: 'Maximum consecutive conditional skips on main before forcing an unconditional run.'
-    required: false
-    default: '5'
-  max-duration-minutes:
-    description: 'Red-flag duration threshold in minutes for the ci variant.'
-    required: false
-    default: '10'
-  duration-minutes:
-    description: 'Observed or baseline duration in minutes for the ci variant.'
-    required: false
-    default: '0'
-  outcome:
-    description: 'Observed job outcome (success, failure, skipped) for verify mode in the ci variant.'
+    description: 'Model override for the ci variant. Defaults to [ci].model in monochange.toml.'
     required: false
     default: ''
-  prior-decision:
-    description: 'Prior decision (y or n) being verified in the ci variant.'
+  api-key:
+    description: 'API key for the ci variant AI provider. Masked in logs.'
     required: false
     default: ''
-  memory-path:
-    description: 'Path to the CI decision ledger JSON file.'
+  api-url:
+    description: 'Provider endpoint URL override for the ci variant.'
     required: false
-    default: '.monochange/ci-memory.json'
+    default: ''
+  cloudflare-account-id:
+    description: 'Cloudflare account ID for the ci variant cloudflare provider.'
+    required: false
+    default: ''
+  on-error:
+    description: 'Reaction to a ci decide failure: run-all runs every job (default), fail fails the step.'
+    required: false
+    default: 'run-all'
   auth-token:
-    description: 'Optional repo-scoped token (or MONOCHANGE_CI_TOKEN) required to access repo history and analytics for the ci variant.'
-    required: false
-    default: ''
-  repo-id:
-    description: 'Optional canonical repository identifier override for the ci variant (defaults to GITHUB_REPOSITORY or normalized git remote origin).'
+    description: 'Repository-scoped CI auth token for the ci variant. Masked in logs.'
     required: false
     default: ''
   require-auth:
-    description: "For the ci variant, require valid repo-scoped authentication before reading history or computing analytics (default: 'true' for analytics mode, 'false' otherwise unless auth-token or .monochange/ci-auth.json is present)."
+    description: 'For the ci variant, require repository-scoped authentication before reading or writing CI memory.'
+    required: false
+    default: 'false'
+  repo-id:
+    description: 'Canonical repository identity override for the ci variant.'
+    required: false
+    default: ''
+  needs:
+    description: 'For ci verify mode, pass ${{ toJSON(needs) }} from the verifying job.'
+    required: false
+    default: ''
+  decisions:
+    description: 'For ci verify mode, pass the gate job decisions output JSON.'
+    required: false
+    default: ''
+  workflow:
+    description: 'For ci check mode, comma- or newline-separated workflow files to scan for decisions references.'
     required: false
     default: ''
 outputs:
@@ -324,32 +284,12 @@ outputs:
     description: 'Release commit SHA that hosted-release created on the release branch.'
   verified:
     description: 'Whether GitHub verified the hosted-release commit signature.'
-  decision:
-    description: 'For ci, single-character decision: y or n.'
-  should-run:
-    description: 'For ci, boolean string matching decision (true or false).'
-  unconditional:
-    description: 'For ci, whether an unconditional rule forced the job to run.'
-  suggestion:
-    description: 'For ci, speedup suggestion when the job exceeds max-duration-minutes.'
-  verdict-class:
-    description: 'For ci verify mode: true_negative, false_negative, true_positive, or false_positive.'
-  repo-id:
-    description: 'For ci, canonical repository identifier used for repo-scoped authentication and analytics.'
-  authenticated:
-    description: 'For ci, whether a valid repo-scoped token or local auth file authenticated this run.'
-  auth-token:
-    description: 'For ci auth mode, the repo-scoped token created or validated. Treat it as a secret.'
-  false-negatives:
-    description: 'For ci, count of runs that did not run (n) but should have (failed on main).'
-  false-positives:
-    description: 'For ci, count of runs that ran (y) but did not need to (unaffected files and passed).'
-  true-negatives:
-    description: 'For ci, count of runs safely skipped (n) and verified green on main.'
-  true-positives:
-    description: 'For ci, count of runs that ran (y) and caught a failure or verified affected code.'
-  analytics:
-    description: 'For ci, JSON object with full repo CI gatekeeper analytics (false negatives, false positives, accuracy, saved minutes).'
+  decisions:
+    description: 'For ci decide mode, JSON object mapping every [ci.jobs] id to a boolean verdict.'
+  affected-packages:
+    description: 'For ci decide mode, JSON array of affected package ids.'
+  run-all:
+    description: 'For ci decide mode, true when every job should run, including when the action fails open with on-error: run-all.'
 runs:
   using: node24
   main: dist/index.mjs
