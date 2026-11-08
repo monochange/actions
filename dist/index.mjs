@@ -20933,16 +20933,16 @@ function parseMixedOutput(text) {
 //#endregion
 //#region src/shared/monochange-release.ts
 const monochangeRelease = {
-	"version": "0.21.0",
+	"version": "0.21.1",
 	"integrities": {
-		"darwin-arm64": "sha512-bMc/Z2bJwkMEK19U6xSeTv6AZh5xy/24N7od2FrWZacuAUtJwHpefGc+bPq3BtHGbF454BWpe0GKCu/dM7h8EQ==",
-		"darwin-x64": "sha512-C8ZmyGNZWNkJ0HaXdCo6r/akuc9XuC/0vPcqsFdJnAFrpx7wAFo38phbDQraOMmKLPvkKwVu3Evh1uTYU3jbHQ==",
-		"linux-arm64-gnu": "sha512-RmnJpaXNdXXWd8gY8QUpZDN588wQLpGWFp7Pk6xwGTuGRuuZF+U4/nIxKkuxyrQVtdFHPhn4WwRxg4lTNeToQw==",
-		"linux-arm64-musl": "sha512-HAZ8aRAPpaUGfoLBUl1svzrfyQLBCRHxI7g8TKslUVsDMXhX6pHMnZhF6XkWq4B325uk/W5ddegyt2Udz6r+XQ==",
-		"linux-x64-gnu": "sha512-xPpeBJqDjs2bQVXAoDX/EO8y20wR0j1ThK6Z8dC7yqmihstlLkKPA38XmPwIpAearH1BGbh8zPIpORyfPetqeg==",
-		"linux-x64-musl": "sha512-8FmRujW8LsSyeFwqziNuZ4W+B2NPuP6Pv8YX4S3uuIvno0OhFFP/9WR0UH5+zulbqXLcEapd2Q62TwGdshQPDA==",
-		"win32-arm64-msvc": "sha512-kmZ68wVZ+90uYpZfaeiR6TajVqnTylY57pgY//ENFdyexAtyYneUl2xxALHzkkik3u0U4jzkUnnyyiWo9IGJGg==",
-		"win32-x64-msvc": "sha512-jK8fLP/ZCwoYLdssoENAyqvJI3ad/kXYON3O9FYwGHec5++x+Z8o32+gcWttCmpcj1qrrcap1Tum8FMqFhxxgg=="
+		"darwin-arm64": "sha512-Fs7ZLHBlhtUnRGy3Ic+glMSFNZoRXPny5vHRzbS0FgEqb9dF/EAop1EarJBXQ71mf+WlQ03+vynLflonsBeYDw==",
+		"darwin-x64": "sha512-gW47JMwcNqAQJpPXWM4jBtkc2nN60mg7VNPwk5hzU62jqc+MXD36SGaB3YPp+M0nxFkCiZMwVHQkJy6mieL1Qw==",
+		"linux-arm64-gnu": "sha512-SSrIvGreYmeO4H2+TnNgCjn8E7qOMXKSuLjyQZMOIT2uQGssXB8hNF61bvoYROqaYh5chyeujYDi+cSwlMj1Yg==",
+		"linux-arm64-musl": "sha512-u/YrGigE5ovP8fuBQ3MbpL5Hcd4V5RlcTO9G6r1X5LbHwrT2fSWmWKUJxEBFDH5VmFLAuuGCiitxjSznisE3Mg==",
+		"linux-x64-gnu": "sha512-3P+NqMPrsicMLRF0LOK2Vvr6JY5bz9DZXWI0ESjKGfvic8IrP0dZlaCWpyJyOgQlH/WZyeB9HPdmNATTQ5LIgA==",
+		"linux-x64-musl": "sha512-gyx5IGPlbQe31DqCKC9qHGUhuzzqiEoxi5QL5tBIavf33YRwMbhWshPd7aRxJHAS1A5+5IfwF2i6tcra7kV/qQ==",
+		"win32-arm64-msvc": "sha512-Bqterxwn73/9zeuSjzft42z0/H5IGIrtAGLL5XK9FtmV9XXT6bOqKrUsc8QSPPypOm36SAEb1gM18zLxEr+OKQ==",
+		"win32-x64-msvc": "sha512-Ju7jCkSDr/sxYK/HrN/QpCIRDBWLE/eM/s9wKleDD1tEh7W5Je1N55PiZy0X2yLhycGR0cm6OZlwlWqAFAPrGA=="
 	}
 };
 

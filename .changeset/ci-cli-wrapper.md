@@ -14,4 +14,4 @@ This breaks the published `ci` contract:
 - `verify` takes `needs` (`${{ toJSON(needs) }}`) and the gate's `decisions` output, then records each job outcome through the CLI. `check` takes `workflow` paths and validates the `[ci]` wiring.
 - Workflows gate jobs with `if: needs.gate.outputs.run-all == 'true' || fromJSON(needs.gate.outputs.decisions)['<job-id>']`.
 
-The pinned monochange CLI is intentionally unchanged in this change. A release that includes `monochange ci` (after monochange#867) must land before consumers can use this action release; re-pin the action SHA afterwards.
+The action now pins monochange CLI 0.21.1, the first release that ships `monochange ci`. Re-pin the action SHA after this release to adopt it.

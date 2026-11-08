@@ -1,6 +1,17 @@
 packages:
   - .
 
+minimumReleaseAgeExclude:
+  - '@monochange/cli-darwin-arm64@0.21.1'
+  - '@monochange/cli-darwin-x64@0.21.1'
+  - '@monochange/cli-linux-arm64-gnu@0.21.1'
+  - '@monochange/cli-linux-arm64-musl@0.21.1'
+  - '@monochange/cli-linux-x64-gnu@0.21.1'
+  - '@monochange/cli-linux-x64-musl@0.21.1'
+  - '@monochange/cli-win32-arm64-msvc@0.21.1'
+  - '@monochange/cli-win32-x64-msvc@0.21.1'
+  - '@monochange/cli@0.21.1'
+
 overrides:
   tinypool: ^2.1.2
   ws: ^8.20.1
