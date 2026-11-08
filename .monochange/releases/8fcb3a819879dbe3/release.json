@@ -1,0 +1,181 @@
+{
+  "schema_version": "0.10",
+  "kind": "monochange.releaseRecord",
+  "created_at": "2026-11-08T17:06:18Z",
+  "command": "release",
+  "version": "0.12.0",
+  "versions": {
+    "actions": "0.12.0"
+  },
+  "release_targets": [
+    {
+      "id": "actions",
+      "kind": "package",
+      "version": "0.12.0",
+      "version_format": "primary",
+      "tag": true,
+      "release": true,
+      "tag_name": "v0.12.0",
+      "rendered_title": "v0.12.0 (2026-11-08)",
+      "rendered_changelog_title": "[0.12.0](https://github.com/monochange/actions/releases/tag/v0.12.0) (2026-11-08)",
+      "members": [
+        "actions"
+      ],
+      "floating_tags": [
+        "v{{ major }}.{{ minor }}",
+        "v{{ major }}"
+      ]
+    }
+  ],
+  "released_packages": [
+    "actions"
+  ],
+  "changed_files": [
+    "changelog.md",
+    "package.json"
+  ],
+  "package_publications": [],
+  "updated_changelogs": [
+    "changelog.md"
+  ],
+  "deleted_changesets": [
+    ".changeset/ci-cli-wrapper.md"
+  ],
+  "changesets": [
+    {
+      "path": ".changeset/ci-cli-wrapper.md",
+      "summary": "Replace the `ci` action engine with the `monochange ci` CLI",
+      "details": "The `ci` action is now a thin wrapper. Job rules live in the consumer's `monochange.toml` under `[ci.jobs.*]`, and the CLI owns git diffing, provider calls, memory, learned rules, and verification.\n\nThis breaks the published `ci` contract:\n\n- `mode` accepts `decide` (default), `verify`, or `check`. The old `analytics` and `auth` modes are now `monochange ci analytics` and `monochange ci auth` in the CLI.\n- `decide` evaluates every configured job in one call and replaces the per-invocation `job`, `paths`, `packages`, `unconditional*`, `max-skips-on-main`, `max-duration-minutes`, `duration-minutes`, `memory-path`, `suggestion`, and `verdict-class` inputs with `[ci]` configuration.\n- `decide` outputs `decisions` (JSON object of job id to boolean), `affected-packages` (JSON array), and `run-all` instead of `decision`, `should-run`, `unconditional`, `reason`, and the analytics counters.\n- `verify` takes `needs` (`${{ toJSON(needs) }}`) and the gate's `decisions` output, then records each job outcome through the CLI. `check` takes `workflow` paths and validates the `[ci]` wiring.\n- Workflows gate jobs with `if: needs.gate.outputs.run-all == 'true' || fromJSON(needs.gate.outputs.decisions)['<job-id>']`.\n\nThe action now pins monochange CLI 0.21.1, the first release that ships `monochange ci`. Re-pin the action SHA after this release to adopt it.",
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "major",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "major"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "12e9f99c8e4e60198a7601f73b5c00d4fcf1ba4d",
+            "short_sha": "12e9f99",
+            "url": "https://github.com/monochange/actions/commit/12e9f99c8e4e60198a7601f73b5c00d4fcf1ba4d",
+            "authored_at": "2026-11-07T22:58:55Z",
+            "committed_at": "2026-11-07T22:58:55Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#122",
+            "title": "refactor(ci)!: wrap the monochange ci CLI instead of reimplementing it",
+            "url": "https://github.com/monochange/actions/pull/122",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "d7401f10a7f9b9ba657efd2c9e343ad93fe67a36",
+            "short_sha": "d7401f1",
+            "url": "https://github.com/monochange/actions/commit/d7401f10a7f9b9ba657efd2c9e343ad93fe67a36",
+            "authored_at": "2026-11-08T17:05:33Z",
+            "committed_at": "2026-11-08T17:05:33Z",
+            "author_name": "Ifiok Jr.",
+            "author_email": "ifiokotung@gmail.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#122",
+            "title": "refactor(ci)!: wrap the monochange ci CLI instead of reimplementing it",
+            "url": "https://github.com/monochange/actions/pull/122",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    }
+  ],
+  "changelogs": [
+    {
+      "owner_id": "actions",
+      "owner_kind": "package",
+      "output": "default",
+      "stream": "default",
+      "path": "changelog.md",
+      "format": "monochange",
+      "notes": {
+        "title": "[0.12.0](https://github.com/monochange/actions/releases/tag/v0.12.0) (2026-11-08)",
+        "summary": [],
+        "sections": [
+          {
+            "title": "💥 Breaking Change",
+            "collapsed": false,
+            "entries": [
+              "#### Replace the `ci` action engine with the `monochange ci` CLI\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #122](https://github.com/monochange/actions/pull/122)\n\nThe `ci` action is now a thin wrapper. Job rules live in the consumer's `monochange.toml` under `[ci.jobs.*]`, and the CLI owns git diffing, provider calls, memory, learned rules, and verification.\n\nThis breaks the published `ci` contract:\n\n- `mode` accepts `decide` (default), `verify`, or `check`. The old `analytics` and `auth` modes are now `monochange ci analytics` and `monochange ci auth` in the CLI.\n- `decide` evaluates every configured job in one call and replaces the per-invocation `job`, `paths`, `packages`, `unconditional*`, `max-skips-on-main`, `max-duration-minutes`, `duration-minutes`, `memory-path`, `suggestion`, and `verdict-class` inputs with `[ci]` configuration.\n- `decide` outputs `decisions` (JSON object of job id to boolean), `affected-packages` (JSON array), and `run-all` instead of `decision`, `should-run`, `unconditional`, `reason`, and the analytics counters.\n- `verify` takes `needs` (`${{ toJSON(needs) }}`) and the gate's `decisions` output, then records each job outcome through the CLI. `check` takes `workflow` paths and validates the `[ci]` wiring.\n- Workflows gate jobs with `if: needs.gate.outputs.run-all == 'true' || fromJSON(needs.gate.outputs.decisions)['<job-id>']`.\n\nThe action now pins monochange CLI 0.21.1, the first release that ships `monochange ci`. Re-pin the action SHA after this release to adopt it."
+            ]
+          }
+        ]
+      },
+      "rendered": "## [0.12.0](https://github.com/monochange/actions/releases/tag/v0.12.0) (2026-11-08)\n\n### 💥 Breaking Change\n\n#### Replace the `ci` action engine with the `monochange ci` CLI\n\n_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #122](https://github.com/monochange/actions/pull/122)\n\nThe `ci` action is now a thin wrapper. Job rules live in the consumer's `monochange.toml` under `[ci.jobs.*]`, and the CLI owns git diffing, provider calls, memory, learned rules, and verification.\n\nThis breaks the published `ci` contract:\n\n- `mode` accepts `decide` (default), `verify`, or `check`. The old `analytics` and `auth` modes are now `monochange ci analytics` and `monochange ci auth` in the CLI.\n- `decide` evaluates every configured job in one call and replaces the per-invocation `job`, `paths`, `packages`, `unconditional*`, `max-skips-on-main`, `max-duration-minutes`, `duration-minutes`, `memory-path`, `suggestion`, and `verdict-class` inputs with `[ci]` configuration.\n- `decide` outputs `decisions` (JSON object of job id to boolean), `affected-packages` (JSON array), and `run-all` instead of `decision`, `should-run`, `unconditional`, `reason`, and the analytics counters.\n- `verify` takes `needs` (`${{ toJSON(needs) }}`) and the gate's `decisions` output, then records each job outcome through the CLI. `check` takes `workflow` paths and validates the `[ci]` wiring.\n- Workflows gate jobs with `if: needs.gate.outputs.run-all == 'true' || fromJSON(needs.gate.outputs.decisions)['<job-id>']`.\n\nThe action now pins monochange CLI 0.21.1, the first release that ships `monochange ci`. Re-pin the action SHA after this release to adopt it."
+    }
+  ],
+  "provider": {
+    "kind": "github",
+    "owner": "monochange",
+    "repo": "actions",
+    "host": null
+  }
+}

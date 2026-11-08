@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.12.0](https://github.com/monochange/actions/releases/tag/v0.12.0) (2026-11-08)
+
+### 💥 Breaking Change
+
+#### Replace the `ci` action engine with the `monochange ci` CLI
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #122](https://github.com/monochange/actions/pull/122)
+
+The `ci` action is now a thin wrapper. Job rules live in the consumer's `monochange.toml` under `[ci.jobs.*]`, and the CLI owns git diffing, provider calls, memory, learned rules, and verification.
+
+This breaks the published `ci` contract:
+
+- `mode` accepts `decide` (default), `verify`, or `check`. The old `analytics` and `auth` modes are now `monochange ci analytics` and `monochange ci auth` in the CLI.
+- `decide` evaluates every configured job in one call and replaces the per-invocation `job`, `paths`, `packages`, `unconditional*`, `max-skips-on-main`, `max-duration-minutes`, `duration-minutes`, `memory-path`, `suggestion`, and `verdict-class` inputs with `[ci]` configuration.
+- `decide` outputs `decisions` (JSON object of job id to boolean), `affected-packages` (JSON array), and `run-all` instead of `decision`, `should-run`, `unconditional`, `reason`, and the analytics counters.
+- `verify` takes `needs` (`${{ toJSON(needs) }}`) and the gate's `decisions` output, then records each job outcome through the CLI. `check` takes `workflow` paths and validates the `[ci]` wiring.
+- Workflows gate jobs with `if: needs.gate.outputs.run-all == 'true' || fromJSON(needs.gate.outputs.decisions)['<job-id>']`.
+
+The action now pins monochange CLI 0.21.1, the first release that ships `monochange ci`. Re-pin the action SHA after this release to adopt it.
+
 ## [0.11.1](https://github.com/monochange/actions/releases/tag/v0.11.1) (2026-11-07)
 
 ### 🚀 Feature
