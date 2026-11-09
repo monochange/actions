@@ -110,6 +110,7 @@ ignored_paths = [
   "docs/**",
   "dist/**",
   ".changeset/**",
+  ".cursor/**",
   ".github/**",
   "monochange.toml",
   "pnpm-lock.yaml",
