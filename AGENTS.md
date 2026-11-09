@@ -47,8 +47,8 @@ pnpm exec monochange run change --package actions --bump patch --reason "describ
 
 - Anything under `src/` or any `action.yml` needs a changeset.
 - Documentation, tests (`**/*.test.ts`), generated output (`dist/`, `coverage/`, `docs/`),
- cloud-agent setup (`.cursor/`), and release plumbing (`.github/`, `monochange.toml`, lockfiles)
- do not.
+  cloud-agent setup (`.cursor/`), and release plumbing (`.github/`, `monochange.toml`, lockfiles)
+  do not.
 - The `release` and `no-changeset-required` labels skip the check. Add
   `no-changeset-required` only when a maintainer has decided the change needs no release note.
 - Run `pnpm exec monochange step validate` and
