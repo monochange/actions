@@ -21084,8 +21084,8 @@ function splitList$1(value) {
 */
 function eventLabels() {
 	const pullRequest = context.payload.pull_request;
-	if (!isRecord$6(pullRequest) || !Array.isArray(pullRequest.labels)) return;
-	const names = pullRequest.labels.map((label) => isRecord$6(label) && typeof label.name === "string" ? label.name : void 0).filter((name) => typeof name === "string");
+	if (!isRecord$7(pullRequest) || !Array.isArray(pullRequest.labels)) return;
+	const names = pullRequest.labels.map((label) => isRecord$7(label) && typeof label.name === "string" ? label.name : void 0).filter((name) => typeof name === "string");
 	return names.length > 0 ? names.join(",") : void 0;
 }
 /**
@@ -21095,7 +21095,7 @@ function eventLabels() {
 */
 function eventBaseRef() {
 	const base = context.payload.pull_request?.base;
-	return isRecord$6(base) && typeof base.ref === "string" && base.ref ? `origin/${base.ref}` : void 0;
+	return isRecord$7(base) && typeof base.ref === "string" && base.ref ? `origin/${base.ref}` : void 0;
 }
 /**
 * Classify the exact pull request head commit, so the report names the commit
@@ -21103,7 +21103,7 @@ function eventBaseRef() {
 */
 function eventHeadSha() {
 	const head = context.payload.pull_request?.head;
-	return isRecord$6(head) && typeof head.sha === "string" && head.sha ? head.sha : void 0;
+	return isRecord$7(head) && typeof head.sha === "string" && head.sha ? head.sha : void 0;
 }
 /**
 * Use an event ref only when the checkout contains it. A shallow checkout
@@ -21120,7 +21120,7 @@ async function checkedOutRef(ref, cwd, endpoint) {
 	], { cwd })).exitCode === 0) return ref;
 	warning(`Pull request ${endpoint} \`${ref}\` is not in the checkout, so change classification falls back to the default ${endpoint}. Check out with fetch-depth: 0 to classify against the pull request ${endpoint}.`);
 }
-function isRecord$6(value) {
+function isRecord$7(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSeverity(value) {
@@ -21141,7 +21141,7 @@ function stringArray(value) {
 	return value.filter((item) => typeof item === "string");
 }
 function readFinding(value) {
-	if (!isRecord$6(value)) throw new Error("monochange classification findings must be objects.");
+	if (!isRecord$7(value)) throw new Error("monochange classification findings must be objects.");
 	return {
 		bump: requiredSeverity(value, "bump"),
 		comparisons: stringArray(value.comparisons),
@@ -21154,7 +21154,7 @@ function readFinding(value) {
 	};
 }
 function readPackage(value) {
-	if (!isRecord$6(value) || !isRecord$6(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
+	if (!isRecord$7(value) || !isRecord$7(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
 	return {
 		action: requiredString$1(value, "action"),
 		compatibility_impact: requiredString$1(value.decision, "compatibility_impact"),
@@ -21170,7 +21170,7 @@ function readPackage(value) {
 	};
 }
 function readChangeClassificationReport(value) {
-	if (!isRecord$6(value) || typeof value.schema_version !== "string" || !/^\d+\.\d+$/u.test(value.schema_version) || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.");
+	if (!isRecord$7(value) || typeof value.schema_version !== "string" || !/^\d+\.\d+$/u.test(value.schema_version) || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.");
 	return {
 		...typeof value.base_commit === "string" ? { base_commit: value.base_commit } : {},
 		candidate: requiredString$1(value, "candidate"),
@@ -21302,7 +21302,7 @@ function pullRequestNumber(explicit) {
 		return Number(explicit);
 	}
 	const pullRequest = context.payload.pull_request;
-	return isRecord$6(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
+	return isRecord$7(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
 }
 async function upsertComment(inputs, markdown) {
 	if (!inputs.postComment) return;
@@ -21557,25 +21557,25 @@ async function runChangesetPolicy() {
 	info(skipped ? "changeset-policy skipped" : "changeset-policy completed successfully");
 }
 function changesetStatus(parsed) {
-	if (!isRecord$5(parsed)) return;
+	if (!isRecord$6(parsed)) return;
 	const status = parsed.status;
 	return typeof status === "string" ? status : void 0;
 }
 function changesetSkipped(parsed) {
-	if (!isRecord$5(parsed)) return false;
+	if (!isRecord$6(parsed)) return false;
 	return parsed.skip === true || parsed.skipped === true || parsed.status === "skipped";
 }
 function changesetSummary(parsed) {
-	if (!isRecord$5(parsed)) return;
+	if (!isRecord$6(parsed)) return;
 	const summary = parsed.summary;
 	return typeof summary === "string" ? summary : void 0;
 }
 function changesetComment(parsed) {
-	if (!isRecord$5(parsed)) return;
+	if (!isRecord$6(parsed)) return;
 	const comment = parsed.comment;
 	return typeof comment === "string" && comment.trim() ? comment : void 0;
 }
-function isRecord$5(value) {
+function isRecord$6(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function extractContentWithoutMarker(body) {
@@ -21708,7 +21708,7 @@ function failureDetail(result) {
 function errorMessage(error) {
 	return error instanceof Error ? error.message : String(error);
 }
-function isRecord$4(value) {
+function isRecord$5(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -21839,7 +21839,7 @@ function setRunAllOutputs() {
 }
 function isDecisionMap(value) {
 	const parsed = safeJsonParse(value);
-	return isRecord$4(parsed) && Object.values(parsed).every((entry) => typeof entry === "boolean");
+	return isRecord$5(parsed) && Object.values(parsed).every((entry) => typeof entry === "boolean");
 }
 function isStringArrayJson(value) {
 	const parsed = safeJsonParse(value);
@@ -21850,7 +21850,7 @@ function isStringArrayJson(value) {
 //#region src/actions/ci/github-context.ts
 function readGitHubContext() {
 	const payload = context.payload;
-	const record = isRecord$3(payload) ? payload : void 0;
+	const record = isRecord$4(payload) ? payload : void 0;
 	const pullRequest = recordField(record, "pull_request");
 	const headCommit = recordField(record, "head_commit");
 	const repository = recordField(record, "repository");
@@ -21873,7 +21873,7 @@ function pullRequestLabels(pullRequest) {
 	const labels = pullRequest?.labels;
 	if (!Array.isArray(labels)) return [];
 	return labels.flatMap((label) => {
-		const name = stringField(isRecord$3(label) ? label : void 0, "name");
+		const name = stringField(isRecord$4(label) ? label : void 0, "name");
 		return name === void 0 ? [] : [name];
 	});
 }
@@ -21882,13 +21882,13 @@ function refToBranch(ref) {
 }
 function recordField(record, key) {
 	const value = record?.[key];
-	return isRecord$3(value) ? value : void 0;
+	return isRecord$4(value) ? value : void 0;
 }
 function stringField(record, key) {
 	const value = record?.[key];
 	return typeof value === "string" && value !== "" ? value : void 0;
 }
-function isRecord$3(value) {
+function isRecord$4(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -21998,7 +21998,7 @@ function parseNeeds(value) {
 	const parsed = parseJsonObject(value, "needs");
 	const results = {};
 	for (const [jobId, entry] of Object.entries(parsed)) {
-		const result = isRecord$4(entry) ? entry.result : void 0;
+		const result = isRecord$5(entry) ? entry.result : void 0;
 		if (typeof result !== "string") throw new Error(`Input \`needs\` entry \`${jobId}\` must be an object with a string result.`);
 		results[jobId] = result;
 	}
@@ -22015,7 +22015,7 @@ function parseDecisions(value) {
 }
 function parseJsonObject(value, name) {
 	const parsed = safeJsonParse(value);
-	if (!isRecord$4(parsed)) throw new Error(`Input \`${name}\` must be a JSON object.`);
+	if (!isRecord$5(parsed)) throw new Error(`Input \`${name}\` must be a JSON object.`);
 	return parsed;
 }
 function mapConclusion(result) {
@@ -22265,7 +22265,7 @@ function explainHostedFailure(message) {
 	const hint = HOSTED_STATUS_HINTS[Number(message.match(/HTTP (\d{3})/)?.[1])];
 	return hint ? `${message}\n\n${hint}` : message;
 }
-function isRecord$2(value) {
+function isRecord$3(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function requiredString(record, key) {
@@ -22276,8 +22276,8 @@ function requiredString(record, key) {
 /** Read the release request target from `step open-release-request --format json` output. */
 function parseReleaseRequestTarget(stdout) {
 	const parsed = parseMixedOutput(stdout);
-	const request = isRecord$2(parsed) ? parsed.release_request : void 0;
-	if (!isRecord$2(request)) throw new Error("monochange did not report a release request. Configure `[source]` with `provider = \"github\"` in monochange.toml.");
+	const request = isRecord$3(parsed) ? parsed.release_request : void 0;
+	if (!isRecord$3(request)) throw new Error("monochange did not report a release request. Configure `[source]` with `provider = \"github\"` in monochange.toml.");
 	return {
 		baseBranch: requiredString(request, "base_branch"),
 		headBranch: requiredString(request, "head_branch"),
@@ -23320,7 +23320,7 @@ function bool$5(name) {
 		"on"
 	].includes(input$5(name).toLowerCase());
 }
-function isRecord$1(value) {
+function isRecord$2(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function outputValue$1(value) {
@@ -23350,7 +23350,7 @@ async function runOpenReleaseRequest() {
 			GITHUB_TOKEN: token
 		} } : {}
 	}));
-	const parsed = isRecord$1(mixed) ? mixed : void 0;
+	const parsed = isRecord$2(mixed) ? mixed : void 0;
 	setOutput("result", "success");
 	setOutput("json", JSON.stringify(parsed ?? null));
 	setOutput("head-branch", outputValue$1(parsed?.headBranch));
@@ -23486,6 +23486,12 @@ function bool$3(name) {
 		"on"
 	].includes(input$3(name).toLowerCase());
 }
+function isRecord$1(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function readyOutput(parsed) {
+	return isRecord$1(parsed) && parsed.status === "ready" ? "true" : "false";
+}
 async function runPublishReadiness() {
 	const monochange = await resolveMonochange(input$3("setup-monochange", "true"));
 	const cwd = input$3("working-directory", ".");
@@ -23531,7 +23537,7 @@ async function runPublishReadiness() {
 	const parsed = parseMixedOutput(stdout);
 	setOutput("result", "success");
 	setOutput("has-release-record", "true");
-	setOutput("ready", "true");
+	setOutput("ready", readyOutput(parsed));
 	setOutput("output-path", output);
 	setOutput("json", JSON.stringify(parsed ?? null));
 	setOutput("summary", stdout.slice(0, 65536));
