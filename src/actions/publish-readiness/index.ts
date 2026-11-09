@@ -12,6 +12,16 @@ function bool(name: string): boolean {
   return ['true', '1', 'yes', 'on'].includes(input(name).toLowerCase());
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+// `monochange step publish-readiness` exits 0 for both ready and blocked reports.
+// The global status is `ready` or `blocked` (serde snake_case).
+function readyOutput(parsed: unknown): string {
+  return isRecord(parsed) && parsed.status === 'ready' ? 'true' : 'false';
+}
+
 export async function runPublishReadiness(): Promise<void> {
   const monochange = await resolveMonochange(input('setup-monochange', 'true'));
   const cwd = input('working-directory', '.');
@@ -60,7 +70,7 @@ export async function runPublishReadiness(): Promise<void> {
   const parsed = parseMixedOutput(stdout);
   core.setOutput('result', 'success');
   core.setOutput('has-release-record', 'true');
-  core.setOutput('ready', 'true');
+  core.setOutput('ready', readyOutput(parsed));
   core.setOutput('output-path', output);
   core.setOutput('json', JSON.stringify(parsed ?? null));
   core.setOutput('summary', stdout.slice(0, 65_536));
