@@ -1,0 +1,4 @@
+{
+  "name": "monochange actions",
+  "install": "bash .cursor/install.sh"
+}
