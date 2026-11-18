@@ -26,8 +26,8 @@ importers:
         specifier: 0.21.1
         version: 0.21.1
       '@rslint/tsgo':
-        specifier: ^0.5.0
-        version: 0.5.0
+        specifier: ^0.7.3
+        version: 0.7.3
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
@@ -1025,38 +1025,38 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@rslint/tsgo-darwin-arm64@0.5.0':
-    resolution: {integrity: sha512-Qu7mqMAeZl2qoUzvh0+OlpV9tg89EHZA/FZfxapvdrT1+MYS5b8IWdtUfAr+W0ye/k7jGVTkHkzA9AT+6LPtqg==}
+  '@rslint/tsgo-darwin-arm64@0.7.3':
+    resolution: {integrity: sha512-B8IvfuUNDCmsi83kuvmqhEs9ZUFzk25DQvXBkjMP/Y9AFmcvuVuAIjNF8Ol/aoKLAqAccb4eaclW8Hy6ORHZKQ==}
     cpu: [arm64]
     os: [darwin]
 
-  '@rslint/tsgo-darwin-x64@0.5.0':
-    resolution: {integrity: sha512-mWS+isUswYarGw4RNiuhknA8tZG0Rn35E/AZGhOkxWnroC1KdqHQzlv2L8r7mnCT9h8zv+YTqSC+Z3GuSVJ1Sw==}
+  '@rslint/tsgo-darwin-x64@0.7.3':
+    resolution: {integrity: sha512-K/RLsehV7HumVZh0UqNfFtgdjFDg0Px0yqZp3LQleESsKzuAt8EoGqqOWKog3236EH7JWuk+6lKpKRR9kVKz7Q==}
     cpu: [x64]
     os: [darwin]
 
-  '@rslint/tsgo-linux-arm64@0.5.0':
-    resolution: {integrity: sha512-K59bb8/Hl2zwUnviSPKb+VYgA6SAFmoX+RBvTR9ux+XTRmx68PpS9Bh+92JDS0nNgqahTtQFnZJpig8U1shVtw==}
+  '@rslint/tsgo-linux-arm64@0.7.3':
+    resolution: {integrity: sha512-rcQmXRI27Xt67IsvT40xkIUaPdNrcXJM2Sn8qDuBE5CyDjfox0SSTiRDQxv56kRUFKxgw/9IKbR2KU+v9qHi6A==}
     cpu: [arm64]
     os: [linux]
 
-  '@rslint/tsgo-linux-x64@0.5.0':
-    resolution: {integrity: sha512-DB4e8CYac+wfeemghTbORw9CB4peDAK9LjmOdwA2LDlVe8YhKaunKrzUW9KhvBW3h+7c2QIz9XtVizVzpxKMNg==}
+  '@rslint/tsgo-linux-x64@0.7.3':
+    resolution: {integrity: sha512-MQ4LMh4Rpw4vYyQIrcbT0nHXk5bg+M6s9f603QmXq/AWZkLVqzeEWMxfLnSgVVWyx1no6e7Wxis6EFzvdnkfbg==}
     cpu: [x64]
     os: [linux]
 
-  '@rslint/tsgo-win32-arm64@0.5.0':
-    resolution: {integrity: sha512-Mk3feVMRwTAV0yFM4mkrIJZ4iENoiQyqLd7AMOXVuX8cr92EFxIlLjWUVc0hk1l/80OI8l0/06WrfIaaOwetPg==}
+  '@rslint/tsgo-win32-arm64@0.7.3':
+    resolution: {integrity: sha512-oHbbiPaOOrGZakn8DkIGaWZid0Mzclh2LI0DKDkIvqL5Cg7y4BhdL7r01XxjowHgjpE1F+CWEzDpGg5mN2ewYQ==}
     cpu: [arm64]
     os: [win32]
 
-  '@rslint/tsgo-win32-x64@0.5.0':
-    resolution: {integrity: sha512-doyJUtOFSFp3AG96bGLbhQAPhaMogZOgRaLfEBuyq4U1jSpllznklAVde7lSSjTzWxU11XWvAEYg2L6wDCYrQQ==}
+  '@rslint/tsgo-win32-x64@0.7.3':
+    resolution: {integrity: sha512-3H1PegkZxHmVBKmeBUsGQ8XpKvMN/URmOXYYEdk/HQjt8mB/xfusIbh95I3sTu3EWP5dQ/9C5mBJcnO1Mh/sDg==}
     cpu: [x64]
     os: [win32]
 
-  '@rslint/tsgo@0.5.0':
-    resolution: {integrity: sha512-GHGupt4cMzE7kmIhQom1zmdBUSRjSVQT1tWbbaCMgw56TDD9MCy3R80+bMsNtxXfVqy0hR02G7M4ue3SUAHZgw==}
+  '@rslint/tsgo@0.7.3':
+    resolution: {integrity: sha512-BVROTf8SHObbRIf5aSjCIp9hgQJUfQYBRQ4oByGX2R9sHiG75IYOSxjLk63V7yyaxHrhYBE6RFRcFgxMRStAEQ==}
     hasBin: true
 
   '@testing-library/dom@10.4.2':
@@ -2512,32 +2512,32 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@rslint/tsgo-darwin-arm64@0.5.0':
+  '@rslint/tsgo-darwin-arm64@0.7.3':
     optional: true
 
-  '@rslint/tsgo-darwin-x64@0.5.0':
+  '@rslint/tsgo-darwin-x64@0.7.3':
     optional: true
 
-  '@rslint/tsgo-linux-arm64@0.5.0':
+  '@rslint/tsgo-linux-arm64@0.7.3':
     optional: true
 
-  '@rslint/tsgo-linux-x64@0.5.0':
+  '@rslint/tsgo-linux-x64@0.7.3':
     optional: true
 
-  '@rslint/tsgo-win32-arm64@0.5.0':
+  '@rslint/tsgo-win32-arm64@0.7.3':
     optional: true
 
-  '@rslint/tsgo-win32-x64@0.5.0':
+  '@rslint/tsgo-win32-x64@0.7.3':
     optional: true
 
-  '@rslint/tsgo@0.5.0':
+  '@rslint/tsgo@0.7.3':
     optionalDependencies:
-      '@rslint/tsgo-darwin-arm64': 0.5.0
-      '@rslint/tsgo-darwin-x64': 0.5.0
-      '@rslint/tsgo-linux-arm64': 0.5.0
-      '@rslint/tsgo-linux-x64': 0.5.0
-      '@rslint/tsgo-win32-arm64': 0.5.0
-      '@rslint/tsgo-win32-x64': 0.5.0
+      '@rslint/tsgo-darwin-arm64': 0.7.3
+      '@rslint/tsgo-darwin-x64': 0.7.3
+      '@rslint/tsgo-linux-arm64': 0.7.3
+      '@rslint/tsgo-linux-x64': 0.7.3
+      '@rslint/tsgo-win32-arm64': 0.7.3
+      '@rslint/tsgo-win32-x64': 0.7.3
 
   '@testing-library/dom@10.4.2':
     dependencies:
