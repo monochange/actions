@@ -29,8 +29,8 @@ describe('runPublishReadiness', () => {
       version: '1.0.0',
     });
     mockExec.mockResolvedValue({ exitCode: 0, stdout: '{"id":"rel_1"}', stderr: '' });
-    mockExecRequired.mockResolvedValue('{"ready":true}');
-    mockParse.mockReturnValue({ ready: true });
+    mockExecRequired.mockResolvedValue('{"status":"ready"}');
+    mockParse.mockReturnValue({ status: 'ready' });
   });
 
   it('checks release record before writing publish readiness', async () => {
@@ -78,6 +78,42 @@ describe('runPublishReadiness', () => {
     await runPublishReadiness();
 
     expect(mockCore.setOutput).toHaveBeenCalledWith('json', 'null');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('ready', 'false');
+  });
+
+  it('reports ready only when the CLI status is ready', async () => {
+    mockParse.mockReturnValue({
+      kind: 'monochange.publishReadiness',
+      schema_version: 3,
+      status: 'ready',
+    });
+
+    await runPublishReadiness();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('ready', 'true');
+  });
+
+  it('reports not ready when the CLI status is blocked', async () => {
+    mockParse.mockReturnValue({
+      kind: 'monochange.publishReadiness',
+      schema_version: 3,
+      status: 'blocked',
+    });
+
+    await runPublishReadiness();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('ready', 'false');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('has-release-record', 'true');
+  });
+
+  it('reports not ready when the CLI status is missing', async () => {
+    mockParse.mockReturnValue({ kind: 'monochange.publishReadiness' });
+
+    await runPublishReadiness();
+
+    expect(mockCore.setOutput).toHaveBeenCalledWith('ready', 'false');
   });
 
   it('fails on unexpected release-record errors', async () => {
