@@ -31,14 +31,12 @@ export async function collectStatuses(options: {
     }
 
     checks.push(
-      ...data.statuses.map(
-        (status): ActionCheck => ({
-          kind: 'status',
-          name: status.context,
-          state: mapStatusState(status.state),
-          detailsUrl: status.target_url ?? undefined,
-        }),
-      ),
+      ...data.statuses.map((status): ActionCheck => ({
+        kind: 'status',
+        name: status.context,
+        state: mapStatusState(status.state),
+        detailsUrl: status.target_url ?? undefined,
+      })),
     );
 
     if (checks.length >= totalCount || data.statuses.length < 100) {
