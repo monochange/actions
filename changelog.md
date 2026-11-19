@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.12.1](https://github.com/monochange/actions/releases/tag/v0.12.1) (2026-11-19)
+
+### 🐛 Fixed
+
+- **Set the publish-readiness ready output from the CLI status.**
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #131](https://github.com/monochange/actions/pull/131)
+
 ## [0.12.0](https://github.com/monochange/actions/releases/tag/v0.12.0) (2026-11-08)
 
 ### 💥 Breaking Change
