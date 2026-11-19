@@ -1,0 +1,287 @@
+{
+  "schema_version": "0.10",
+  "kind": "monochange.releaseRecord",
+  "created_at": "2026-11-19T11:10:44Z",
+  "command": "release",
+  "version": "0.12.1",
+  "versions": {
+    "actions": "0.12.1"
+  },
+  "release_targets": [
+    {
+      "id": "actions",
+      "kind": "package",
+      "version": "0.12.1",
+      "version_format": "primary",
+      "tag": true,
+      "release": true,
+      "tag_name": "v0.12.1",
+      "rendered_title": "v0.12.1 (2026-11-19)",
+      "rendered_changelog_title": "[0.12.1](https://github.com/monochange/actions/releases/tag/v0.12.1) (2026-11-19)",
+      "members": [
+        "actions"
+      ],
+      "floating_tags": [
+        "v{{ major }}.{{ minor }}",
+        "v{{ major }}"
+      ]
+    }
+  ],
+  "released_packages": [
+    "actions"
+  ],
+  "changed_files": [
+    "changelog.md",
+    "package.json"
+  ],
+  "package_publications": [],
+  "updated_changelogs": [
+    "changelog.md"
+  ],
+  "deleted_changesets": [
+    ".changeset/1794259345-actions.md",
+    ".changeset/1795003938-actions.md"
+  ],
+  "changesets": [
+    {
+      "path": ".changeset/1794259345-actions.md",
+      "summary": "Set the publish-readiness ready output from the CLI status",
+      "details": null,
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "patch",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "patch"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "bf41a99d2a617ea3295e9b1ae817045325bfc1ee",
+            "short_sha": "bf41a99",
+            "url": "https://github.com/monochange/actions/commit/bf41a99d2a617ea3295e9b1ae817045325bfc1ee",
+            "authored_at": "2026-11-09T21:23:18Z",
+            "committed_at": "2026-11-19T11:06:44Z",
+            "author_name": "Cursor Agent",
+            "author_email": "cursoragent@cursor.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#131",
+            "title": "fix(publish-readiness): set ready from the CLI status",
+            "url": "https://github.com/monochange/actions/pull/131",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "ifiokjr",
+            "display_name": "ifiokjr",
+            "url": "https://github.com/ifiokjr",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "bf41a99d2a617ea3295e9b1ae817045325bfc1ee",
+            "short_sha": "bf41a99",
+            "url": "https://github.com/monochange/actions/commit/bf41a99d2a617ea3295e9b1ae817045325bfc1ee",
+            "authored_at": "2026-11-09T21:23:18Z",
+            "committed_at": "2026-11-19T11:06:44Z",
+            "author_name": "Cursor Agent",
+            "author_email": "cursoragent@cursor.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#131",
+            "title": "fix(publish-readiness): set ready from the CLI status",
+            "url": "https://github.com/monochange/actions/pull/131",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "ifiokjr",
+              "display_name": "ifiokjr",
+              "url": "https://github.com/ifiokjr",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    },
+    {
+      "path": ".changeset/1795003938-actions.md",
+      "summary": "Ignore picomatch advisory GHSA-fc5q-39xc-vjpf until a patched release exists.",
+      "details": null,
+      "targets": [
+        {
+          "id": "actions",
+          "kind": "package",
+          "bump": "none",
+          "origin": "direct-change",
+          "evidence_refs": [],
+          "change_type": "none"
+        }
+      ],
+      "context": {
+        "provider": "github",
+        "host": "github.com",
+        "capabilities": {
+          "commit_web_urls": true,
+          "actor_profiles": true,
+          "review_request_lookup": true,
+          "related_issues": true,
+          "issue_comments": true
+        },
+        "introduced": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "dependabot",
+            "display_name": "dependabot",
+            "url": "https://github.com/apps/dependabot",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "c3d5148b3ddb94a4953c5347edf1b289447a162b",
+            "short_sha": "c3d5148",
+            "url": "https://github.com/monochange/actions/commit/c3d5148b3ddb94a4953c5347edf1b289447a162b",
+            "authored_at": "2026-11-18T12:12:52Z",
+            "committed_at": "2026-11-18T12:12:52Z",
+            "author_name": "Cursor Agent",
+            "author_email": "cursoragent@cursor.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#132",
+            "title": "ci(deps): bump monochange/actions/merge from 0.10.1 to 0.12.0",
+            "url": "https://github.com/monochange/actions/pull/132",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "dependabot",
+              "display_name": "dependabot",
+              "url": "https://github.com/apps/dependabot",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "last_updated": {
+          "actor": {
+            "provider": "github",
+            "host": "github.com",
+            "id": null,
+            "login": "dependabot",
+            "display_name": "dependabot",
+            "url": "https://github.com/apps/dependabot",
+            "source": "review_request_author"
+          },
+          "commit": {
+            "provider": "github",
+            "host": "github.com",
+            "sha": "c3d5148b3ddb94a4953c5347edf1b289447a162b",
+            "short_sha": "c3d5148",
+            "url": "https://github.com/monochange/actions/commit/c3d5148b3ddb94a4953c5347edf1b289447a162b",
+            "authored_at": "2026-11-18T12:12:52Z",
+            "committed_at": "2026-11-18T12:12:52Z",
+            "author_name": "Cursor Agent",
+            "author_email": "cursoragent@cursor.com"
+          },
+          "review_request": {
+            "provider": "github",
+            "host": "github.com",
+            "kind": "pull_request",
+            "id": "#132",
+            "title": "ci(deps): bump monochange/actions/merge from 0.10.1 to 0.12.0",
+            "url": "https://github.com/monochange/actions/pull/132",
+            "author": {
+              "provider": "github",
+              "host": "github.com",
+              "id": null,
+              "login": "dependabot",
+              "display_name": "dependabot",
+              "url": "https://github.com/apps/dependabot",
+              "source": "review_request_author"
+            }
+          }
+        },
+        "related_issues": []
+      }
+    }
+  ],
+  "changelogs": [
+    {
+      "owner_id": "actions",
+      "owner_kind": "package",
+      "output": "default",
+      "stream": "default",
+      "path": "changelog.md",
+      "format": "monochange",
+      "notes": {
+        "title": "[0.12.1](https://github.com/monochange/actions/releases/tag/v0.12.1) (2026-11-19)",
+        "summary": [],
+        "sections": [
+          {
+            "title": "🐛 Fixed",
+            "collapsed": false,
+            "entries": [
+              "- **Set the publish-readiness ready output from the CLI status.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #131](https://github.com/monochange/actions/pull/131)"
+            ]
+          }
+        ]
+      },
+      "rendered": "## [0.12.1](https://github.com/monochange/actions/releases/tag/v0.12.1) (2026-11-19)\n\n### 🐛 Fixed\n\n- **Set the publish-readiness ready output from the CLI status.**\n  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #131](https://github.com/monochange/actions/pull/131)"
+    }
+  ],
+  "provider": {
+    "kind": "github",
+    "owner": "monochange",
+    "repo": "actions",
+    "host": null
+  }
+}
