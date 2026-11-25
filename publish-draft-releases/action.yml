@@ -2,6 +2,10 @@ name: publish-draft-releases
 description: 'Publish the draft GitHub releases created for a monochange release, retrying transient API failures.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as publish-draft-releases.'
+    required: false
+    default: publish-draft-releases
   release-tag:
     description: 'Release tag to publish, for example v0.14.0.'
     required: true

@@ -1,30 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { parse } from 'yaml';
 
-const variantDirectories = [
-  'change-classification',
-  'changeset-policy',
-  'check',
-  'ci',
-  'fail-when',
-  'hosted-release',
-  'merge',
-  'open-release-request',
-  'post-merge-release',
-  'publish-draft-releases',
-  'publish-packages',
-  'publish-plan',
-  'publish-readiness',
-  'release-pr',
-  'release-preview',
-  'release-record',
-  'setup-monochange',
-  'tag-release',
-];
+const actionsDirectory = 'src/actions';
+
+/** Read every variant from disk so a new directory cannot miss the metadata guard. */
+const variantDirectories = readdirSync(actionsDirectory, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .filter((entry) => existsSync(join(actionsDirectory, entry.name, 'index.ts')))
+  .map((entry) => entry.name)
+  .toSorted();
 
 const metadataFiles = [
   'action.yml',

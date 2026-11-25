@@ -2,6 +2,10 @@ name: publish-readiness
 description: 'Run monochange publish-readiness action.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as publish-readiness.'
+    required: false
+    default: publish-readiness
   setup-monochange:
     description: 'How to resolve monochange.'
     required: false

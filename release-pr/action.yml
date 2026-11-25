@@ -2,6 +2,10 @@ name: release-pr
 description: 'Create or update the release pull request using monochange.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as release-pr.'
+    required: false
+    default: release-pr
   setup-monochange:
     description: 'How to resolve monochange. true = auto-resolve (default), false = require existing monochange on PATH, any other string = custom command.'
     required: false

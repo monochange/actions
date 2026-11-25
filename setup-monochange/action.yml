@@ -2,6 +2,10 @@ name: setup-monochange
 description: 'Resolve or install the monochange CLI and expose its path, version, and source.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as setup-monochange.'
+    required: false
+    default: setup-monochange
   setup-monochange:
     description: 'How to resolve monochange. true = auto-resolve (default), false = require existing monochange on PATH, any other string = custom command.'
     required: false

@@ -2,6 +2,10 @@ name: release-preview
 description: 'Run monochange release-preview action.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as release-preview.'
+    required: false
+    default: release-preview
   setup-monochange:
     description: 'How to resolve monochange.'
     required: false

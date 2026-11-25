@@ -2,6 +2,10 @@ name: check
 description: 'Run monochange check action.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as check.'
+    required: false
+    default: check
   setup-monochange:
     description: 'How to resolve monochange.'
     required: false
