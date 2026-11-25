@@ -1,0 +1,39 @@
+name: publish-draft-releases
+description: 'Publish the draft GitHub releases created for a monochange release, retrying transient API failures.'
+author: monochange
+inputs:
+  release-tag:
+    description: 'Release tag to publish, for example v0.14.0.'
+    required: true
+  github-token:
+    description: 'GitHub token used to read and publish releases.'
+    required: false
+    default: ${{ github.token }}
+  repository:
+    description: 'Target repository in owner/repo format.'
+    required: false
+    default: ${{ github.repository }}
+  publish-related:
+    description: 'Whether to also publish every released target from the matching monochange release record.'
+    required: false
+    default: 'true'
+  max-attempts:
+    description: 'Maximum attempts per release for retryable GitHub API failures.'
+    required: false
+    default: '5'
+  working-directory:
+    description: 'Working directory containing the monochange release records.'
+    required: false
+    default: '.'
+outputs:
+  result:
+    description: 'success or failed.'
+  target-tags:
+    description: 'JSON array of release tags this run inspected.'
+  published-tags:
+    description: 'JSON array of release tags this run made public.'
+  failed-tags:
+    description: 'JSON array of release tags that could not be published.'
+runs:
+  using: node24
+  main: ../dist/index.mjs

@@ -12,6 +12,7 @@ const variants = [
   'open-release-request',
   'hosted-release',
   'tag-release',
+  'publish-draft-releases',
   'publish-readiness',
   'publish-packages',
 ];

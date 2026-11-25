@@ -14,6 +14,7 @@ import { chmod as chmod$1, mkdtemp, rm as rm$1, writeFile as writeFile$1 } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as setTimeout$2 } from "node:timers/promises";
+import { existsSync as existsSync$1, readdirSync } from "node:fs";
 
 // \0rolldown/runtime.js
 var __create = Object.create;
@@ -20976,7 +20977,7 @@ const MAX_MARKDOWN_LENGTH = 6e4;
 function input$8(name, fallback) {
 	return getInput(name).trim() || fallback;
 }
-function readInputs$7() {
+function readInputs$8() {
 	return {
 		base: getOptionalInput$1("base"),
 		dependencyPropagation: input$8("dependency-propagation", "public"),
@@ -21003,8 +21004,8 @@ function splitList$1(value) {
 */
 function eventLabels() {
 	const pullRequest = context.payload.pull_request;
-	if (!isRecord$7(pullRequest) || !Array.isArray(pullRequest.labels)) return;
-	const names = pullRequest.labels.map((label) => isRecord$7(label) && typeof label.name === "string" ? label.name : void 0).filter((name) => typeof name === "string");
+	if (!isRecord$8(pullRequest) || !Array.isArray(pullRequest.labels)) return;
+	const names = pullRequest.labels.map((label) => isRecord$8(label) && typeof label.name === "string" ? label.name : void 0).filter((name) => typeof name === "string");
 	return names.length > 0 ? names.join(",") : void 0;
 }
 /**
@@ -21014,7 +21015,7 @@ function eventLabels() {
 */
 function eventBaseRef() {
 	const base = context.payload.pull_request?.base;
-	return isRecord$7(base) && typeof base.ref === "string" && base.ref ? `origin/${base.ref}` : void 0;
+	return isRecord$8(base) && typeof base.ref === "string" && base.ref ? `origin/${base.ref}` : void 0;
 }
 /**
 * Classify the exact pull request head commit, so the report names the commit
@@ -21022,7 +21023,7 @@ function eventBaseRef() {
 */
 function eventHeadSha() {
 	const head = context.payload.pull_request?.head;
-	return isRecord$7(head) && typeof head.sha === "string" && head.sha ? head.sha : void 0;
+	return isRecord$8(head) && typeof head.sha === "string" && head.sha ? head.sha : void 0;
 }
 /**
 * Use an event ref only when the checkout contains it. A shallow checkout
@@ -21039,7 +21040,7 @@ async function checkedOutRef(ref, cwd, endpoint) {
 	], { cwd })).exitCode === 0) return ref;
 	warning(`Pull request ${endpoint} \`${ref}\` is not in the checkout, so change classification falls back to the default ${endpoint}. Check out with fetch-depth: 0 to classify against the pull request ${endpoint}.`);
 }
-function isRecord$7(value) {
+function isRecord$8(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSeverity(value) {
@@ -21060,7 +21061,7 @@ function stringArray(value) {
 	return value.filter((item) => typeof item === "string");
 }
 function readFinding(value) {
-	if (!isRecord$7(value)) throw new Error("monochange classification findings must be objects.");
+	if (!isRecord$8(value)) throw new Error("monochange classification findings must be objects.");
 	return {
 		bump: requiredSeverity(value, "bump"),
 		comparisons: stringArray(value.comparisons),
@@ -21073,7 +21074,7 @@ function readFinding(value) {
 	};
 }
 function readPackage(value) {
-	if (!isRecord$7(value) || !isRecord$7(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
+	if (!isRecord$8(value) || !isRecord$8(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
 	return {
 		action: requiredString$1(value, "action"),
 		compatibility_impact: requiredString$1(value.decision, "compatibility_impact"),
@@ -21089,7 +21090,7 @@ function readPackage(value) {
 	};
 }
 function readChangeClassificationReport(value) {
-	if (!isRecord$7(value) || typeof value.schema_version !== "string" || !/^\d+\.\d+$/u.test(value.schema_version) || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.");
+	if (!isRecord$8(value) || typeof value.schema_version !== "string" || !/^\d+\.\d+$/u.test(value.schema_version) || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.");
 	return {
 		...typeof value.base_commit === "string" ? { base_commit: value.base_commit } : {},
 		candidate: requiredString$1(value, "candidate"),
@@ -21221,7 +21222,7 @@ function pullRequestNumber(explicit) {
 		return Number(explicit);
 	}
 	const pullRequest = context.payload.pull_request;
-	return isRecord$7(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
+	return isRecord$8(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
 }
 async function upsertComment(inputs, markdown) {
 	if (!inputs.postComment) return;
@@ -21335,7 +21336,7 @@ async function markCommentStale(inputs, head) {
 	}
 }
 async function runChangeClassification() {
-	const inputs = readInputs$7();
+	const inputs = readInputs$8();
 	const monochange = await resolveMonochange(inputs.setupMonochange);
 	const base = inputs.base ?? await checkedOutRef(eventBaseRef(), inputs.workingDirectory, "base");
 	const head = inputs.head ?? await checkedOutRef(eventHeadSha(), inputs.workingDirectory, "head") ?? "HEAD";
@@ -21397,7 +21398,7 @@ async function runChangeClassification() {
 
 // src/actions/changeset-policy/index.ts
 const COMMENT_MARKER = "<!-- monochange:changeset-policy -->";
-function readInputs$6() {
+function readInputs$7() {
 	return {
 		changedPaths: getOptionalInput("changed-paths"),
 		commentOnFailure: getBoolean$2("comment-on-failure"),
@@ -21430,7 +21431,7 @@ function getBoolean$2(name) {
 	].includes(value);
 }
 async function runChangesetPolicy() {
-	const inputs = readInputs$6();
+	const inputs = readInputs$7();
 	if (inputs.debug) info(`changeset-policy inputs: ${JSON.stringify({
 		...inputs,
 		githubToken: "[redacted]"
@@ -21476,25 +21477,25 @@ async function runChangesetPolicy() {
 	info(skipped ? "changeset-policy skipped" : "changeset-policy completed successfully");
 }
 function changesetStatus(parsed) {
-	if (!isRecord$6(parsed)) return;
+	if (!isRecord$7(parsed)) return;
 	const status = parsed.status;
 	return typeof status === "string" ? status : void 0;
 }
 function changesetSkipped(parsed) {
-	if (!isRecord$6(parsed)) return false;
+	if (!isRecord$7(parsed)) return false;
 	return parsed.skip === true || parsed.skipped === true || parsed.status === "skipped";
 }
 function changesetSummary(parsed) {
-	if (!isRecord$6(parsed)) return;
+	if (!isRecord$7(parsed)) return;
 	const summary = parsed.summary;
 	return typeof summary === "string" ? summary : void 0;
 }
 function changesetComment(parsed) {
-	if (!isRecord$6(parsed)) return;
+	if (!isRecord$7(parsed)) return;
 	const comment = parsed.comment;
 	return typeof comment === "string" && comment.trim() ? comment : void 0;
 }
-function isRecord$6(value) {
+function isRecord$7(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function extractContentWithoutMarker(body) {
@@ -21622,10 +21623,10 @@ function failureDetail(result) {
 	const stdout = result.stdout.trim();
 	return stdout === "" ? `exit code ${result.exitCode}` : stdout;
 }
-function errorMessage(error) {
+function errorMessage$1(error) {
 	return error instanceof Error ? error.message : String(error);
 }
-function isRecord$5(value) {
+function isRecord$6(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -21660,7 +21661,7 @@ async function runDecide(command, inputs, context) {
 	try {
 		result = await exec(command, buildDecideArgs(inputs, context), { cwd: inputs.workingDirectory });
 	} catch (error) {
-		handleDecideFailure(inputs, errorMessage(error));
+		handleDecideFailure(inputs, errorMessage$1(error));
 		return;
 	}
 	const outputs = result.exitCode === 0 ? parseDecideOutputs(result.stdout) : void 0;
@@ -21754,7 +21755,7 @@ function setRunAllOutputs() {
 }
 function isDecisionMap(value) {
 	const parsed = safeJsonParse(value);
-	return isRecord$5(parsed) && Object.values(parsed).every((entry) => typeof entry === "boolean");
+	return isRecord$6(parsed) && Object.values(parsed).every((entry) => typeof entry === "boolean");
 }
 function isStringArrayJson(value) {
 	const parsed = safeJsonParse(value);
@@ -21764,7 +21765,7 @@ function isStringArrayJson(value) {
 // src/actions/ci/github-context.ts
 function readGitHubContext() {
 	const payload = context.payload;
-	const record = isRecord$4(payload) ? payload : void 0;
+	const record = isRecord$5(payload) ? payload : void 0;
 	const pullRequest = recordField(record, "pull_request");
 	const headCommit = recordField(record, "head_commit");
 	const repository = recordField(record, "repository");
@@ -21787,7 +21788,7 @@ function pullRequestLabels(pullRequest) {
 	const labels = pullRequest?.labels;
 	if (!Array.isArray(labels)) return [];
 	return labels.flatMap((label) => {
-		const name = stringField(isRecord$4(label) ? label : void 0, "name");
+		const name = stringField(isRecord$5(label) ? label : void 0, "name");
 		return name === void 0 ? [] : [name];
 	});
 }
@@ -21796,18 +21797,18 @@ function refToBranch(ref) {
 }
 function recordField(record, key) {
 	const value = record?.[key];
-	return isRecord$4(value) ? value : void 0;
+	return isRecord$5(value) ? value : void 0;
 }
 function stringField(record, key) {
 	const value = record?.[key];
 	return typeof value === "string" && value !== "" ? value : void 0;
 }
-function isRecord$4(value) {
+function isRecord$5(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 // src/actions/ci/inputs.ts
-function readInputs$5() {
+function readInputs$6() {
 	return {
 		apiKey: input$6("api-key"),
 		apiUrl: input$6("api-url"),
@@ -21910,7 +21911,7 @@ function parseNeeds(value) {
 	const parsed = parseJsonObject(value, "needs");
 	const results = {};
 	for (const [jobId, entry] of Object.entries(parsed)) {
-		const result = isRecord$5(entry) ? entry.result : void 0;
+		const result = isRecord$6(entry) ? entry.result : void 0;
 		if (typeof result !== "string") throw new Error(`Input \`needs\` entry \`${jobId}\` must be an object with a string result.`);
 		results[jobId] = result;
 	}
@@ -21927,7 +21928,7 @@ function parseDecisions(value) {
 }
 function parseJsonObject(value, name) {
 	const parsed = safeJsonParse(value);
-	if (!isRecord$5(parsed)) throw new Error(`Input \`${name}\` must be a JSON object.`);
+	if (!isRecord$6(parsed)) throw new Error(`Input \`${name}\` must be a JSON object.`);
 	return parsed;
 }
 function mapConclusion(result) {
@@ -21948,7 +21949,7 @@ function mapConclusion(result) {
 * context onto CLI flags and republishes the CLI's outputs for later steps.
 */
 async function runCi() {
-	const inputs = readInputs$5();
+	const inputs = readInputs$6();
 	maskSecrets(inputs);
 	const context = readGitHubContext();
 	const { command } = await resolveMonochange(inputs.setupMonochange);
@@ -22135,7 +22136,7 @@ const HOSTED_STATUS_HINTS = {
 	409: "The release branch already points at a different commit than this run prepared from. Merge or close the open release pull request and delete its branch, then rerun.",
 	503: "The monochange deployment is not configured for hosted releases. Check `hosted-url`."
 };
-function readInputs$4() {
+function readInputs$5() {
 	return {
 		dryRun: getBooleanInput("dry-run"),
 		githubToken: getOptionalInput$1("github-token") ?? "",
@@ -22175,7 +22176,7 @@ function explainHostedFailure(message) {
 	const hint = HOSTED_STATUS_HINTS[status];
 	return hint ? `${message}\n\n${hint}` : message;
 }
-function isRecord$3(value) {
+function isRecord$4(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function requiredString(record, key) {
@@ -22186,8 +22187,8 @@ function requiredString(record, key) {
 /** Read the release request target from `step open-release-request --format json` output. */
 function parseReleaseRequestTarget(stdout) {
 	const parsed = parseMixedOutput(stdout);
-	const request = isRecord$3(parsed) ? parsed.release_request : void 0;
-	if (!isRecord$3(request)) throw new Error("monochange did not report a release request. Configure `[source]` with `provider = \"github\"` in monochange.toml.");
+	const request = isRecord$4(parsed) ? parsed.release_request : void 0;
+	if (!isRecord$4(request)) throw new Error("monochange did not report a release request. Configure `[source]` with `provider = \"github\"` in monochange.toml.");
 	return {
 		baseBranch: requiredString(request, "base_branch"),
 		headBranch: requiredString(request, "head_branch"),
@@ -22318,7 +22319,7 @@ async function publishWithBuiltInSteps(command, target, options) {
 * or the commit verification in machine-readable form.
 */
 async function runHostedRelease() {
-	const inputs = readInputs$4();
+	const inputs = readInputs$5();
 	if (!inputs.dryRun) {
 		assertOidcAvailable();
 		if (!inputs.githubToken) throw new Error("Input `github-token` is required to read the release commit and pull request back from GitHub.");
@@ -22458,7 +22459,7 @@ function serializeCommentOutput(body) {
 
 // src/actions/merge/index.ts
 async function runMerge() {
-	const inputs = readInputs$3();
+	const inputs = readInputs$4();
 	if (context.eventName === "issue_comment") {
 		if (!(context.payload.comment?.body ?? "").includes(inputs.triggerCommand)) throw new Error(`This workflow was triggered by a pull request comment, but the comment does not contain the configured trigger command \`${inputs.triggerCommand}\`.`);
 	}
@@ -22655,7 +22656,7 @@ async function runMerge() {
 		if (workspace) await cleanupWorkspace(workspace.tempDir);
 	}
 }
-function readInputs$3() {
+function readInputs$4() {
 	const comment = getOptionalInput$1("comment");
 	const pullRequest = getOptionalInput$1("pull-request");
 	const requiredFailingCheck = getOptionalInput$1("required-failing-check");
@@ -23224,7 +23225,7 @@ function bool$5(name) {
 		"on"
 	].includes(input$5(name).toLowerCase());
 }
-function isRecord$2(value) {
+function isRecord$3(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function outputValue$1(value) {
@@ -23255,7 +23256,7 @@ async function runOpenReleaseRequest() {
 		} } : {}
 	});
 	const mixed = parseMixedOutput(stdout);
-	const parsed = isRecord$2(mixed) ? mixed : void 0;
+	const parsed = isRecord$3(mixed) ? mixed : void 0;
 	setOutput("result", "success");
 	setOutput("json", JSON.stringify(parsed ?? null));
 	setOutput("head-branch", outputValue$1(parsed?.headBranch));
@@ -23265,7 +23266,7 @@ async function runOpenReleaseRequest() {
 }
 
 // src/actions/post-merge-release/index.ts
-function readInputs$2() {
+function readInputs$3() {
 	return {
 		debug: getBoolean$1("debug"),
 		dryRun: getBoolean$1("dry-run"),
@@ -23284,7 +23285,7 @@ function getBoolean$1(name) {
 	].includes(value);
 }
 async function runPostMergeRelease() {
-	const inputs = readInputs$2();
+	const inputs = readInputs$3();
 	if (inputs.debug) info(`post-merge-release inputs: ${JSON.stringify(inputs, null, 2)}`);
 	const monochange = await resolveMonochange(inputs.setupMonochange);
 	info(`Using monochange ${monochange.version} from ${monochange.source}`);
@@ -23334,6 +23335,291 @@ async function runPostMergeRelease() {
 	setOutput("result", "success");
 	setOutput("json", JSON.stringify(record));
 	info("post-merge-release completed successfully");
+}
+
+// src/actions/publish-draft-releases/delay.ts
+/** Wait for a retry backoff without blocking the event loop. */
+async function sleep(milliseconds) {
+	await new Promise((resolve) => {
+		setTimeout(resolve, milliseconds);
+	});
+}
+
+// src/actions/publish-draft-releases/index.ts
+const DEFAULT_MAX_ATTEMPTS = 5;
+const BACKOFF_BASE_MS = 1e4;
+/**
+* Select release targets from a monochange release record whose `tag_name`
+* matches the primary tag. `jq` applies this to every `.monochange/releases`
+* record passed on the command line.
+*/
+const RELEASE_RECORD_FILTER = [
+	"select(any(.release_targets[]?; .tag_name == $tag))",
+	".release_targets[]",
+	"select(.release == true)",
+	".tag_name"
+].join(" | ");
+function readInputs$2() {
+	const releaseTag = getOptionalInput$1("release-tag");
+	if (releaseTag === void 0) throw new Error("Input `release-tag` is required.");
+	return {
+		githubToken: getOptionalInput$1("github-token") ?? "",
+		maxAttempts: parseMaxAttempts(getOptionalInput$1("max-attempts")),
+		publishRelated: getOptionalBooleanInput("publish-related") ?? true,
+		releaseTag,
+		repository: getOptionalInput$1("repository") ?? "",
+		workingDirectory: getOptionalInput$1("working-directory") ?? "."
+	};
+}
+function parseMaxAttempts(value) {
+	if (value === void 0) return DEFAULT_MAX_ATTEMPTS;
+	if (!/^[1-9]\d*$/.test(value)) throw new Error(`Input \`max-attempts\` must be a positive integer, received \`${value}\`.`);
+	return Number(value);
+}
+function errorMessage(error) {
+	return error instanceof Error ? error.message : String(error);
+}
+function commandOutput(result) {
+	return result.stderr.trim() || result.stdout.trim();
+}
+function isRecord$2(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+/**
+* Only transient failures are worth another attempt. `gh` reports the HTTP
+* status inside its error text, so a 404 or 422 fails at once with the response.
+*/
+function isRetryableError(message) {
+	if (/rate limit/i.test(message)) return true;
+	const status = message.match(/HTTP\s+(\d{3})/);
+	const code = status?.[1] === void 0 ? void 0 : Number(status[1]);
+	if (code !== void 0) return code >= 500 || code === 429;
+	return /dial tcp|connection reset|connection refused|i\/o timeout|tls handshake|no such host|network is unreachable|temporary failure|unexpected eof/i.test(message);
+}
+function isMissingRelease(message) {
+	return /HTTP\s+404|release not found/i.test(message);
+}
+function ghEnvironment(inputs) {
+	if (inputs.githubToken === "") return {};
+	return { env: {
+		...Object.fromEntries(Object.entries(process.env).filter((entry) => entry[1] !== void 0)),
+		GH_TOKEN: inputs.githubToken
+	} };
+}
+function repositoryArgs(repository) {
+	return repository === "" ? [] : ["--repo", repository];
+}
+/**
+* `gh release view` falls back to a GraphQL draft lookup after the REST
+* `/releases/tags/{tag}` endpoint, which alone returns 404 for a draft. It
+* therefore finds drafts when the token can push to the repository.
+*/
+async function viewRelease(tag, inputs) {
+	let result;
+	try {
+		result = await exec("gh", [
+			"release",
+			"view",
+			tag,
+			"--json",
+			"tagName,isDraft",
+			...repositoryArgs(inputs.repository)
+		], ghEnvironment(inputs));
+	} catch (error) {
+		return { error: errorMessage(error) };
+	}
+	if (result.exitCode !== 0) {
+		const message = commandOutput(result) || `gh release view ${tag} failed.`;
+		if (isMissingRelease(message)) return { state: "missing" };
+		return { error: message };
+	}
+	const parsed = safeJsonParse(result.stdout);
+	const isDraft = isRecord$2(parsed) ? parsed.isDraft : void 0;
+	if (typeof isDraft !== "boolean") return { error: `Could not read the draft state of release ${tag} from gh output.` };
+	return { state: isDraft ? "draft" : "public" };
+}
+/** Publish one release, returning the `gh` error text when the edit fails. */
+async function makeReleasePublic(tag, latest, inputs) {
+	const args = [
+		"release",
+		"edit",
+		tag,
+		"--draft=false",
+		latest ? "--latest" : "--latest=false",
+		...repositoryArgs(inputs.repository)
+	];
+	try {
+		const result = await exec("gh", args, ghEnvironment(inputs));
+		if (result.exitCode === 0) return;
+		return commandOutput(result) || `gh release edit ${tag} failed.`;
+	} catch (error) {
+		return errorMessage(error);
+	}
+}
+/**
+* Run one lookup-publish-verify cycle. A retry re-reads the release first, so a
+* request that failed after GitHub applied it is reported as published rather
+* than edited twice.
+*/
+async function attemptPublish(tag, inputs) {
+	const view = await viewRelease(tag, inputs);
+	if ("error" in view) return {
+		edited: false,
+		message: view.error,
+		retryable: isRetryableError(view.error),
+		state: "error"
+	};
+	if (view.state !== "draft") return {
+		edited: false,
+		message: "",
+		retryable: false,
+		state: view.state
+	};
+	const editError = await makeReleasePublic(tag, tag === inputs.releaseTag, inputs);
+	if (editError !== void 0) return {
+		edited: true,
+		message: editError,
+		retryable: isRetryableError(editError),
+		state: "error"
+	};
+	const confirmation = await viewRelease(tag, inputs);
+	if ("error" in confirmation) return {
+		edited: true,
+		message: confirmation.error,
+		retryable: isRetryableError(confirmation.error),
+		state: "error"
+	};
+	if (confirmation.state === "public") return {
+		edited: true,
+		message: "",
+		retryable: false,
+		state: "public"
+	};
+	return {
+		edited: true,
+		message: confirmation.state === "draft" ? `Release ${tag} is still a draft after publishing.` : `Release ${tag} was not found after publishing.`,
+		retryable: true,
+		state: "error"
+	};
+}
+function backoffMs(attempt) {
+	return BACKOFF_BASE_MS * 2 ** (attempt - 1);
+}
+async function publishTag(tag, inputs) {
+	let edited = false;
+	let lastMessage = "";
+	for (let attempt = 1; attempt <= inputs.maxAttempts; attempt += 1) {
+		const result = await attemptPublish(tag, inputs);
+		edited = edited || result.edited;
+		if (result.state === "public") return {
+			message: "",
+			outcome: edited ? "published" : "already-public",
+			tag
+		};
+		if (result.state === "missing") return {
+			message: `Release ${tag} was not found.`,
+			outcome: "missing",
+			tag
+		};
+		lastMessage = result.message;
+		if (!result.retryable || attempt === inputs.maxAttempts) break;
+		warning(`Attempt ${attempt} to publish release ${tag} failed: ${result.message}. Retrying in ${backoffMs(attempt) / 1e3}s.`);
+		await sleep(backoffMs(attempt));
+	}
+	return {
+		message: lastMessage,
+		outcome: "failed",
+		tag
+	};
+}
+function findReleaseRecords(workingDirectory) {
+	const releasesDirectory = join(workingDirectory, ".monochange", "releases");
+	let entries;
+	try {
+		entries = readdirSync(releasesDirectory, { withFileTypes: true });
+	} catch {
+		return [];
+	}
+	return entries.filter((entry) => entry.isDirectory()).map((entry) => join(releasesDirectory, entry.name, "release.json")).filter((path) => existsSync$1(path));
+}
+/** Read the other release tags from the monochange record that owns the primary tag. */
+async function readRelatedTags(inputs) {
+	const records = findReleaseRecords(inputs.workingDirectory);
+	if (records.length === 0) {
+		info("No monochange release record found; publishing only the primary release.");
+		return [];
+	}
+	let result;
+	try {
+		result = await exec("jq", [
+			"-r",
+			"--arg",
+			"tag",
+			inputs.releaseTag,
+			RELEASE_RECORD_FILTER,
+			"--",
+			...records
+		]);
+	} catch (error) {
+		warning(`Could not read the monochange release record; publishing only the primary release: ${errorMessage(error)}`);
+		return [];
+	}
+	if (result.exitCode !== 0) {
+		const message = commandOutput(result) || `jq exited with code ${result.exitCode}.`;
+		warning(`Could not read the monochange release record; publishing only the primary release: ${message}`);
+		return [];
+	}
+	const tags = result.stdout.split("\n").map((line) => line.trim()).filter((line) => line !== "");
+	if (tags.length === 0) info(`No monochange release record lists ${inputs.releaseTag}; publishing only the primary release.`);
+	return tags;
+}
+async function collectTargetTags(inputs) {
+	const tags = [inputs.releaseTag];
+	if (!inputs.publishRelated) return tags;
+	for (const tag of await readRelatedTags(inputs)) if (!tags.includes(tag)) tags.push(tag);
+	return tags;
+}
+function reportResult(result, primary) {
+	if (result.outcome === "already-public") {
+		info(`Release ${result.tag} is already public; nothing to publish.`);
+		return;
+	}
+	if (result.outcome === "published") {
+		info(`Published release ${result.tag}.`);
+		return;
+	}
+	if (result.outcome === "missing" && !primary) {
+		warning(`Release ${result.tag} does not exist; skipping it.`);
+		return;
+	}
+	if (result.outcome === "missing") {
+		warning(`Release ${result.tag} does not exist.`);
+		return;
+	}
+	warning(`Could not publish release ${result.tag}: ${result.message}`);
+}
+async function runPublishDraftReleases() {
+	const inputs = readInputs$2();
+	if (inputs.githubToken !== "") setSecret(inputs.githubToken);
+	const tags = await collectTargetTags(inputs);
+	const results = [];
+	for (const tag of tags) {
+		const result = await publishTag(tag, inputs);
+		results.push(result);
+		reportResult(result, tag === inputs.releaseTag);
+	}
+	const publishedTags = results.filter((result) => result.outcome === "published").map((result) => result.tag);
+	const failedResults = results.filter((result) => result.outcome === "failed" || result.tag === inputs.releaseTag && result.outcome === "missing");
+	const failedTags = failedResults.map((result) => result.tag);
+	setOutput("target-tags", JSON.stringify(tags));
+	setOutput("published-tags", JSON.stringify(publishedTags));
+	setOutput("failed-tags", JSON.stringify(failedTags));
+	if (failedTags.includes(inputs.releaseTag)) {
+		setOutput("result", "failed");
+		const details = failedResults.map((result) => `${result.tag} (${result.message})`).join("; ");
+		throw new Error(`The primary release ${inputs.releaseTag} is not public. Failed releases: ${details}.`);
+	}
+	setOutput("result", "success");
 }
 
 // src/actions/publish-packages/index.ts
@@ -23705,6 +23991,9 @@ async function run() {
 		case "tag-release":
 			await runTagRelease();
 			return;
+		case "publish-draft-releases":
+			await runPublishDraftReleases();
+			return;
 		case "publish-readiness":
 			await runPublishReadiness();
 			return;
@@ -23717,7 +24006,7 @@ async function run() {
 		case "fail-when":
 			await runFailWhen();
 			return;
-		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: change-classification, merge, setup-monochange, changeset-policy, check, ci, release-preview, release-record, open-release-request, release-pr, hosted-release, tag-release, publish-readiness, publish-packages, post-merge-release, fail-when.`);
+		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: change-classification, merge, setup-monochange, changeset-policy, check, ci, release-preview, release-record, open-release-request, release-pr, hosted-release, tag-release, publish-draft-releases, publish-readiness, publish-packages, post-merge-release, fail-when.`);
 	}
 }
 run().catch((error) => {

@@ -15,6 +15,7 @@ const variantDirectories = [
   'merge',
   'open-release-request',
   'post-merge-release',
+  'publish-draft-releases',
   'publish-packages',
   'publish-plan',
   'publish-readiness',
