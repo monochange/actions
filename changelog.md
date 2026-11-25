@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.12.1](https://github.com/monochange/actions/releases/tag/v0.12.1) (2026-11-25)
+
+### 🐛 Fixed
+
+- **Set the publish-readiness ready output from the CLI status.**
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #131](https://github.com/monochange/actions/pull/131)
+- **Load action metadata after removing GitHub expressions from descriptions.** GitHub evaluates `${{ }}` in action metadata, so the literal `${{ toJSON(needs) }}` in the root and `ci` `needs` input descriptions failed with `Unrecognized named-value: needs` and stopped the action from loading. Both descriptions now name `toJSON(needs)` as plain text, and a test rejects any `${{` in an action metadata description.
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #141](https://github.com/monochange/actions/pull/141)
+
 ## [0.12.0](https://github.com/monochange/actions/releases/tag/v0.12.0) (2026-11-08)
 
 ### 💥 Breaking Change
