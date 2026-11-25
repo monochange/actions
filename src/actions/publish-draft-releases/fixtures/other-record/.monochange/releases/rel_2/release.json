@@ -1,0 +1,15 @@
+{
+  "schema_version": "0.10",
+  "kind": "monochange.releaseRecord",
+  "version": "9.9.9",
+  "release_targets": [
+    {
+      "id": "root",
+      "kind": "package",
+      "version": "9.9.9",
+      "tag": true,
+      "release": true,
+      "tag_name": "v9.9.9"
+    }
+  ]
+}

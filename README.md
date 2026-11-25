@@ -27,6 +27,7 @@ Currently implemented:
 - `open-release-request` / `release-pr` - open a release pull request
 - `hosted-release` - create a verified release commit and pull request through monochange.dev and the monochange GitHub App
 - `tag-release` - create or report release tags from a release record
+- `publish-draft-releases` - publish the draft GitHub releases for a release with retries
 - `publish-readiness` - generate publish readiness data from a release record
 - `publish-packages` - publish packages from readiness data
 - `publish-plan` - compatibility wrapper for publish rate-limit planning
@@ -43,6 +44,7 @@ Public entrypoints:
 - `monochange/actions/open-release-request@v0.4.0`
 - `monochange/actions/hosted-release@v0`
 - `monochange/actions/tag-release@v0.4.0`
+- `monochange/actions/publish-draft-releases@v0`
 - `monochange/actions/publish-readiness@v0.4.0`
 - `monochange/actions/publish-packages@v0.4.0`
 - `monochange/actions/fail-when@v0.4.0`
@@ -820,6 +822,24 @@ Tag and publish after a release PR merges.
     from-ref: HEAD
     branch: release
 ```
+
+---
+
+## `publish-draft-releases`
+
+Publish the draft GitHub releases that monochange created for a release. The primary tag is always published; with `publish-related` enabled, the action reads the matching `.monochange/releases/*/release.json` record with `jq` and publishes every target whose `release` flag is true. Only the primary tag is marked latest.
+
+The action is safe to run twice, retries HTTP 5xx, rate limiting, and network errors with exponential backoff, and fails at once on a 4xx such as 404 or 422. It exits non-zero only when the primary release is not public at the end.
+
+```yaml
+- name: publish draft releases
+  uses: monochange/actions/publish-draft-releases@v0
+  with:
+    release-tag: v0.14.0
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+See the full [`publish-draft-releases` documentation](publish-draft-releases/README.md) for inputs, outputs, retry behavior, and permissions.
 
 ---
 

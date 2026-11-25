@@ -1,0 +1,31 @@
+{
+  "schema_version": "0.10",
+  "kind": "monochange.releaseRecord",
+  "version": "0.14.0",
+  "release_targets": [
+    {
+      "id": "root",
+      "kind": "package",
+      "version": "0.14.0",
+      "tag": true,
+      "release": true,
+      "tag_name": "v1.0.0"
+    },
+    {
+      "id": "forks",
+      "kind": "group",
+      "version": "5.0.1",
+      "tag": true,
+      "release": true,
+      "tag_name": "forks/v5.0.1"
+    },
+    {
+      "id": "skipped",
+      "kind": "package",
+      "version": "1.0.0",
+      "tag": true,
+      "release": false,
+      "tag_name": "skip/v1.0.0"
+    }
+  ]
+}
