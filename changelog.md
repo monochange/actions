@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.12.2](https://github.com/monochange/actions/releases/tag/v0.12.2) (2026-11-25)
+
+### 🚀 Feature
+
+- **Add the publish-draft-releases action variant.** Publishes the draft GitHub releases for a release, including every target whose `release` flag is true in the matching `.monochange/releases/*/release.json` record. The action retries HTTP 5xx, rate limiting, and network errors with exponential backoff, fails at once on 4xx, reads every release back to confirm it is public, and marks only the primary tag as latest.
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #142](https://github.com/monochange/actions/pull/142)
+
 ## [0.12.1](https://github.com/monochange/actions/releases/tag/v0.12.1) (2026-11-25)
 
 ### 🐛 Fixed
