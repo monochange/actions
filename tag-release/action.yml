@@ -2,6 +2,10 @@ name: tag-release
 description: 'Run monochange tag-release action.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as tag-release.'
+    required: false
+    default: tag-release
   setup-monochange:
     description: 'How to resolve monochange.'
     required: false

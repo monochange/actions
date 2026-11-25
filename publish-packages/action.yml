@@ -2,6 +2,10 @@ name: publish-packages
 description: 'Run monochange publish-packages action.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as publish-packages.'
+    required: false
+    default: publish-packages
   setup-monochange:
     description: 'How to resolve monochange.'
     required: false

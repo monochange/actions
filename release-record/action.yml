@@ -2,6 +2,10 @@ name: release-record
 description: 'Run monochange release-record action.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as release-record.'
+    required: false
+    default: release-record
   setup-monochange:
     description: 'How to resolve monochange.'
     required: false

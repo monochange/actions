@@ -2,6 +2,10 @@ name: hosted-release
 description: 'Create the release commit and release pull request through monochange.dev and the monochange GitHub App.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as hosted-release.'
+    required: false
+    default: hosted-release
   setup-monochange:
     description: 'How to resolve monochange (0.17.0 or newer). true = auto-resolve (default), false = require existing monochange on PATH, any other string = custom command.'
     required: false

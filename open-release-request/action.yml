@@ -2,6 +2,10 @@ name: open-release-request
 description: 'Run monochange open-release-request action.'
 author: monochange
 inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as open-release-request.'
+    required: false
+    default: open-release-request
   setup-monochange:
     description: 'How to resolve monochange.'
     required: false
