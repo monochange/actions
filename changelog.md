@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.12.3](https://github.com/monochange/actions/releases/tag/v0.12.3) (2026-11-25)
+
+### 🐛 Fixed
+
+#### Restore the internal `name` selector for path actions
+
+_Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #144](https://github.com/monochange/actions/pull/144)
+
+`publish-draft-releases/action.yml` did not declare the internal `name` input, and the runner does not set `GITHUB_ACTION_PATH` for `node24` actions. A `uses: monochange/actions/publish-draft-releases@v0.12.2` step therefore exited with `Unsupported action variant`. The action now declares `name: publish-draft-releases` like its siblings.
+
+The same missing selector existed in the other path actions that had not declared it, so every active variant now declares a `name` default matching its directory, and a layout test derives the variant list from disk and enforces the selector and dispatcher coverage.
+
 ## [0.12.2](https://github.com/monochange/actions/releases/tag/v0.12.2) (2026-11-25)
 
 ### 🚀 Feature
