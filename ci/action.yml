@@ -63,7 +63,7 @@ inputs:
     required: false
     default: ''
   needs:
-    description: 'Verify mode only. Pass ${{ toJSON(needs) }} from the job that verifies the gate.'
+    description: 'Verify mode only. Pass toJSON(needs) from the job that verifies the gate.'
     required: false
     default: ''
   decisions:
