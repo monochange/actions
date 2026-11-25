@@ -222,7 +222,7 @@ inputs:
     required: false
     default: ''
   needs:
-    description: 'For ci verify mode, pass ${{ toJSON(needs) }} from the verifying job.'
+    description: 'For ci verify mode, pass toJSON(needs) from the verifying job.'
     required: false
     default: ''
   decisions:
