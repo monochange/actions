@@ -37,6 +37,8 @@ export interface HostedReleaseInputs {
   hostedUrl: string;
   githubToken: string;
   dryRun: boolean;
+  refresh: boolean;
+  from: string;
 }
 
 /** The release pull request monochange renders for the prepared release. */
@@ -50,8 +52,10 @@ export interface ReleaseRequestTarget {
 function readInputs(): HostedReleaseInputs {
   return {
     dryRun: getBooleanInput('dry-run'),
+    from: getOptionalInput('from') ?? '',
     githubToken: getOptionalInput('github-token') ?? '',
     hostedUrl: parseHostedUrl(getOptionalInput('hosted-url') ?? DEFAULT_HOSTED_URL),
+    refresh: getBooleanInput('refresh'),
     releaseCommand: getOptionalInput('release-command') ?? '',
     setupMonochange: getOptionalInput('setup-monochange') ?? 'true',
     workingDirectory: getOptionalInput('working-directory') ?? '.',
@@ -241,7 +245,13 @@ async function runReleaseCommand(
   inputs: HostedReleaseInputs,
   options: CliOptions,
 ): Promise<void> {
-  const args = ['run', inputs.releaseCommand, ...(inputs.dryRun ? ['--dry-run'] : [])];
+  const args = [
+    'run',
+    inputs.releaseCommand,
+    ...(inputs.dryRun ? ['--dry-run'] : []),
+    ...(inputs.refresh ? ['--refresh'] : []),
+    ...(inputs.from ? ['--from', inputs.from] : []),
+  ];
 
   await runHostedStep(command, args, {
     ...options,
@@ -256,11 +266,21 @@ async function runReleaseCommand(
 async function reportReleaseTarget(
   command: string,
   options: CliOptions,
+  from = '',
 ): Promise<ReleaseRequestTarget> {
   const target = parseReleaseRequestTarget(
     await runHostedStep(
       command,
-      ['step', 'open-release-request', '--backend', 'hosted', '--dry-run', '--format', 'json'],
+      [
+        'step',
+        'open-release-request',
+        '--backend',
+        'hosted',
+        '--dry-run',
+        '--format',
+        'json',
+        ...(from ? ['--from', from] : []),
+      ],
       options,
     ),
   );
@@ -275,21 +295,36 @@ async function reportReleaseTarget(
 async function publishWithBuiltInSteps(
   command: string,
   target: ReleaseRequestTarget,
-  options: CliOptions,
+  options: CliOptions & { from: string; refresh: boolean },
 ): Promise<void> {
   // monochange 0.17 and 0.18 commit to `GITHUB_HEAD_REF` (falling back to the
   // triggering ref). Point it at the release branch so the bot commits there
   // instead of on the branch that triggered the workflow.
   await runHostedStep(
     command,
-    ['step', 'commit-release', '--commit-backend', 'hosted', '--hosted-auth', 'oidc'],
+    [
+      'step',
+      'commit-release',
+      '--commit-backend',
+      'hosted',
+      '--hosted-auth',
+      'oidc',
+      ...(options.refresh ? ['--refresh'] : []),
+      ...(options.from ? ['--from', options.from] : []),
+    ],
     { ...options, env: { ...options.env, GITHUB_HEAD_REF: target.headBranch } },
   );
-  await runHostedStep(
-    command,
-    ['step', 'open-release-request', '--backend', 'hosted', '--format', 'json'],
-    options,
-  );
+  const openArgs = [
+    'step',
+    'open-release-request',
+    '--backend',
+    'hosted',
+    '--format',
+    'json',
+    ...(options.refresh ? ['--refresh'] : []),
+    ...(options.from ? ['--from', options.from] : []),
+  ];
+  await runHostedStep(command, openArgs, options);
 }
 
 /**
@@ -338,17 +373,25 @@ export async function runHostedRelease(): Promise<void> {
 
   if (inputs.releaseCommand) {
     await runReleaseCommand(monochange.command, inputs, options);
-    target = await reportReleaseTarget(monochange.command, options);
+    target = await reportReleaseTarget(monochange.command, options, inputs.from);
   } else {
-    await runHostedStep(
-      monochange.command,
-      ['step', 'prepare-release', '--format', 'json'],
-      options,
-    );
-    target = await reportReleaseTarget(monochange.command, options);
+    const prepareArgs = [
+      'step',
+      'prepare-release',
+      '--format',
+      'json',
+      ...(inputs.refresh ? ['--refresh'] : []),
+      ...(inputs.from ? ['--from', inputs.from] : []),
+    ];
+    await runHostedStep(monochange.command, prepareArgs, options);
+    target = await reportReleaseTarget(monochange.command, options, inputs.from);
 
     if (!inputs.dryRun) {
-      await publishWithBuiltInSteps(monochange.command, target, options);
+      await publishWithBuiltInSteps(monochange.command, target, {
+        ...options,
+        from: inputs.from,
+        refresh: inputs.refresh,
+      });
     }
   }
 

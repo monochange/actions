@@ -17,6 +17,22 @@ inputs:
   target-branch:
     description: 'Target branch the release PR merged into.'
     required: false
+  base-branch:
+    description: 'Optional default branch override for sync-release and open-next-cut. Defaults to the repository default branch.'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token passed to monochange as GITHUB_TOKEN.'
+    required: false
+    default: ${{ github.token }}
+  sync-release:
+    description: 'Run open-sync-request from the default branch after publishing succeeds.'
+    required: false
+    default: 'false'
+  open-next-cut:
+    description: 'Immediately open the next sticky cut PR from the default branch when newer changesets already wait after publishing succeeds.'
+    required: false
+    default: 'false'
   dry-run:
     description: 'Show what would be done without tagging or publishing.'
     required: false

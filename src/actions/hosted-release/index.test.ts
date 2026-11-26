@@ -229,6 +229,46 @@ describe('runHostedRelease', () => {
     expect(outputs()).toMatchObject({ result: 'dry-run' });
   });
 
+  it('forwards refresh and from to the repository release command and dry-run target check', async () => {
+    mockResolve.mockResolvedValue({
+      command: 'monochange',
+      source: 'existing-monochange',
+      version: 'monochange 0.23.0',
+    });
+    setInputs({
+      from: 'origin/main',
+      'github-token': 'gh-token',
+      refresh: 'true',
+      'release-command': 'release',
+    });
+
+    await runHostedRelease();
+
+    const calls = mockExec.mock.calls.map(([command, args]) => [command, ...args].join(' '));
+    expect(calls).toEqual([
+      'monochange run release --refresh --from origin/main',
+      'monochange step open-release-request --backend hosted --dry-run --format json --from origin/main',
+    ]);
+  });
+
+  it('forwards refresh and from across all built-in release steps', async () => {
+    setInputs({
+      from: 'origin/main',
+      'github-token': 'gh-token',
+      refresh: 'true',
+    });
+
+    await runHostedRelease();
+
+    const calls = mockExec.mock.calls.map(([command, args]) => [command, ...args].join(' '));
+    expect(calls).toEqual([
+      'monochange step prepare-release --format json --refresh --from origin/main',
+      'monochange step open-release-request --backend hosted --dry-run --format json --from origin/main',
+      'monochange step commit-release --commit-backend hosted --hosted-auth oidc --refresh --from origin/main',
+      'monochange step open-release-request --backend hosted --format json --refresh --from origin/main',
+    ]);
+  });
+
   it('requires monochange 0.20.0 for a repository release command', async () => {
     setInputs({ 'github-token': 'gh-token', 'release-command': 'release' });
 

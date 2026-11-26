@@ -20977,7 +20977,7 @@ const MAX_MARKDOWN_LENGTH = 6e4;
 function input$8(name, fallback) {
 	return getInput(name).trim() || fallback;
 }
-function readInputs$8() {
+function readInputs$9() {
 	return {
 		base: getOptionalInput$1("base"),
 		dependencyPropagation: input$8("dependency-propagation", "public"),
@@ -21004,8 +21004,8 @@ function splitList$1(value) {
 */
 function eventLabels() {
 	const pullRequest = context.payload.pull_request;
-	if (!isRecord$8(pullRequest) || !Array.isArray(pullRequest.labels)) return;
-	const names = pullRequest.labels.map((label) => isRecord$8(label) && typeof label.name === "string" ? label.name : void 0).filter((name) => typeof name === "string");
+	if (!isRecord$11(pullRequest) || !Array.isArray(pullRequest.labels)) return;
+	const names = pullRequest.labels.map((label) => isRecord$11(label) && typeof label.name === "string" ? label.name : void 0).filter((name) => typeof name === "string");
 	return names.length > 0 ? names.join(",") : void 0;
 }
 /**
@@ -21015,7 +21015,7 @@ function eventLabels() {
 */
 function eventBaseRef() {
 	const base = context.payload.pull_request?.base;
-	return isRecord$8(base) && typeof base.ref === "string" && base.ref ? `origin/${base.ref}` : void 0;
+	return isRecord$11(base) && typeof base.ref === "string" && base.ref ? `origin/${base.ref}` : void 0;
 }
 /**
 * Classify the exact pull request head commit, so the report names the commit
@@ -21023,7 +21023,7 @@ function eventBaseRef() {
 */
 function eventHeadSha() {
 	const head = context.payload.pull_request?.head;
-	return isRecord$8(head) && typeof head.sha === "string" && head.sha ? head.sha : void 0;
+	return isRecord$11(head) && typeof head.sha === "string" && head.sha ? head.sha : void 0;
 }
 /**
 * Use an event ref only when the checkout contains it. A shallow checkout
@@ -21040,7 +21040,7 @@ async function checkedOutRef(ref, cwd, endpoint) {
 	], { cwd })).exitCode === 0) return ref;
 	warning(`Pull request ${endpoint} \`${ref}\` is not in the checkout, so change classification falls back to the default ${endpoint}. Check out with fetch-depth: 0 to classify against the pull request ${endpoint}.`);
 }
-function isRecord$8(value) {
+function isRecord$11(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSeverity(value) {
@@ -21061,7 +21061,7 @@ function stringArray(value) {
 	return value.filter((item) => typeof item === "string");
 }
 function readFinding(value) {
-	if (!isRecord$8(value)) throw new Error("monochange classification findings must be objects.");
+	if (!isRecord$11(value)) throw new Error("monochange classification findings must be objects.");
 	return {
 		bump: requiredSeverity(value, "bump"),
 		comparisons: stringArray(value.comparisons),
@@ -21074,7 +21074,7 @@ function readFinding(value) {
 	};
 }
 function readPackage(value) {
-	if (!isRecord$8(value) || !isRecord$8(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
+	if (!isRecord$11(value) || !isRecord$11(value.decision) || !Array.isArray(value.findings)) throw new Error("monochange classification packages must contain decisions and findings.");
 	return {
 		action: requiredString$1(value, "action"),
 		compatibility_impact: requiredString$1(value.decision, "compatibility_impact"),
@@ -21090,7 +21090,7 @@ function readPackage(value) {
 	};
 }
 function readChangeClassificationReport(value) {
-	if (!isRecord$8(value) || typeof value.schema_version !== "string" || !/^\d+\.\d+$/u.test(value.schema_version) || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.");
+	if (!isRecord$11(value) || typeof value.schema_version !== "string" || !/^\d+\.\d+$/u.test(value.schema_version) || !Array.isArray(value.packages)) throw new Error("monochange did not return a supported change-classification report. Use a monochange version that emits change classification schema version 0.1 or newer.");
 	return {
 		...typeof value.base_commit === "string" ? { base_commit: value.base_commit } : {},
 		candidate: requiredString$1(value, "candidate"),
@@ -21222,7 +21222,7 @@ function pullRequestNumber(explicit) {
 		return Number(explicit);
 	}
 	const pullRequest = context.payload.pull_request;
-	return isRecord$8(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
+	return isRecord$11(pullRequest) && typeof pullRequest.number === "number" ? pullRequest.number : void 0;
 }
 async function upsertComment(inputs, markdown) {
 	if (!inputs.postComment) return;
@@ -21336,7 +21336,7 @@ async function markCommentStale(inputs, head) {
 	}
 }
 async function runChangeClassification() {
-	const inputs = readInputs$8();
+	const inputs = readInputs$9();
 	const monochange = await resolveMonochange(inputs.setupMonochange);
 	const base = inputs.base ?? await checkedOutRef(eventBaseRef(), inputs.workingDirectory, "base");
 	const head = inputs.head ?? await checkedOutRef(eventHeadSha(), inputs.workingDirectory, "head") ?? "HEAD";
@@ -21398,7 +21398,7 @@ async function runChangeClassification() {
 
 // src/actions/changeset-policy/index.ts
 const COMMENT_MARKER = "<!-- monochange:changeset-policy -->";
-function readInputs$7() {
+function readInputs$8() {
 	return {
 		changedPaths: getOptionalInput("changed-paths"),
 		commentOnFailure: getBoolean$2("comment-on-failure"),
@@ -21431,7 +21431,7 @@ function getBoolean$2(name) {
 	].includes(value);
 }
 async function runChangesetPolicy() {
-	const inputs = readInputs$7();
+	const inputs = readInputs$8();
 	if (inputs.debug) info(`changeset-policy inputs: ${JSON.stringify({
 		...inputs,
 		githubToken: "[redacted]"
@@ -21477,25 +21477,25 @@ async function runChangesetPolicy() {
 	info(skipped ? "changeset-policy skipped" : "changeset-policy completed successfully");
 }
 function changesetStatus(parsed) {
-	if (!isRecord$7(parsed)) return;
+	if (!isRecord$10(parsed)) return;
 	const status = parsed.status;
 	return typeof status === "string" ? status : void 0;
 }
 function changesetSkipped(parsed) {
-	if (!isRecord$7(parsed)) return false;
+	if (!isRecord$10(parsed)) return false;
 	return parsed.skip === true || parsed.skipped === true || parsed.status === "skipped";
 }
 function changesetSummary(parsed) {
-	if (!isRecord$7(parsed)) return;
+	if (!isRecord$10(parsed)) return;
 	const summary = parsed.summary;
 	return typeof summary === "string" ? summary : void 0;
 }
 function changesetComment(parsed) {
-	if (!isRecord$7(parsed)) return;
+	if (!isRecord$10(parsed)) return;
 	const comment = parsed.comment;
 	return typeof comment === "string" && comment.trim() ? comment : void 0;
 }
-function isRecord$7(value) {
+function isRecord$10(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function extractContentWithoutMarker(body) {
@@ -21626,7 +21626,7 @@ function failureDetail(result) {
 function errorMessage$1(error) {
 	return error instanceof Error ? error.message : String(error);
 }
-function isRecord$6(value) {
+function isRecord$9(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -21755,7 +21755,7 @@ function setRunAllOutputs() {
 }
 function isDecisionMap(value) {
 	const parsed = safeJsonParse(value);
-	return isRecord$6(parsed) && Object.values(parsed).every((entry) => typeof entry === "boolean");
+	return isRecord$9(parsed) && Object.values(parsed).every((entry) => typeof entry === "boolean");
 }
 function isStringArrayJson(value) {
 	const parsed = safeJsonParse(value);
@@ -21765,7 +21765,7 @@ function isStringArrayJson(value) {
 // src/actions/ci/github-context.ts
 function readGitHubContext() {
 	const payload = context.payload;
-	const record = isRecord$5(payload) ? payload : void 0;
+	const record = isRecord$8(payload) ? payload : void 0;
 	const pullRequest = recordField(record, "pull_request");
 	const headCommit = recordField(record, "head_commit");
 	const repository = recordField(record, "repository");
@@ -21788,7 +21788,7 @@ function pullRequestLabels(pullRequest) {
 	const labels = pullRequest?.labels;
 	if (!Array.isArray(labels)) return [];
 	return labels.flatMap((label) => {
-		const name = stringField(isRecord$5(label) ? label : void 0, "name");
+		const name = stringField(isRecord$8(label) ? label : void 0, "name");
 		return name === void 0 ? [] : [name];
 	});
 }
@@ -21797,18 +21797,18 @@ function refToBranch(ref) {
 }
 function recordField(record, key) {
 	const value = record?.[key];
-	return isRecord$5(value) ? value : void 0;
+	return isRecord$8(value) ? value : void 0;
 }
 function stringField(record, key) {
 	const value = record?.[key];
 	return typeof value === "string" && value !== "" ? value : void 0;
 }
-function isRecord$5(value) {
+function isRecord$8(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 // src/actions/ci/inputs.ts
-function readInputs$6() {
+function readInputs$7() {
 	return {
 		apiKey: input$6("api-key"),
 		apiUrl: input$6("api-url"),
@@ -21911,7 +21911,7 @@ function parseNeeds(value) {
 	const parsed = parseJsonObject(value, "needs");
 	const results = {};
 	for (const [jobId, entry] of Object.entries(parsed)) {
-		const result = isRecord$6(entry) ? entry.result : void 0;
+		const result = isRecord$9(entry) ? entry.result : void 0;
 		if (typeof result !== "string") throw new Error(`Input \`needs\` entry \`${jobId}\` must be an object with a string result.`);
 		results[jobId] = result;
 	}
@@ -21928,7 +21928,7 @@ function parseDecisions(value) {
 }
 function parseJsonObject(value, name) {
 	const parsed = safeJsonParse(value);
-	if (!isRecord$6(parsed)) throw new Error(`Input \`${name}\` must be a JSON object.`);
+	if (!isRecord$9(parsed)) throw new Error(`Input \`${name}\` must be a JSON object.`);
 	return parsed;
 }
 function mapConclusion(result) {
@@ -21949,7 +21949,7 @@ function mapConclusion(result) {
 * context onto CLI flags and republishes the CLI's outputs for later steps.
 */
 async function runCi() {
-	const inputs = readInputs$6();
+	const inputs = readInputs$7();
 	maskSecrets(inputs);
 	const context = readGitHubContext();
 	const { command } = await resolveMonochange(inputs.setupMonochange);
@@ -22136,11 +22136,13 @@ const HOSTED_STATUS_HINTS = {
 	409: "The release branch already points at a different commit than this run prepared from. Merge or close the open release pull request and delete its branch, then rerun.",
 	503: "The monochange deployment is not configured for hosted releases. Check `hosted-url`."
 };
-function readInputs$5() {
+function readInputs$6() {
 	return {
 		dryRun: getBooleanInput("dry-run"),
+		from: getOptionalInput$1("from") ?? "",
 		githubToken: getOptionalInput$1("github-token") ?? "",
 		hostedUrl: parseHostedUrl(getOptionalInput$1("hosted-url") ?? DEFAULT_HOSTED_URL),
+		refresh: getBooleanInput("refresh"),
 		releaseCommand: getOptionalInput$1("release-command") ?? "",
 		setupMonochange: getOptionalInput$1("setup-monochange") ?? "true",
 		workingDirectory: getOptionalInput$1("working-directory") ?? "."
@@ -22176,7 +22178,7 @@ function explainHostedFailure(message) {
 	const hint = HOSTED_STATUS_HINTS[status];
 	return hint ? `${message}\n\n${hint}` : message;
 }
-function isRecord$4(value) {
+function isRecord$7(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function requiredString(record, key) {
@@ -22187,8 +22189,8 @@ function requiredString(record, key) {
 /** Read the release request target from `step open-release-request --format json` output. */
 function parseReleaseRequestTarget(stdout) {
 	const parsed = parseMixedOutput(stdout);
-	const request = isRecord$4(parsed) ? parsed.release_request : void 0;
-	if (!isRecord$4(request)) throw new Error("monochange did not report a release request. Configure `[source]` with `provider = \"github\"` in monochange.toml.");
+	const request = isRecord$7(parsed) ? parsed.release_request : void 0;
+	if (!isRecord$7(request)) throw new Error("monochange did not report a release request. Configure `[source]` with `provider = \"github\"` in monochange.toml.");
 	return {
 		baseBranch: requiredString(request, "base_branch"),
 		headBranch: requiredString(request, "head_branch"),
@@ -22257,7 +22259,9 @@ async function runReleaseCommand(command, inputs, options) {
 	await runHostedStep(command, [
 		"run",
 		inputs.releaseCommand,
-		...inputs.dryRun ? ["--dry-run"] : []
+		...inputs.dryRun ? ["--dry-run"] : [],
+		...inputs.refresh ? ["--refresh"] : [],
+		...inputs.from ? ["--from", inputs.from] : []
 	], {
 		...options,
 		env: {
@@ -22270,7 +22274,7 @@ async function runReleaseCommand(command, inputs, options) {
 * Report the release pull request branches from the prepared release that
 * the previous command saved, without contacting the hosted app.
 */
-async function reportReleaseTarget(command, options) {
+async function reportReleaseTarget(command, options, from = "") {
 	const target = parseReleaseRequestTarget(await runHostedStep(command, [
 		"step",
 		"open-release-request",
@@ -22278,7 +22282,8 @@ async function reportReleaseTarget(command, options) {
 		"hosted",
 		"--dry-run",
 		"--format",
-		"json"
+		"json",
+		...from ? ["--from", from] : []
 	], options));
 	setOutput("head-branch", target.headBranch);
 	setOutput("base-branch", target.baseBranch);
@@ -22292,7 +22297,9 @@ async function publishWithBuiltInSteps(command, target, options) {
 		"--commit-backend",
 		"hosted",
 		"--hosted-auth",
-		"oidc"
+		"oidc",
+		...options.refresh ? ["--refresh"] : [],
+		...options.from ? ["--from", options.from] : []
 	], {
 		...options,
 		env: {
@@ -22306,7 +22313,9 @@ async function publishWithBuiltInSteps(command, target, options) {
 		"--backend",
 		"hosted",
 		"--format",
-		"json"
+		"json",
+		...options.refresh ? ["--refresh"] : [],
+		...options.from ? ["--from", options.from] : []
 	], options);
 }
 /**
@@ -22319,7 +22328,7 @@ async function publishWithBuiltInSteps(command, target, options) {
 * or the commit verification in machine-readable form.
 */
 async function runHostedRelease() {
-	const inputs = readInputs$5();
+	const inputs = readInputs$6();
 	if (!inputs.dryRun) {
 		assertOidcAvailable();
 		if (!inputs.githubToken) throw new Error("Input `github-token` is required to read the release commit and pull request back from GitHub.");
@@ -22337,16 +22346,23 @@ async function runHostedRelease() {
 	let target;
 	if (inputs.releaseCommand) {
 		await runReleaseCommand(monochange.command, inputs, options);
-		target = await reportReleaseTarget(monochange.command, options);
+		target = await reportReleaseTarget(monochange.command, options, inputs.from);
 	} else {
-		await runHostedStep(monochange.command, [
+		const prepareArgs = [
 			"step",
 			"prepare-release",
 			"--format",
-			"json"
-		], options);
-		target = await reportReleaseTarget(monochange.command, options);
-		if (!inputs.dryRun) await publishWithBuiltInSteps(monochange.command, target, options);
+			"json",
+			...inputs.refresh ? ["--refresh"] : [],
+			...inputs.from ? ["--from", inputs.from] : []
+		];
+		await runHostedStep(monochange.command, prepareArgs, options);
+		target = await reportReleaseTarget(monochange.command, options, inputs.from);
+		if (!inputs.dryRun) await publishWithBuiltInSteps(monochange.command, target, {
+			...options,
+			from: inputs.from,
+			refresh: inputs.refresh
+		});
 	}
 	if (inputs.dryRun) {
 		info(`Dry-run: would commit the prepared release to \`${target.headBranch}\` and open a pull request into \`${target.baseBranch}\` through ${inputs.hostedUrl}.`);
@@ -22459,7 +22475,7 @@ function serializeCommentOutput(body) {
 
 // src/actions/merge/index.ts
 async function runMerge() {
-	const inputs = readInputs$4();
+	const inputs = readInputs$5();
 	if (context.eventName === "issue_comment") {
 		if (!(context.payload.comment?.body ?? "").includes(inputs.triggerCommand)) throw new Error(`This workflow was triggered by a pull request comment, but the comment does not contain the configured trigger command \`${inputs.triggerCommand}\`.`);
 	}
@@ -22656,7 +22672,7 @@ async function runMerge() {
 		if (workspace) await cleanupWorkspace(workspace.tempDir);
 	}
 }
-function readInputs$4() {
+function readInputs$5() {
 	const comment = getOptionalInput$1("comment");
 	const pullRequest = getOptionalInput$1("pull-request");
 	const requiredFailingCheck = getOptionalInput$1("required-failing-check");
@@ -23225,7 +23241,7 @@ function bool$5(name) {
 		"on"
 	].includes(input$5(name).toLowerCase());
 }
-function isRecord$3(value) {
+function isRecord$6(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function outputValue$1(value) {
@@ -23256,7 +23272,7 @@ async function runOpenReleaseRequest() {
 		} } : {}
 	});
 	const mixed = parseMixedOutput(stdout);
-	const parsed = isRecord$3(mixed) ? mixed : void 0;
+	const parsed = isRecord$6(mixed) ? mixed : void 0;
 	setOutput("result", "success");
 	setOutput("json", JSON.stringify(parsed ?? null));
 	setOutput("head-branch", outputValue$1(parsed?.headBranch));
@@ -23266,12 +23282,16 @@ async function runOpenReleaseRequest() {
 }
 
 // src/actions/post-merge-release/index.ts
-function readInputs$3() {
+function readInputs$4() {
 	return {
+		baseBranch: getInput("base-branch").trim(),
 		debug: getBoolean$1("debug"),
 		dryRun: getBoolean$1("dry-run"),
+		githubToken: getInput("github-token").trim(),
+		openNextCut: getBoolean$1("open-next-cut"),
 		ref: getInput("ref").trim() || "HEAD",
 		setupMonochange: getInput("setup-monochange").trim() || "true",
+		syncRelease: getBoolean$1("sync-release"),
 		targetBranch: getInput("target-branch").trim()
 	};
 }
@@ -23284,9 +23304,75 @@ function getBoolean$1(name) {
 		"on"
 	].includes(value);
 }
+function isRecord$5(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function hasSyncedFromCommit(record) {
+	if (!isRecord$5(record)) return false;
+	if (typeof record.synced_from_commit === "string" && record.synced_from_commit.length > 0) return true;
+	if (isRecord$5(record.record) && typeof record.record.synced_from_commit === "string" && record.record.synced_from_commit.length > 0) return true;
+	return false;
+}
+function buildCliEnv$1(githubToken) {
+	if (!githubToken) return;
+	return {
+		...Object.fromEntries(Object.entries(process.env).filter((entry) => entry[1] !== void 0)),
+		GITHUB_TOKEN: githubToken
+	};
+}
+function getRepositoryDefaultBranch() {
+	const repository = context?.payload.repository;
+	if (isRecord$5(repository) && typeof repository.default_branch === "string" && repository.default_branch.trim() !== "") return repository.default_branch.trim();
+	return "";
+}
+async function resolveDefaultBranch(configuredBaseBranch) {
+	if (configuredBaseBranch && configuredBaseBranch !== "main") return configuredBaseBranch;
+	const repositoryDefault = getRepositoryDefaultBranch();
+	if (repositoryDefault) return repositoryDefault;
+	const originHead = await exec("git", [
+		"symbolic-ref",
+		"--quiet",
+		"--short",
+		"refs/remotes/origin/HEAD"
+	], { ignoreReturnCode: true });
+	if (originHead.exitCode === 0) {
+		const ref = originHead.stdout.trim();
+		if (ref.startsWith("origin/") && ref.length > 7) return ref.slice(7);
+	}
+	return configuredBaseBranch || "main";
+}
+async function withDefaultBranchWorktree(defaultBranch, task) {
+	const tempRoot = await mkdtemp(join(tmpdir(), "monochange-post-merge-"));
+	const worktreeDir = join(tempRoot, "checkout");
+	try {
+		await execRequired("git", [
+			"worktree",
+			"add",
+			"--force",
+			"--detach",
+			worktreeDir,
+			`refs/remotes/origin/${defaultBranch}`
+		]);
+		return await task(worktreeDir);
+	} finally {
+		await exec("git", [
+			"worktree",
+			"remove",
+			"--force",
+			worktreeDir
+		], { ignoreReturnCode: true });
+		await rm$1(tempRoot, {
+			force: true,
+			recursive: true
+		});
+	}
+}
 async function runPostMergeRelease() {
-	const inputs = readInputs$3();
-	if (inputs.debug) info(`post-merge-release inputs: ${JSON.stringify(inputs, null, 2)}`);
+	const inputs = readInputs$4();
+	if (inputs.debug) info(`post-merge-release inputs: ${JSON.stringify({
+		...inputs,
+		githubToken: inputs.githubToken ? "[redacted]" : ""
+	}, null, 2)}`);
 	const monochange = await resolveMonochange(inputs.setupMonochange);
 	info(`Using monochange ${monochange.version} from ${monochange.source}`);
 	const recordArgs = [
@@ -23301,16 +23387,34 @@ async function runPostMergeRelease() {
 	if (inputs.dryRun) {
 		info(`Dry-run: would run \`${monochange.command} ${recordArgs.join(" ")}\``);
 		info(`Dry-run: would run \`${monochange.command} step tag-release --from ${inputs.ref}\``);
-		info(`Dry-run: would run \`${monochange.command} publish-release\``);
+		info(`Dry-run: would run \`${monochange.command} step publish-release\``);
+		if (inputs.syncRelease) info(`Dry-run: would run \`${monochange.command} step open-sync-request --format json\` from the default branch`);
+		if (inputs.openNextCut) info(`Dry-run: would run \`${monochange.command} step prepare-release --format json\` and \`${monochange.command} step open-release-request --format json\` from the default branch`);
 		setOutput("result", "dry-run");
 		setOutput("tagged", "false");
 		setOutput("published", "false");
 		return;
 	}
-	const recordStdout = await execRequired(monochange.command, recordArgs);
+	if (inputs.githubToken) setSecret(inputs.githubToken);
+	const cliEnv = buildCliEnv$1(inputs.githubToken);
+	const runCli = async (args, cwd) => {
+		const options = cwd || cliEnv ? {
+			...cwd ? { cwd } : {},
+			...cliEnv ? { env: cliEnv } : {}
+		} : void 0;
+		return options ? execRequired(monochange.command, args, options) : execRequired(monochange.command, args);
+	};
+	const recordStdout = await runCli(recordArgs);
 	const record = parseMixedOutput(recordStdout);
 	if (!record) {
 		info("No release record found for the given ref. Skipping.");
+		setOutput("result", "skipped");
+		setOutput("tagged", "false");
+		setOutput("published", "false");
+		return;
+	}
+	if (hasSyncedFromCommit(record)) {
+		info("Release record is a synced bookkeeping commit. Skipping duplicate tagging/publish.");
 		setOutput("result", "skipped");
 		setOutput("tagged", "false");
 		setOutput("published", "false");
@@ -23323,14 +23427,52 @@ async function runPostMergeRelease() {
 		inputs.ref
 	];
 	if (inputs.targetBranch) tagArgs.push("--branch", inputs.targetBranch);
-	await execRequired(monochange.command, tagArgs);
+	await runCli(tagArgs);
 	setOutput("tagged", "true");
 	try {
-		await execRequired(monochange.command, ["step", "publish-release"]);
+		await runCli(["step", "publish-release"]);
 		setOutput("published", "true");
 	} catch (error) {
-		warning(`publish-release failed: ${error instanceof Error ? error.message : String(error)}`);
+		const message = error instanceof Error ? error.message : String(error);
+		warning(`publish-release failed: ${message}`);
 		setOutput("published", "false");
+		setOutput("json", JSON.stringify(record));
+		setOutput("result", "failed");
+		throw error instanceof Error ? error : new Error(message);
+	}
+	if (inputs.syncRelease || inputs.openNextCut) {
+		const defaultBranch = await resolveDefaultBranch(inputs.baseBranch);
+		await execRequired("git", [
+			"fetch",
+			"origin",
+			`+refs/heads/${defaultBranch}:refs/remotes/origin/${defaultBranch}`
+		]);
+		if (inputs.syncRelease) await withDefaultBranchWorktree(defaultBranch, async (worktreeDir) => {
+			await runCli([
+				"step",
+				"open-sync-request",
+				"--format",
+				"json"
+			], worktreeDir);
+		});
+		if (inputs.openNextCut) try {
+			await withDefaultBranchWorktree(defaultBranch, async (worktreeDir) => {
+				await runCli([
+					"step",
+					"prepare-release",
+					"--format",
+					"json"
+				], worktreeDir);
+				await runCli([
+					"step",
+					"open-release-request",
+					"--format",
+					"json"
+				], worktreeDir);
+			});
+		} catch (error) {
+			info(`open-next-cut skipped or had no pending changesets: ${error instanceof Error ? error.message : String(error)}`);
+		}
 	}
 	setOutput("result", "success");
 	setOutput("json", JSON.stringify(record));
@@ -23359,7 +23501,7 @@ const RELEASE_RECORD_FILTER = [
 	"select(.release == true)",
 	".tag_name"
 ].join(" | ");
-function readInputs$2() {
+function readInputs$3() {
 	const releaseTag = getOptionalInput$1("release-tag");
 	if (releaseTag === void 0) throw new Error("Input `release-tag` is required.");
 	return {
@@ -23382,7 +23524,7 @@ function errorMessage(error) {
 function commandOutput(result) {
 	return result.stderr.trim() || result.stdout.trim();
 }
-function isRecord$2(value) {
+function isRecord$4(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 /**
@@ -23434,7 +23576,7 @@ async function viewRelease(tag, inputs) {
 		return { error: message };
 	}
 	const parsed = safeJsonParse(result.stdout);
-	const isDraft = isRecord$2(parsed) ? parsed.isDraft : void 0;
+	const isDraft = isRecord$4(parsed) ? parsed.isDraft : void 0;
 	if (typeof isDraft !== "boolean") return { error: `Could not read the draft state of release ${tag} from gh output.` };
 	return { state: isDraft ? "draft" : "public" };
 }
@@ -23599,7 +23741,7 @@ function reportResult(result, primary) {
 	warning(`Could not publish release ${result.tag}: ${result.message}`);
 }
 async function runPublishDraftReleases() {
-	const inputs = readInputs$2();
+	const inputs = readInputs$3();
 	if (inputs.githubToken !== "") setSecret(inputs.githubToken);
 	const tags = await collectTargetTags(inputs);
 	const results = [];
@@ -23675,11 +23817,11 @@ function bool$3(name) {
 		"on"
 	].includes(input$3(name).toLowerCase());
 }
-function isRecord$1(value) {
+function isRecord$3(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function readyOutput(parsed) {
-	return isRecord$1(parsed) && parsed.status === "ready" ? "true" : "false";
+	return isRecord$3(parsed) && parsed.status === "ready" ? "true" : "false";
 }
 async function runPublishReadiness() {
 	const monochange = await resolveMonochange(input$3("setup-monochange", "true"));
@@ -23819,12 +23961,39 @@ async function runReleaseRecord() {
 }
 
 // src/actions/release-pr/index.ts
-function readInputs$1() {
+const ALLOWED_ROLES = {
+	admin: ["admin"],
+	maintain: ["admin", "maintain"],
+	push: [
+		"admin",
+		"maintain",
+		"write",
+		"push"
+	],
+	write: [
+		"admin",
+		"maintain",
+		"write",
+		"push"
+	]
+};
+function parseMinimumPermission(raw) {
+	const value = raw.trim().toLowerCase();
+	if (value === "") return "maintain";
+	if (value === "admin" || value === "maintain" || value === "push" || value === "write") return value;
+	throw new Error(`Input \`minimum-reviewer-permission\` must be one of admin, maintain, write, or push. Received \`${raw.trim()}\`.`);
+}
+function readInputs$2() {
 	return {
+		bannerOnly: getBoolean("banner-only"),
 		debug: getBoolean("debug"),
 		dryRun: getBoolean("dry-run"),
 		format: getInput("format").trim() || "json",
+		from: getInput("from").trim(),
 		githubToken: getInput("github-token").trim(),
+		minimumReviewerPermission: parseMinimumPermission(getInput("minimum-reviewer-permission")),
+		refresh: getBoolean("refresh"),
+		refreshCommand: getInput("refresh-command").trim() || "/refresh",
 		setupMonochange: getInput("setup-monochange").trim() || "true",
 		workingDirectory: getInput("working-directory").trim() || "."
 	};
@@ -23838,16 +24007,49 @@ function getBoolean(name) {
 		"on"
 	].includes(value);
 }
+function isRecord$2(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+async function resolveCommentRefreshTrigger(inputs) {
+	const context$2 = context;
+	if (context$2?.eventName !== "issue_comment") return inputs.refresh;
+	if (!context$2.payload.issue?.pull_request) throw new Error("This workflow was triggered by an issue comment, but the issue is not a pull request.");
+	const comment = context$2.payload.comment;
+	if (!(isRecord$2(comment) && typeof comment.body === "string" ? comment.body : "").includes(inputs.refreshCommand)) throw new Error(`This workflow was triggered by a pull request comment, but the comment does not contain \`${inputs.refreshCommand}\`.`);
+	if (!inputs.githubToken) throw new Error("Input `github-token` is required to authorize `/refresh` pull request comments.");
+	const octokit = getOctokit(inputs.githubToken);
+	const { owner, repo } = context$2.repo;
+	const actor = context$2.actor;
+	const { data } = await octokit.rest.repos.getCollaboratorPermissionLevel({
+		owner,
+		repo,
+		username: actor
+	});
+	const actorRole = data.role_name || data.permission;
+	if (!ALLOWED_ROLES[inputs.minimumReviewerPermission].includes(actorRole)) throw new Error(`Actor \`${actor}\` has \`${actorRole}\` permission, which does not meet required \`${inputs.minimumReviewerPermission}\` permission for \`${inputs.refreshCommand}\`.`);
+	return true;
+}
 async function runReleasePr() {
-	const inputs = readInputs$1();
+	const inputs = readInputs$2();
+	const refresh = await resolveCommentRefreshTrigger(inputs);
 	if (inputs.debug) info(`release-pr inputs: ${JSON.stringify({
 		...inputs,
-		githubToken: "[redacted]"
+		githubToken: "[redacted]",
+		refresh
 	}, null, 2)}`);
 	const monochange = await resolveMonochange(inputs.setupMonochange);
 	info(`Using monochange ${monochange.version} from ${monochange.source}`);
+	const args = [
+		"step",
+		"open-release-request",
+		"--format",
+		inputs.format
+	];
+	if (refresh) args.push("--refresh");
+	if (inputs.bannerOnly) args.push("--banner-only");
+	if (inputs.from) args.push("--from", inputs.from);
 	if (inputs.dryRun) {
-		info(`Dry-run: would run \`${monochange.command} step open-release-request --format ${inputs.format}\``);
+		info(`Dry-run: would run \`${monochange.command} ${args.join(" ")}\``);
 		setOutput("result", "dry-run");
 		setOutput("head-branch", "");
 		setOutput("base-branch", "");
@@ -23856,12 +24058,6 @@ async function runReleasePr() {
 		setOutput("json", "null");
 		return;
 	}
-	const args = [
-		"step",
-		"open-release-request",
-		"--format",
-		inputs.format
-	];
 	if (inputs.githubToken) setSecret(inputs.githubToken);
 	const stdout = await execRequired(monochange.command, args, {
 		cwd: inputs.workingDirectory,
@@ -23871,7 +24067,7 @@ async function runReleasePr() {
 		} } : {}
 	});
 	const parsed = parseMixedOutput(stdout);
-	const parsedRecord = typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : void 0;
+	const parsedRecord = isRecord$2(parsed) ? parsed : void 0;
 	setOutput("result", "success");
 	setOutput("json", JSON.stringify(parsedRecord ?? null));
 	setOutput("head-branch", parsedRecord?.headBranch ?? "");
@@ -23882,14 +24078,14 @@ async function runReleasePr() {
 }
 
 // src/actions/setup-monochange/index.ts
-function readInputs() {
+function readInputs$1() {
 	return {
 		debug: getInput("debug").trim().toLowerCase() === "true",
 		setupMonochange: getInput("setup-monochange").trim() || "true"
 	};
 }
 async function runSetupMonochange() {
-	const inputs = readInputs();
+	const inputs = readInputs$1();
 	if (inputs.debug) info(`setup-monochange inputs: ${JSON.stringify({
 		...inputs,
 		setupMonochange: inputs.setupMonochange
@@ -23900,6 +24096,94 @@ async function runSetupMonochange() {
 	setOutput("source", resolved.source);
 	setOutput("result", "success");
 	info(`Resolved monochange ${resolved.version} from ${resolved.source}: ${resolved.command}`);
+}
+
+// src/actions/sync-release/index.ts
+const VALID_SYNC_MODES = /* @__PURE__ */ new Set([
+	"semantic_pr",
+	"bookkeeping_only",
+	"merge_pr",
+	"none"
+]);
+const VALID_BACKENDS = /* @__PURE__ */ new Set(["local", "hosted"]);
+function parseSyncMode(raw) {
+	if (raw === "") return "";
+	if (VALID_SYNC_MODES.has(raw)) return raw;
+	throw new Error(`Input \`mode\` for sync-release must be one of semantic_pr, bookkeeping_only, merge_pr, or none. Received \`${raw}\`.`);
+}
+function parseBackend(raw) {
+	if (VALID_BACKENDS.has(raw)) return raw;
+	throw new Error(`Input \`backend\` must be local or hosted. Received \`${raw}\`.`);
+}
+function readInputs() {
+	return {
+		backend: parseBackend(getOptionalInput$1("backend") ?? "local"),
+		debug: getBooleanInput("debug"),
+		dryRun: getBooleanInput("dry-run"),
+		format: getOptionalInput$1("format") ?? "json",
+		from: getOptionalInput$1("from") ?? "",
+		githubToken: getOptionalInput$1("github-token") ?? "",
+		hostedUrl: getOptionalInput$1("hosted-url") ?? "https://monochange.dev",
+		mode: parseSyncMode(getOptionalInput$1("mode") ?? ""),
+		openRequest: getOptionalBooleanInput("open-request") ?? true,
+		setupMonochange: getOptionalInput$1("setup-monochange") ?? "true",
+		workingDirectory: getOptionalInput$1("working-directory") ?? "."
+	};
+}
+function buildCliEnv(inputs) {
+	const overrides = {};
+	if (inputs.githubToken) overrides.GITHUB_TOKEN = inputs.githubToken;
+	if (inputs.backend === "hosted" && inputs.hostedUrl) overrides.MONOCHANGE_HOSTED_URL = inputs.hostedUrl;
+	if (Object.keys(overrides).length === 0) return;
+	return {
+		...Object.fromEntries(Object.entries(process.env).filter((entry) => entry[1] !== void 0)),
+		...overrides
+	};
+}
+function buildCommandArgs(inputs) {
+	const args = [
+		"step",
+		inputs.openRequest ? "open-sync-request" : "sync-release",
+		"--format",
+		inputs.format
+	];
+	if (inputs.from) args.push("--from", inputs.from);
+	if (inputs.mode) args.push("--mode", inputs.mode);
+	if (inputs.openRequest) args.push("--backend", inputs.backend);
+	if (inputs.dryRun) args.push("--dry-run");
+	return args;
+}
+async function runSyncRelease() {
+	const inputs = readInputs();
+	if (inputs.debug) info(`sync-release inputs: ${JSON.stringify({
+		...inputs,
+		githubToken: "[redacted]"
+	}, null, 2)}`);
+	const monochange = await resolveMonochange(inputs.setupMonochange);
+	info(`Using monochange ${monochange.version} from ${monochange.source}`);
+	if (inputs.githubToken) setSecret(inputs.githubToken);
+	const env = buildCliEnv(inputs);
+	const execOptions = {
+		cwd: inputs.workingDirectory,
+		...env ? { env } : {}
+	};
+	const args = buildCommandArgs(inputs);
+	const stdout = await execRequired(monochange.command, args, execOptions);
+	const parsed = parseMixedOutput(stdout);
+	const parsedRecord = isRecord$1(parsed) ? parsed : void 0;
+	const syncReport = isRecord$1(parsedRecord?.sync) ? parsedRecord.sync : parsedRecord;
+	const status = typeof syncReport?.status === "string" ? syncReport.status : "completed";
+	const syncedTags = Array.isArray(syncReport?.synced_tags) ? syncReport.synced_tags.filter((tag) => typeof tag === "string") : [];
+	let result = "success";
+	if (status === "skipped" || status === "up_to_date") result = "skipped";
+	else if (inputs.dryRun || status === "dry_run") result = "dry-run";
+	setOutput("result", result);
+	setOutput("synced-tags", JSON.stringify(syncedTags));
+	setOutput("json", JSON.stringify(parsedRecord ?? null));
+	info(`sync-release completed with status: ${status}`);
+}
+function isRecord$1(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 // src/actions/tag-release/index.ts
@@ -24003,10 +24287,13 @@ async function run() {
 		case "post-merge-release":
 			await runPostMergeRelease();
 			return;
+		case "sync-release":
+			await runSyncRelease();
+			return;
 		case "fail-when":
 			await runFailWhen();
 			return;
-		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: change-classification, merge, setup-monochange, changeset-policy, check, ci, release-preview, release-record, open-release-request, release-pr, hosted-release, tag-release, publish-draft-releases, publish-readiness, publish-packages, post-merge-release, fail-when.`);
+		default: throw new Error(`Unsupported action variant \`${name}\`. Supported values: change-classification, merge, setup-monochange, changeset-policy, check, ci, release-preview, release-record, open-release-request, release-pr, hosted-release, tag-release, publish-draft-releases, publish-readiness, publish-packages, post-merge-release, sync-release, fail-when.`);
 	}
 }
 run().catch((error) => {

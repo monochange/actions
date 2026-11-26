@@ -25,6 +25,32 @@ inputs:
     description: 'Working directory to run monochange in.'
     required: false
     default: '.'
+  refresh:
+    description: 'Force re-cutting an open sticky cut PR from the latest green commit on the base branch.'
+    required: false
+    default: 'false'
+  banner-only:
+    description: 'Update only the behind-main status banner on an open cut pull request without mutating branches.'
+    required: false
+    default: 'false'
+  from:
+    description: 'Optional base git ref or commit SHA to cut from.'
+    required: false
+    default: ''
+  refresh-command:
+    description: 'Pull request comment command that authorizes re-cutting an open cut PR.'
+    required: false
+    default: '/refresh'
+  minimum-reviewer-permission:
+    description: 'Minimum repository permission required to trigger /refresh via a pull request comment: admin, maintain (default), write, or push.'
+    required: false
+    default: 'maintain'
+    type: choice
+    options:
+      - admin
+      - maintain
+      - write
+      - push
   debug:
     description: 'Enable extra debug logging.'
     required: false

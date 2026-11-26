@@ -24,7 +24,7 @@ type Described = {
 };
 
 type ActionMetadata = Described & {
-  inputs?: Record<string, Described>;
+  inputs?: Record<string, Described & { default?: string; options?: string[] }>;
   outputs?: Record<string, Described>;
 };
 
@@ -58,6 +58,56 @@ describe('action metadata descriptions', () => {
       // GitHub evaluates `${{ }}` in action metadata, where only `inputs` and
       // `runs` contexts exist, so a description must stay plain text.
       expect(description, `${file} ${path} must not contain \${{ }}`).not.toContain('${{');
+    }
+  });
+
+  it('declares release-cut and sync inputs across standalone and root manifests', () => {
+    const root = parse(readFileSync('action.yml', 'utf8')) as ActionMetadata;
+    const releasePr = parse(readFileSync('release-pr/action.yml', 'utf8')) as ActionMetadata;
+    const postMerge = parse(
+      readFileSync('post-merge-release/action.yml', 'utf8'),
+    ) as ActionMetadata;
+    const hostedRelease = parse(
+      readFileSync('hosted-release/action.yml', 'utf8'),
+    ) as ActionMetadata;
+    const syncRelease = parse(readFileSync('sync-release/action.yml', 'utf8')) as ActionMetadata;
+
+    expect(root.inputs?.mode?.default).toBe('');
+    expect(root.inputs?.['minimum-reviewer-permission']?.options).toContain('write');
+
+    for (const inputName of [
+      'refresh',
+      'banner-only',
+      'from',
+      'refresh-command',
+      'minimum-reviewer-permission',
+    ]) {
+      expect(
+        releasePr.inputs?.[inputName],
+        `release-pr/action.yml input ${inputName}`,
+      ).toBeDefined();
+    }
+    expect(releasePr.inputs?.['minimum-reviewer-permission']?.options).toContain('write');
+
+    for (const inputName of ['sync-release', 'open-next-cut', 'base-branch', 'github-token']) {
+      expect(
+        postMerge.inputs?.[inputName],
+        `post-merge-release/action.yml input ${inputName}`,
+      ).toBeDefined();
+    }
+
+    for (const inputName of ['refresh', 'from']) {
+      expect(
+        hostedRelease.inputs?.[inputName],
+        `hosted-release/action.yml input ${inputName}`,
+      ).toBeDefined();
+    }
+
+    for (const inputName of ['name', 'from', 'mode', 'open-request', 'backend', 'hosted-url']) {
+      expect(
+        syncRelease.inputs?.[inputName],
+        `sync-release/action.yml input ${inputName}`,
+      ).toBeDefined();
     }
   });
 });
