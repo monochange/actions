@@ -1,0 +1,62 @@
+name: sync-release
+description: 'Replay published cut release bookkeeping onto the base branch and open or update the coalesced sync pull request.'
+author: monochange
+inputs:
+  name:
+    description: 'Internal action variant selector. Leave this as sync-release.'
+    required: false
+    default: sync-release
+  setup-monochange:
+    description: 'How to resolve monochange. true = auto-resolve (default), false = require existing monochange on PATH, any other string = custom command.'
+    required: false
+    default: 'true'
+  working-directory:
+    description: 'Working directory to run monochange in.'
+    required: false
+    default: '.'
+  from:
+    description: 'Optional release tag or commit SHA to sync explicitly.'
+    required: false
+    default: ''
+  mode:
+    description: 'Optional sync mode override: semantic_pr, bookkeeping_only, merge_pr, or none.'
+    required: false
+    default: ''
+  open-request:
+    description: 'Whether to run open-sync-request to open or update the coalesced sync pull request (true) or only run standalone sync-release locally (false).'
+    required: false
+    default: 'true'
+  backend:
+    description: 'Release request backend for open-sync-request: local or hosted.'
+    required: false
+    default: 'local'
+  hosted-url:
+    description: 'HTTPS base URL of the monochange app when backend is hosted.'
+    required: false
+    default: 'https://monochange.dev'
+  github-token:
+    description: 'GitHub token passed to monochange as GITHUB_TOKEN.'
+    required: false
+    default: ${{ github.token }}
+  format:
+    description: 'Output format passed to monochange.'
+    required: false
+    default: 'json'
+  dry-run:
+    description: 'Preview sync changes without writing files or opening a pull request.'
+    required: false
+    default: 'false'
+  debug:
+    description: 'Enable extra debug logging.'
+    required: false
+    default: 'false'
+outputs:
+  result:
+    description: 'success, skipped, dry-run, or failed.'
+  synced-tags:
+    description: 'JSON array of published tags synchronized onto the base branch.'
+  json:
+    description: 'JSON output reported by monochange sync-release / open-sync-request.'
+runs:
+  using: node24
+  main: ../dist/index.mjs

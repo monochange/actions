@@ -31,7 +31,8 @@ Currently implemented:
 - `publish-readiness` - generate publish readiness data from a release record
 - `publish-packages` - publish packages from readiness data
 - `publish-plan` - compatibility wrapper for publish rate-limit planning
-- `post-merge-release` - tag and publish after a release PR merges
+- `post-merge-release` - tag and publish after a release PR merges (with optional cut sync & next-cut chaining)
+- `sync-release` - replay published cut release bookkeeping onto the base branch and open/update the coalesced sync pull request
 
 Public entrypoints:
 
@@ -47,6 +48,7 @@ Public entrypoints:
 - `monochange/actions/publish-draft-releases@v0`
 - `monochange/actions/publish-readiness@v0.4.0`
 - `monochange/actions/publish-packages@v0.4.0`
+- `monochange/actions/sync-release@v0`
 - `monochange/actions/fail-when@v0.4.0`
 
 Both entrypoints run the same implementation.

@@ -81,6 +81,8 @@ The release branch is `<branch_prefix>/release` from monochange 0.19.0. Older ve
 | `hosted-url`        | No       | `https://monochange.dev` | HTTPS base URL of the monochange app, without embedded credentials. The OIDC token audience is this URL's host.                                          |
 | `github-token`      | No       | `${{ github.token }}`    | Passed to monochange as `GITHUB_TOKEN` to upload the release tree, and used to read the release back. Needs `contents: write` and `pull-requests: read`. |
 | `dry-run`           | No       | `false`                  | Prepare the release and report the branches without contacting the hosted app. Does not need `id-token: write`.                                          |
+| `refresh`           | No       | `false`                  | Force re-cutting an open sticky cut PR from the latest green commit on the base branch.                                                                  |
+| `from`              | No       | empty                    | Optional base git ref or commit SHA to cut from.                                                                                                         |
 
 ## Outputs
 

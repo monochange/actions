@@ -30,6 +30,14 @@ inputs:
     description: 'Prepare the release and report the target branches without contacting the hosted app.'
     required: false
     default: 'false'
+  refresh:
+    description: 'Force re-cutting an open sticky cut PR from the latest green commit on the base branch.'
+    required: false
+    default: 'false'
+  from:
+    description: 'Optional base git ref or commit SHA to cut from.'
+    required: false
+    default: ''
 outputs:
   result:
     description: 'success, dry-run, or failed.'
