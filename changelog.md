@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 This changelog is managed by [monochange](https://github.com/monochange/monochange).
 
+## [0.12.4](https://github.com/monochange/actions/releases/tag/v0.12.4) (2026-11-28)
+
+### 🚀 Feature
+
+- **Add `sync-release` variant and frozen release cut support (`--refresh`, `--banner-only`, post-merge chaining).** Adds the `sync-release` GitHub Action variant (`monochange/actions/sync-release`) to replay published cut release bookkeeping onto the base branch and open/update the coalesced sync pull request (`monochange/sync-release`) via a single `open-sync-request` invocation (or standalone `sync-release` when `open-request` is `false`). Also adds `refresh`, `banner-only`, `from`, and authorized `/refresh` PR comment trigger support (including `write` permission) to `release-pr` and `hosted-release`, and updates `post-merge-release` to skip synced bookkeeping commits (`synced_from_commit`), fail without follow-on steps if publishing fails, and optionally chain `open-sync-request` and `open-next-cut` from clean default-branch worktrees.
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #148](https://github.com/monochange/actions/pull/148)
+
+### 🐛 Fixed
+
+- **Ignore skipped conclusions in ci/verify so unrun jobs are not recorded as verified outcomes.**
+  _Owner:_ [@ifiokjr](https://github.com/ifiokjr) · _Review:_ [PR #146](https://github.com/monochange/actions/pull/146)
+
 ## [0.12.3](https://github.com/monochange/actions/releases/tag/v0.12.3) (2026-11-25)
 
 ### 🐛 Fixed
