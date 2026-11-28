@@ -21934,7 +21934,7 @@ function parseJsonObject(value, name) {
 function mapConclusion(result) {
 	switch (result.trim().toLowerCase()) {
 		case "failure": return "failure";
-		case "skipped": return "skipped";
+		case "skipped": return;
 		case "success": return "success";
 		default: return;
 	}
