@@ -306,7 +306,7 @@ describe('runCi verify', () => {
     'unknown-job': true,
   };
 
-  it('verifies every gated job and skips cancelled, unknown, and untracked jobs', async () => {
+  it('verifies every gated job and skips cancelled, skipped, unknown, and untracked jobs', async () => {
     setInputs({
       'auth-token': 'ci-token',
       decisions: JSON.stringify(decisions),
@@ -323,7 +323,7 @@ describe('runCi verify', () => {
     await runCi();
 
     expect(mockCore.setSecret).toHaveBeenCalledWith('ci-token');
-    expect(mockExec).toHaveBeenCalledTimes(3);
+    expect(mockExec).toHaveBeenCalledTimes(2);
     expect(mockExec).toHaveBeenNthCalledWith(
       1,
       'monochange',
@@ -351,12 +351,6 @@ describe('runCi verify', () => {
     expect(mockExec).toHaveBeenNthCalledWith(
       2,
       'monochange',
-      expect.arrayContaining(['--job', 'skipped-job', '--conclusion', 'skipped']),
-      { cwd: 'packages/app' },
-    );
-    expect(mockExec).toHaveBeenNthCalledWith(
-      3,
-      'monochange',
       expect.arrayContaining(['--job', 'test-windows', '--conclusion', 'success']),
       { cwd: 'packages/app' },
     );
@@ -364,9 +358,28 @@ describe('runCi verify', () => {
       expect.stringContaining('Skipping verify for `cancelled-job`'),
     );
     expect(mockCore.info).toHaveBeenCalledWith(
+      expect.stringContaining('Skipping verify for `skipped-job`'),
+    );
+    expect(mockCore.info).toHaveBeenCalledWith(
       expect.stringContaining('Skipping verify for `unknown-job`'),
     );
     expect(mockCore.info).toHaveBeenCalledWith('recorded');
+    expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
+  });
+
+  it('ignores skipped conclusions regardless of casing or whitespace', async () => {
+    setInputs({
+      decisions: JSON.stringify({ 'skipped-job': true }),
+      mode: 'verify',
+      needs: JSON.stringify({ 'skipped-job': { result: ' SKIPPED ' } }),
+    });
+
+    await runCi();
+
+    expect(mockExec).not.toHaveBeenCalled();
+    expect(mockCore.info).toHaveBeenCalledWith(
+      'Skipping verify for `skipped-job`: result ` SKIPPED ` is not verifiable.',
+    );
     expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'success');
   });
 

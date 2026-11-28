@@ -162,7 +162,7 @@ function mapConclusion(result: string): VerifyConclusion | undefined {
       return 'failure';
     }
     case 'skipped': {
-      return 'skipped';
+      return undefined;
     }
     case 'success': {
       return 'success';
